@@ -13,6 +13,7 @@ import {
 import BreakdownCard, { DaySpend, CategorySpend } from "./BreakdownCard";
 import ExpenseList from "./ExpenseList";
 import BudgetProgress from "./BudgetProgress";
+import InstallPrompt from "./InstallPrompt";
 import { getNowInTimezone } from "@/utils/date";
 
 export default async function DashboardPage() {
@@ -105,6 +106,9 @@ export default async function DashboardPage() {
         <h1 className="font-bold tracking-tight text-lg">Weekly Expenses</h1>
         <UserMenu />
       </div>
+
+      {/* PWA Install Banner */}
+      <InstallPrompt />
 
       {/* Burn Rate Summary */}
       <div className="rounded-2xl border border-zinc-800 bg-linear-to-b from-zinc-900 to-zinc-950 p-5 shadow-sm">

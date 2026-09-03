@@ -8,7 +8,7 @@ import {
   parseISO,
   startOfWeek,
 } from "date-fns";
-import { ArrowLeft, Archive, CalendarDays, TrendingDown } from "lucide-react";
+import { ArrowLeft, Archive } from "lucide-react";
 import UserMenu from "@/app/UserMenu";
 import ArchiveWeekList, { ArchivedWeek } from "./ArchiveWeekList";
 import { ExpenseItem } from "@/app/ExpenseList";

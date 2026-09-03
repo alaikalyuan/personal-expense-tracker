@@ -24,7 +24,7 @@ export default function BottomNav() {
     <>
       {/* Soft Bottom Gradient to prevent scrolling content from clashing */}
       <div
-        className="fixed bottom-0 inset-x-0 h-32 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent pointer-events-none z-30"
+        className="fixed bottom-0 inset-x-0 h-32 bg-linear-to-t from-zinc-950 via-zinc-950/80 to-transparent pointer-events-none z-30"
         aria-hidden="true"
       />
 
