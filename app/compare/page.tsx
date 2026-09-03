@@ -18,6 +18,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
+import { getNowInTimezone } from "@/utils/date";
 
 const categoryColors: Record<string, string> = {
   "Food & Dining": "bg-green-500",
@@ -40,7 +41,7 @@ export default async function ComparePage() {
     redirect("/login");
   }
 
-  const now = new Date();
+  const now = getNowInTimezone();
 
   // 1. Current Week (Monday - Sunday)
   const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 });

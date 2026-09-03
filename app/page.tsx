@@ -13,6 +13,7 @@ import {
 import BreakdownCard, { DaySpend, CategorySpend } from "./BreakdownCard";
 import ExpenseList from "./ExpenseList";
 import BudgetProgress from "./BudgetProgress";
+import { getNowInTimezone } from "@/utils/date";
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -26,8 +27,8 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Calculate start and end of the current week (Monday 00:00 to Sunday 23:59) using date-fns
-  const now = new Date();
+  // Calculate start and end of the current week (Monday 00:00 to Sunday 23:59) in local timezone
+  const now = getNowInTimezone();
   const startOfWeekDate = startOfWeek(now, { weekStartsOn: 1 });
   const endOfWeekDate = endOfWeek(now, { weekStartsOn: 1 });
   const startOfWeekStr = format(startOfWeekDate, "yyyy-MM-dd");
@@ -53,7 +54,7 @@ export default async function DashboardPage() {
     : null;
   const largestSpend = Number(largestExpense?.amount ?? 0);
 
-  const todayDayIndex = (new Date().getDay() + 6) % 7 + 1; // Mon=1, Tue=2, ..., Sun=7
+  const todayDayIndex = (now.getDay() + 6) % 7 + 1; // Mon=1, Tue=2, ..., Sun=7
   const avgDailySpend = weeklyTotal / todayDayIndex;
   const daysRemaining = Math.max(7 - todayDayIndex + 1, 1);
   const weeklyBudget = Number(user.user_metadata?.weekly_budget || 500000);

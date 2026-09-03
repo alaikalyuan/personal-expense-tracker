@@ -12,6 +12,7 @@ import { ArrowLeft, Archive, CalendarDays, TrendingDown } from "lucide-react";
 import UserMenu from "@/app/UserMenu";
 import ArchiveWeekList, { ArchivedWeek } from "./ArchiveWeekList";
 import { ExpenseItem } from "@/app/ExpenseList";
+import { getNowInTimezone } from "@/utils/date";
 
 export default async function ArchivePage() {
   const cookieStore = await cookies();
@@ -26,7 +27,7 @@ export default async function ArchivePage() {
   }
 
   // Current week boundary (Monday 00:00)
-  const now = new Date();
+  const now = getNowInTimezone();
   const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 });
   const thisWeekStartStr = format(thisWeekStart, "yyyy-MM-dd");
 

@@ -5,12 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wallet, ArrowLeftRight, Plus } from "lucide-react";
 import { QuickAddModal } from "./QuickAddExpense";
-import { format } from "date-fns";
+import { getTodayString } from "@/utils/date";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = getTodayString();
 
   // Do not show bottom nav on login page
   if (pathname === "/login") {
