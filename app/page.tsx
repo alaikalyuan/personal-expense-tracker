@@ -1,69 +1,190 @@
-import Image from "next/image";
+import { createClient } from "@/utils/supabase/server";
+import UserMenu from "./UserMenu";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import {
+  addDays,
+  endOfWeek,
+  format,
+  isAfter,
+  isSameDay,
+  startOfWeek,
+} from "date-fns";
+import BreakdownCard, { DaySpend, CategorySpend } from "./BreakdownCard";
+import ExpenseList from "./ExpenseList";
+import BudgetProgress from "./BudgetProgress";
 
-export default function Home() {
+export default async function DashboardPage() {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Calculate start and end of the current week (Monday 00:00 to Sunday 23:59) using date-fns
+  const now = new Date();
+  const startOfWeekDate = startOfWeek(now, { weekStartsOn: 1 });
+  const endOfWeekDate = endOfWeek(now, { weekStartsOn: 1 });
+  const startOfWeekStr = format(startOfWeekDate, "yyyy-MM-dd");
+  const endOfWeekStr = format(endOfWeekDate, "yyyy-MM-dd");
+
+  const { data: expenses } = await supabase
+    .from("expenses")
+    .select("*")
+    .eq("user_id", user.id)
+    .gte("spent_at", startOfWeekStr)
+    .lte("spent_at", endOfWeekStr)
+    .order("spent_at", { ascending: false });
+
+  const weeklyTotal = (expenses || []).reduce(
+    (acc, curr) => acc + Number(curr.amount),
+    0
+  );
+  // 1. Largest Single Spend
+  const largestExpense = expenses && expenses.length > 0
+    ? expenses.reduce((largest, expense) =>
+      Number(expense.amount) > Number(largest.amount) ? expense : largest
+    )
+    : null;
+  const largestSpend = Number(largestExpense?.amount ?? 0);
+
+  const todayDayIndex = (new Date().getDay() + 6) % 7 + 1; // Mon=1, Tue=2, ..., Sun=7
+  const avgDailySpend = weeklyTotal / todayDayIndex;
+  const daysRemaining = Math.max(7 - todayDayIndex + 1, 1);
+  const weeklyBudget = Number(user.user_metadata?.weekly_budget || 500000);
+
+  // 3. Top Category by total sum
+  const categoryTotals = (expenses || []).reduce<Record<string, number>>((acc, curr) => {
+    const amt = Number(curr.amount);
+    acc[curr.category] = (acc[curr.category] || 0) + amt;
+    return acc;
+  }, {});
+
+  const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0] || ["None", 0];
+
+  // 4. Daily breakdown (Mon - Sun)
+  const dailyData: DaySpend[] = Array.from({ length: 7 }, (_, i) => {
+    const dayDate = addDays(startOfWeekDate, i);
+    const dateStr = format(dayDate, "yyyy-MM-dd");
+    const dayTotal = (expenses || []).reduce((acc, curr) => {
+      if (curr.spent_at && curr.spent_at.startsWith(dateStr)) {
+        return acc + Number(curr.amount);
+      }
+      return acc;
+    }, 0);
+
+    return {
+      dayName: format(dayDate, "EEE"),
+      dateStr,
+      formattedDate: format(dayDate, "EEEE, MMM d"),
+      amount: dayTotal,
+      isToday: isSameDay(dayDate, now),
+      isFuture: isAfter(dayDate, now),
+    };
+  });
+
+  // 5. Category breakdown
+  const categoryData: CategorySpend[] = Object.entries(categoryTotals)
+    .map(([category, amount]) => ({
+      category,
+      amount,
+      percentage: weeklyTotal > 0 ? Math.round((amount / weeklyTotal) * 100) : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="max-w-md mx-auto p-4 pb-48 flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex justify-between items-center pt-2">
+        <h1 className="font-bold tracking-tight text-lg">Weekly Expenses</h1>
+        <UserMenu />
+      </div>
+
+      {/* Burn Rate Summary */}
+      <div className="rounded-2xl border border-zinc-800 bg-linear-to-b from-zinc-900 to-zinc-950 p-5 shadow-sm">
+        <div className="flex items-baseline justify-between">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">
+              Spent this week
+            </p>
+            <p className="mt-1 text-3xl font-extrabold tracking-tight text-white">
+              Rp {weeklyTotal.toLocaleString("id-ID")}
+            </p>
+          </div>
+        </div>
+
+        {/* Budget Progress & Allowance Pace */}
+        <BudgetProgress
+          weeklyTotal={weeklyTotal}
+          weeklyBudget={weeklyBudget}
+          daysRemaining={daysRemaining}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+
+        {/* Micro-Stats Shelf */}
+        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-zinc-800/80 pt-4">
+        {/* Daily Average */}
+        <div>
+          <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-400">
+            Daily Avg
+          </p>
+          <p className="mt-0.5 text-xs font-semibold text-zinc-200">
+            Rp {Math.round(avgDailySpend).toLocaleString("id-ID")}
+          </p>
+          <p className="mt-0.5 text-[10px] text-zinc-500">
+            {todayDayIndex} of 7 days
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Top Category */}
+        <div className="border-l border-zinc-800/60 pl-2">
+          <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-400">
+            Top Category
+          </p>
+          <p className="mt-0.5 truncate text-xs font-semibold text-zinc-200" title={topCategory[0]}>
+            {topCategory[0]}
+          </p>
+          <p className="mt-0.5 truncate text-[10px] text-zinc-500">
+            Rp {Number(topCategory[1]).toLocaleString("id-ID")}
+          </p>
         </div>
-      </main>
-    </div>
+
+        {/* Max Spend */}
+        <div className="border-l border-zinc-800/60 pl-2">
+          <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-400">
+            Largest
+          </p>
+          <p className="mt-0.5 text-xs font-semibold text-zinc-200">
+            Rp {largestSpend.toLocaleString("id-ID")}
+          </p>
+          <p className="mt-0.5 truncate text-[10px] text-zinc-500" title={largestExpense?.name ?? "None"}>
+            {largestExpense?.name ?? "None"}
+          </p>
+        </div>
+        </div>
+      </div>
+
+      {/* Breakdown Card */}
+      <BreakdownCard
+        dailyData={dailyData}
+        categoryData={categoryData}
+        weeklyTotal={weeklyTotal}
+      />
+
+      {/* Expense Log */}
+      <div className="flex flex-col gap-2">
+        <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+          Recent entries
+        </h2>
+        <ExpenseList expenses={expenses || []} />
+      </div>
+
+      {/* Bottom spacer for clearance above floating navbar and gradient */}
+      <div className="h-8 shrink-0" aria-hidden="true" />
+    </main>
   );
 }
