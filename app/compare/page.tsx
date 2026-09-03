@@ -56,23 +56,24 @@ export default async function ComparePage() {
   const lastWeekStartStr = format(lastWeekStart, "yyyy-MM-dd");
   const lastWeekEndStr = format(lastWeekEnd, "yyyy-MM-dd");
 
-  // Query this week expenses
-  const { data: thisWeekExpenses } = await supabase
-    .from("expenses")
-    .select("*")
-    .eq("user_id", user.id)
-    .gte("spent_at", thisWeekStartStr)
-    .lte("spent_at", thisWeekEndStr)
-    .order("spent_at", { ascending: false });
-
-  // Query last week expenses
-  const { data: lastWeekExpenses } = await supabase
-    .from("expenses")
-    .select("*")
-    .eq("user_id", user.id)
-    .gte("spent_at", lastWeekStartStr)
-    .lte("spent_at", lastWeekEndStr)
-    .order("spent_at", { ascending: false });
+  // Query this week and last week expenses concurrently
+  const [{ data: thisWeekExpenses }, { data: lastWeekExpenses }] =
+    await Promise.all([
+      supabase
+        .from("expenses")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("spent_at", thisWeekStartStr)
+        .lte("spent_at", thisWeekEndStr)
+        .order("spent_at", { ascending: false }),
+      supabase
+        .from("expenses")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("spent_at", lastWeekStartStr)
+        .lte("spent_at", lastWeekEndStr)
+        .order("spent_at", { ascending: false }),
+    ]);
 
   // Total calculations
   const thisTotal = (thisWeekExpenses || []).reduce(
