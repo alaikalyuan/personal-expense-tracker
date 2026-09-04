@@ -1,5 +1,6 @@
 import { login, signup } from "@/app/actions";
 import { getDictionaryServer } from "@/utils/i18n/server";
+import GoogleSignInButton from "./GoogleSignInButton";
 
 export default async function LoginPage({
   searchParams,
@@ -20,6 +21,19 @@ export default async function LoginPage({
             {error}
           </div>
         )}
+
+        <GoogleSignInButton label={t.login.googleSignIn} />
+
+        <div className="relative my-5">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-zinc-200 dark:border-zinc-800" />
+          </div>
+          <div className="relative flex justify-center text-[10px] uppercase">
+            <span className="bg-white px-2 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500 font-medium">
+              {t.login.or}
+            </span>
+          </div>
+        </div>
 
         <form className="flex flex-col gap-3">
           <input

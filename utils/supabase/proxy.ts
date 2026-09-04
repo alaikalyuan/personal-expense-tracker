@@ -10,9 +10,7 @@ export async function updateSession(request: NextRequest) {
     pathname === "/manifest.webmanifest" ||
     pathname.startsWith("/icons");
 
-  const isAuthRoute =
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/auth");
+  const isAuthRoute = pathname.startsWith("/login");
 
   // Check if any Supabase auth cookie is present
   const hasAuthCookie = request.cookies

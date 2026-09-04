@@ -145,6 +145,8 @@ export interface Dictionary {
     passwordPlaceholder: string;
     logIn: string;
     signUp: string;
+    or: string;
+    googleSignIn: string;
   };
   install: {
     title: string;
@@ -297,6 +299,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       passwordPlaceholder: "••••••••",
       logIn: "Masuk",
       signUp: "Daftar",
+      or: "atau",
+      googleSignIn: "Lanjutkan dengan Google",
     },
     install: {
       title: "Pasang Aplikasi Pengeluaran",
@@ -447,6 +451,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       passwordPlaceholder: "••••••••",
       logIn: "Log In",
       signUp: "Sign Up",
+      or: "or",
+      googleSignIn: "Continue with Google",
     },
     install: {
       title: "Install Expense Tracker",
