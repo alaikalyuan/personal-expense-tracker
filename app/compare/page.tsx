@@ -19,6 +19,11 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import { getNowInTimezone } from "@/utils/date";
+import {
+  getDictionaryServer,
+  formatDateServer,
+  getCategoryLabelServer,
+} from "@/utils/i18n/server";
 
 const categoryColors: Record<string, string> = {
   "Food & Dining": "bg-green-500",
@@ -32,6 +37,7 @@ const categoryColors: Record<string, string> = {
 export default async function ComparePage() {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
+  const { t, locale } = await getDictionaryServer();
 
   const {
     data: { user },
@@ -152,7 +158,7 @@ export default async function ComparePage() {
     );
 
     return {
-      dayName: format(thisDayDate, "EEE"),
+      dayName: formatDateServer(thisDayDate, "EEE", locale),
       thisAmt: thisDayAmt,
       lastAmt: lastDayAmt,
       isToday: isSameDay(thisDayDate, now),
@@ -170,10 +176,10 @@ export default async function ComparePage() {
       {/* Header */}
       <div className="flex justify-between items-center pt-2">
         <div>
-          <h1 className="font-bold tracking-tight text-lg">Compare Weeks</h1>
+          <h1 className="font-bold tracking-tight text-lg">{t.compare.title}</h1>
           <p className="text-[11px] text-zinc-400">
-            {format(thisWeekStart, "MMM d")} – {format(thisWeekEnd, "MMM d")} vs{" "}
-            {format(lastWeekStart, "MMM d")} – {format(lastWeekEnd, "MMM d")}
+            {formatDateServer(thisWeekStart, "MMM d", locale)} – {formatDateServer(thisWeekEnd, "MMM d", locale)} {t.common.vs}{" "}
+            {formatDateServer(lastWeekStart, "MMM d", locale)} – {formatDateServer(lastWeekEnd, "MMM d", locale)}
           </p>
         </div>
         <UserMenu />
@@ -182,26 +188,26 @@ export default async function ComparePage() {
       {/* Week-over-Week Spend Hero Card */}
       <div className="rounded-2xl border border-zinc-800 bg-linear-to-b from-zinc-900 to-zinc-950 p-5 shadow-sm">
         <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-          Week-over-Week Spend
+          {t.compare.wowCardTitle}
         </p>
 
         <div className="mt-3 grid grid-cols-2 gap-4">
           <div>
-            <p className="text-[11px] text-zinc-400 font-medium">This Week</p>
+            <p className="text-[11px] text-zinc-400 font-medium">{t.compare.thisWeek}</p>
             <p className="mt-0.5 text-2xl font-extrabold tracking-tight text-white">
               Rp {thisTotal.toLocaleString("id-ID")}
             </p>
             <p className="text-[10px] text-zinc-500 mt-0.5">
-              Day {todayDayIndex} of 7
+              {locale === "id" ? `Hari ke-${todayDayIndex} dari 7` : `Day ${todayDayIndex} of 7`}
             </p>
           </div>
 
           <div className="border-l border-zinc-800/80 pl-4">
-            <p className="text-[11px] text-zinc-400 font-medium">Last Week</p>
+            <p className="text-[11px] text-zinc-400 font-medium">{t.compare.lastWeek}</p>
             <p className="mt-0.5 text-2xl font-bold tracking-tight text-zinc-300">
               Rp {lastTotal.toLocaleString("id-ID")}
             </p>
-            <p className="text-[10px] text-zinc-500 mt-0.5">Full 7 days</p>
+            <p className="text-[10px] text-zinc-500 mt-0.5">{t.compare.fullSevenDays}</p>
           </div>
         </div>
 
@@ -211,17 +217,17 @@ export default async function ComparePage() {
             {isNeutral ? (
               <span className="flex items-center gap-1 text-xs font-semibold text-zinc-400">
                 <Minus className="w-3.5 h-3.5" />
-                Even with last week
+                {t.compare.evenWithLastWeek}
               </span>
             ) : isSaving ? (
               <span className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
                 <TrendingDown className="w-3.5 h-3.5" />
-                {Math.abs(percentDiff)}% less than last week
+                {Math.abs(percentDiff)}% {t.compare.lessThanLastWeek}
               </span>
             ) : (
               <span className="flex items-center gap-1 text-xs font-semibold text-rose-400">
                 <TrendingUp className="w-3.5 h-3.5" />
-                {percentDiff}% more than last week
+                {percentDiff}% {t.compare.moreThanLastWeek}
               </span>
             )}
           </div>
@@ -235,40 +241,42 @@ export default async function ComparePage() {
       {/* Burn Rate Pacing Card */}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-sm backdrop-blur-xs">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-300 mb-3">
-          Daily Burn Rate Pace
+          {t.compare.burnRateTitle}
         </h3>
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div className="rounded-xl border border-zinc-800/60 bg-zinc-950/60 p-3">
-            <p className="text-[10px] text-zinc-400">Current Daily Avg</p>
+            <p className="text-[10px] text-zinc-400">{t.compare.currentDailyAvg}</p>
             <p className="mt-1 text-sm font-bold text-zinc-100">
               Rp {Math.round(thisDailyAvg).toLocaleString("id-ID")}
             </p>
             <p className="text-[9px] text-zinc-500 mt-0.5">
-              Based on {todayDayIndex} elapsed days
+              {t.compare.basedOnElapsedDays.replace("{days}", String(todayDayIndex))}
             </p>
           </div>
 
           <div className="rounded-xl border border-zinc-800/60 bg-zinc-950/60 p-3">
-            <p className="text-[10px] text-zinc-400">Last Week Daily Avg</p>
+            <p className="text-[10px] text-zinc-400">{t.compare.lastWeekDailyAvg}</p>
             <p className="mt-1 text-sm font-bold text-zinc-300">
               Rp {Math.round(lastDailyAvg).toLocaleString("id-ID")}
             </p>
-            <p className="text-[9px] text-zinc-500 mt-0.5">Across all 7 days</p>
+            <p className="text-[9px] text-zinc-500 mt-0.5">{t.compare.acrossAllDays}</p>
           </div>
         </div>
 
         <p className="text-[11px] text-zinc-400 text-center mt-3">
           {thisDailyAvg <= lastDailyAvg ? (
             <span className="text-emerald-400 font-medium">
-              You are spending ~Rp{" "}
-              {Math.round(lastDailyAvg - thisDailyAvg).toLocaleString("id-ID")}{" "}
-              less per day so far!
+              {t.compare.pacingSaving.replace(
+                "{amount}",
+                Math.round(lastDailyAvg - thisDailyAvg).toLocaleString("id-ID")
+              )}
             </span>
           ) : (
             <span className="text-amber-400 font-medium">
-              Pacing ~Rp{" "}
-              {Math.round(thisDailyAvg - lastDailyAvg).toLocaleString("id-ID")}{" "}
-              more per day than last week.
+              {t.compare.pacingOver.replace(
+                "{amount}",
+                Math.round(thisDailyAvg - lastDailyAvg).toLocaleString("id-ID")
+              )}
             </span>
           )}
         </p>
@@ -278,14 +286,14 @@ export default async function ComparePage() {
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-sm backdrop-blur-xs">
         <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
-            Daily Trend Comparison
+            {t.compare.trendTitle}
           </h3>
           <div className="flex items-center gap-3 text-[10px]">
             <span className="flex items-center gap-1 text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-xs bg-emerald-500"></span> This Week
+              <span className="w-2 h-2 rounded-xs bg-emerald-500"></span> {t.compare.thisWeek}
             </span>
             <span className="flex items-center gap-1 text-zinc-400 font-medium">
-              <span className="w-2 h-2 rounded-xs bg-zinc-700"></span> Last Week
+              <span className="w-2 h-2 rounded-xs bg-zinc-700"></span> {t.compare.lastWeek}
             </span>
           </div>
         </div>
@@ -315,7 +323,7 @@ export default async function ComparePage() {
                     <div
                       style={{ height: `${day.lastAmt > 0 ? lastHeight : 4}%` }}
                       className="w-1/2 rounded-t-xs bg-zinc-700 transition-all"
-                      title={`Last Week ${day.dayName}: Rp ${day.lastAmt.toLocaleString("id-ID")}`}
+                      title={`${t.compare.lastWeek} ${day.dayName}: Rp ${day.lastAmt.toLocaleString("id-ID")}`}
                     />
                     {/* This Week Bar (Emerald) */}
                     <div
@@ -323,7 +331,7 @@ export default async function ComparePage() {
                       className={`w-1/2 rounded-t-xs transition-all ${
                         day.isToday ? "bg-emerald-400" : "bg-emerald-500/80"
                       }`}
-                      title={`This Week ${day.dayName}: Rp ${day.thisAmt.toLocaleString("id-ID")}`}
+                      title={`${t.compare.thisWeek} ${day.dayName}: Rp ${day.thisAmt.toLocaleString("id-ID")}`}
                     />
                   </div>
 
@@ -335,7 +343,7 @@ export default async function ComparePage() {
                         : "text-zinc-500 font-medium"
                     }`}
                   >
-                    {day.dayName}
+                    {day.isToday ? t.common.today : day.dayName}
                   </span>
                 </div>
               );
@@ -347,12 +355,12 @@ export default async function ComparePage() {
       {/* Category Delta Comparison */}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-sm backdrop-blur-xs">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-300 mb-3">
-          Category Changes
+          {t.compare.categoryChangesTitle}
         </h3>
 
         {categoryComparison.length === 0 ? (
           <p className="py-6 text-center text-xs text-zinc-500">
-            No expenses recorded for either week yet.
+            {t.compare.noExpensesBothWeeks}
           </p>
         ) : (
           <div className="space-y-3">
@@ -373,11 +381,11 @@ export default async function ComparePage() {
                     />
                     <div>
                       <p className="text-xs font-semibold text-zinc-200">
-                        {cat.category}
+                        {getCategoryLabelServer(cat.category, locale)}
                       </p>
                       <p className="text-[10px] text-zinc-500">
                         Rp {cat.thisAmt.toLocaleString("id-ID")}{" "}
-                        <span className="text-zinc-600">vs</span> Rp{" "}
+                        <span className="text-zinc-600">{t.common.vs}</span> Rp{" "}
                         {cat.lastAmt.toLocaleString("id-ID")}
                       </p>
                     </div>
@@ -396,7 +404,7 @@ export default async function ComparePage() {
                       </span>
                     ) : (
                       <span className="text-xs font-medium text-zinc-500">
-                        No change
+                        {t.compare.noChange}
                       </span>
                     )}
                     {cat.pct !== null && (

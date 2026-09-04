@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Download, X } from "lucide-react";
+import { useTranslation } from "@/utils/i18n/context";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -9,6 +10,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export default function InstallPrompt() {
+  const { t } = useTranslation();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
@@ -74,10 +76,10 @@ export default function InstallPrompt() {
         </div>
         <div className="min-w-0">
           <p className="text-xs font-semibold text-zinc-100 truncate">
-            Install Expense Tracker
+            {t.install.title}
           </p>
           <p className="text-[11px] text-zinc-400 truncate">
-            Add to home screen for full-screen mode
+            {t.install.subtitle}
           </p>
         </div>
       </div>
@@ -88,13 +90,13 @@ export default function InstallPrompt() {
           onClick={handleInstallClick}
           className="rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 px-3 py-1.5 text-xs font-semibold text-zinc-950 transition-all cursor-pointer shadow-sm"
         >
-          Install
+          {t.install.install}
         </button>
         <button
           type="button"
           onClick={handleDismiss}
-          aria-label="Dismiss install banner"
-          className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+          aria-label={t.install.dismiss}
+          className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
         >
           <X className="w-3.5 h-3.5" />
         </button>

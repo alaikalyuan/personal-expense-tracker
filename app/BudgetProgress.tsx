@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Pencil, X, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { setWeeklyBudget } from "@/app/actions";
+import { useTranslation } from "@/utils/i18n/context";
 
 interface BudgetProgressProps {
   weeklyTotal: number;
@@ -10,21 +11,22 @@ interface BudgetProgressProps {
   daysRemaining: number;
 }
 
-const presetBudgets = [
-  { label: "250k", value: 250000 },
-  { label: "500k", value: 500000 },
-  { label: "1jt", value: 1000000 },
-  { label: "2jt", value: 2000000 },
-];
-
 export default function BudgetProgress({
   weeklyTotal,
   weeklyBudget,
   daysRemaining,
 }: BudgetProgressProps) {
+  const { t, locale } = useTranslation();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [budgetInput, setBudgetInput] = useState(String(weeklyBudget));
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const presetBudgets = [
+    { label: t.budget.preset250k, value: 250000 },
+    { label: t.budget.preset500k, value: 500000 },
+    { label: t.budget.preset1m, value: 1000000 },
+    { label: t.budget.preset2m, value: 2000000 },
+  ];
 
   const rawPercent = weeklyBudget > 0 ? Math.round((weeklyTotal / weeklyBudget) * 100) : 0;
   const barWidth = Math.min(rawPercent, 100);
@@ -69,7 +71,7 @@ export default function BudgetProgress({
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
           )}
           <span>
-            {rawPercent}% used of{" "}
+            {rawPercent}% {t.budget.percentUsedOf}{" "}
             <span className="text-zinc-200 font-semibold">
               Rp {weeklyBudget.toLocaleString("id-ID")}
             </span>
@@ -82,11 +84,11 @@ export default function BudgetProgress({
             setBudgetInput(String(weeklyBudget));
             setIsEditOpen(true);
           }}
-          aria-label="Edit weekly budget"
+          aria-label={t.budget.editLimit}
           className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-200 py-0.5 px-1.5 rounded-md hover:bg-zinc-800/60 transition-colors cursor-pointer"
         >
           <Pencil className="w-3 h-3" />
-          <span>Edit limit</span>
+          <span>{t.budget.editLimit}</span>
         </button>
       </div>
 
@@ -102,20 +104,20 @@ export default function BudgetProgress({
       <div className="flex items-center justify-between text-[11px]">
         {isOver ? (
           <span className="font-semibold text-rose-400">
-            Over budget by Rp {Math.abs(remaining).toLocaleString("id-ID")}
+            {t.budget.overBudgetBy} Rp {Math.abs(remaining).toLocaleString("id-ID")}
           </span>
         ) : (
           <span className="text-zinc-400">
             <span className={`font-semibold ${textColor}`}>
               Rp {remaining.toLocaleString("id-ID")}
             </span>{" "}
-            left
+            {t.budget.left}
           </span>
         )}
 
         {!isOver && (
           <span className="text-zinc-500">
-            ~Rp {dailyAllowance.toLocaleString("id-ID")}/day ({daysRemaining}d left)
+            ~Rp {dailyAllowance.toLocaleString("id-ID")}/{locale === "id" ? "hari" : "day"} ({locale === "id" ? `sisa ${daysRemaining} hari` : `${daysRemaining}d left`})
           </span>
         )}
       </div>
@@ -134,16 +136,16 @@ export default function BudgetProgress({
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
               <div>
                 <h3 className="text-sm font-semibold text-zinc-100">
-                  Weekly Budget Limit
+                  {t.budget.modalTitle}
                 </h3>
                 <p className="text-[11px] text-zinc-400">
-                  Set your maximum weekly spending goal
+                  {t.budget.modalSubtitle}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsEditOpen(false)}
-                className="p-1 text-zinc-500 hover:text-zinc-200 rounded-md transition-colors"
+                className="p-1 text-zinc-500 hover:text-zinc-200 rounded-md transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -153,7 +155,7 @@ export default function BudgetProgress({
               {/* Preset buttons */}
               <div>
                 <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-400 mb-1.5">
-                  Quick Presets
+                  {t.budget.quickPresets}
                 </p>
                 <div className="grid grid-cols-4 gap-1.5">
                   {presetBudgets.map((preset) => (
@@ -161,7 +163,7 @@ export default function BudgetProgress({
                       key={preset.value}
                       type="button"
                       onClick={() => setBudgetInput(String(preset.value))}
-                      className={`py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                      className={`py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                         budgetInput === String(preset.value)
                           ? "border-emerald-500 bg-emerald-950/40 text-emerald-400"
                           : "border-zinc-800 bg-zinc-950/60 text-zinc-300 hover:bg-zinc-800"
@@ -196,16 +198,16 @@ export default function BudgetProgress({
                 <button
                   type="button"
                   onClick={() => setIsEditOpen(false)}
-                  className="rounded-xl border border-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors"
+                  className="rounded-xl border border-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors cursor-pointer"
                 >
-                  Cancel
+                  {t.common.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-xl bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-950 hover:bg-zinc-200 active:scale-95 transition-all disabled:opacity-50"
+                  className="rounded-xl bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-950 hover:bg-zinc-200 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
                 >
-                  {isSubmitting ? "Saving..." : "Save Budget"}
+                  {isSubmitting ? t.common.saving : t.budget.saveBudget}
                 </button>
               </div>
             </form>

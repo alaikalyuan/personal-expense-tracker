@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { addExpense } from "@/app/actions";
 import { X } from "lucide-react";
+import { useTranslation } from "@/utils/i18n/context";
+import { CATEGORY_KEYS } from "@/utils/i18n/dictionaries";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface QuickAddModalProps {
 }
 
 export function QuickAddModal({ isOpen, onClose, today }: QuickAddModalProps) {
+  const { t, getCategoryLabel } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +26,7 @@ export function QuickAddModal({ isOpen, onClose, today }: QuickAddModalProps) {
       await addExpense(formData);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add expense");
+      setError(err instanceof Error ? err.message : t.expenses.failedToAdd);
     } finally {
       setIsSubmitting(false);
     }
@@ -47,13 +50,13 @@ export function QuickAddModal({ isOpen, onClose, today }: QuickAddModalProps) {
         className="w-full max-w-md flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl animate-modal-in"
       >
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-sm text-zinc-100">Add expense</h2>
+          <h2 className="font-semibold text-sm text-zinc-100">{t.expenses.addTitle}</h2>
           <button
             type="button"
             onClick={handleClose}
             disabled={isSubmitting}
-            aria-label="Close add expense popup"
-            className="text-zinc-500 hover:text-zinc-200 p-1 rounded-md transition-colors disabled:opacity-50"
+            aria-label={t.common.close}
+            className="text-zinc-500 hover:text-zinc-200 p-1 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -73,33 +76,20 @@ export function QuickAddModal({ isOpen, onClose, today }: QuickAddModalProps) {
               type="number"
               inputMode="numeric"
               step="1"
-              placeholder="Amount"
+              placeholder={t.expenses.amountPlaceholder}
               required
-              className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-zinc-500"
+              className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-zinc-500 text-zinc-100"
             />
           </div>
           <select
             name="category"
-            className="w-1/2 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+            className="w-1/2 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-500 text-zinc-100"
           >
-            <option value="Food & Dining" className="text-green-500">
-              Food & Dining
-            </option>
-            <option value="Transportation" className="text-blue-500">
-              Transportation
-            </option>
-            <option value="Utilities" className="text-yellow-500">
-              Utilities
-            </option>
-            <option value="Academics" className="text-purple-500">
-              Academics
-            </option>
-            <option value="Entertainment" className="text-pink-500">
-              Entertainment
-            </option>
-            <option value="Others" className="text-zinc-500">
-              Others
-            </option>
+            {CATEGORY_KEYS.map((catKey) => (
+              <option key={catKey} value={catKey}>
+                {getCategoryLabel(catKey)}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -115,23 +105,23 @@ export function QuickAddModal({ isOpen, onClose, today }: QuickAddModalProps) {
           <input
             name="name"
             type="text"
-            placeholder="Expense name"
+            placeholder={t.expenses.namePlaceholder}
             required
-            className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+            className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-500 text-zinc-100"
           />
           <div className="flex gap-2">
             <input
               name="note"
               type="text"
-              placeholder="Optional note"
-              className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+              placeholder={t.expenses.notePlaceholder}
+              className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-500 text-zinc-100"
             />
             <button
               type="submit"
               disabled={isSubmitting}
               className="rounded-xl bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-950 transition-colors hover:bg-zinc-200 cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting ? "Adding..." : "Add"}
+              {isSubmitting ? t.common.adding : t.common.add}
             </button>
           </div>
         </div>
@@ -141,6 +131,7 @@ export function QuickAddModal({ isOpen, onClose, today }: QuickAddModalProps) {
 }
 
 export default function QuickAddExpense({ today }: { today: string }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -148,8 +139,8 @@ export default function QuickAddExpense({ today }: { today: string }) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        aria-label="Add expense"
-        className="fixed bottom-6 right-6 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-2xl font-semibold text-zinc-950 shadow-lg shadow-black/30 transition-colors hover:bg-zinc-200"
+        aria-label={t.nav.addExpense}
+        className="fixed bottom-6 right-6 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-2xl font-semibold text-zinc-950 shadow-lg shadow-black/30 transition-colors hover:bg-zinc-200 cursor-pointer"
       >
         +
       </button>

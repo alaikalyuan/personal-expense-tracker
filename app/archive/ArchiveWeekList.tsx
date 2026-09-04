@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, Calendar, Tag, Search, X } from "lucide-react";
 import ExpenseList, { ExpenseItem } from "@/app/ExpenseList";
+import { useTranslation } from "@/utils/i18n/context";
 
 export interface ArchivedWeek {
   weekId: string;
@@ -19,6 +20,8 @@ interface ArchiveWeekListProps {
 }
 
 export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
+  const { t, getCategoryLabel } = useTranslation();
+
   // Default open the most recent past week
   const [expandedWeeks, setExpandedWeeks] = useState<Record<string, boolean>>(() => {
     if (weeks.length > 0) {
@@ -73,9 +76,9 @@ export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
     return (
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center">
         <Calendar className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-        <p className="text-sm font-semibold text-zinc-300">No archived weeks yet</p>
+        <p className="text-sm font-semibold text-zinc-300">{t.archive.noArchivedWeeks}</p>
         <p className="text-xs text-zinc-500 mt-1">
-          Expenses recorded in past weeks will automatically appear here once the current week concludes.
+          {t.archive.noArchivedDescription}
         </p>
       </div>
     );
@@ -91,14 +94,15 @@ export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search past expenses..."
+            placeholder={t.archive.searchPlaceholder}
             className="w-full rounded-xl border border-zinc-800 bg-zinc-900/70 pl-9 pr-8 py-2 text-xs text-zinc-200 placeholder:text-zinc-500 outline-none focus:border-zinc-600 transition-colors"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 text-zinc-500 hover:text-zinc-300 p-0.5"
+              aria-label={t.common.close}
+              className="absolute right-2.5 text-zinc-500 hover:text-zinc-300 p-0.5 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -107,8 +111,8 @@ export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
 
         <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1">
           <span>
-            {filteredWeeks.length} {filteredWeeks.length === 1 ? "week" : "weeks"}
-            {searchQuery && ` matching "${searchQuery}"`}
+            {filteredWeeks.length} {filteredWeeks.length === 1 ? t.archive.weekCount : t.archive.weeksCount}
+            {searchQuery && ` ${t.archive.weeksMatching} "${searchQuery}"`}
           </span>
           <div className="flex items-center gap-3">
             <button
@@ -116,7 +120,7 @@ export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
               onClick={expandAll}
               className="hover:text-zinc-300 transition-colors cursor-pointer"
             >
-              Expand all
+              {t.archive.expandAll}
             </button>
             <span>•</span>
             <button
@@ -124,7 +128,7 @@ export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
               onClick={collapseAll}
               className="hover:text-zinc-300 transition-colors cursor-pointer"
             >
-              Collapse all
+              {t.archive.collapseAll}
             </button>
           </div>
         </div>
@@ -155,13 +159,13 @@ export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
                   </div>
 
                   <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-400">
-                    <span>{week.expenses.length} {week.expenses.length === 1 ? "entry" : "entries"}</span>
+                    <span>{week.expenses.length} {week.expenses.length === 1 ? t.archive.entryCount : t.archive.entriesCount}</span>
                     {week.topCategory && week.topCategory !== "None" && (
                       <>
                         <span className="text-zinc-600">•</span>
                         <span className="flex items-center gap-1 text-zinc-400 truncate">
                           <Tag className="w-2.5 h-2.5 text-zinc-500 shrink-0" />
-                          {week.topCategory}
+                          {getCategoryLabel(week.topCategory)}
                         </span>
                       </>
                     )}

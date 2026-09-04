@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Student Expense Tracker",
-    short_name: "Expenses",
-    description: "Track weekly college and personal expenses",
+    name: "Catatan Pengeluaran Pribadi",
+    short_name: "Pengeluaran",
+    description: "Catat pengeluaran mingguan kuliah dan pribadi",
     start_url: "/",
     id: "/",
     scope: "/",

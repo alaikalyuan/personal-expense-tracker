@@ -13,10 +13,15 @@ import UserMenu from "@/app/UserMenu";
 import ArchiveWeekList, { ArchivedWeek } from "./ArchiveWeekList";
 import { ExpenseItem } from "@/app/ExpenseList";
 import { getNowInTimezone } from "@/utils/date";
+import {
+  getDictionaryServer,
+  formatDateServer,
+} from "@/utils/i18n/server";
 
 export default async function ArchivePage() {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
+  const { t, locale } = await getDictionaryServer();
 
   const {
     data: { user },
@@ -83,9 +88,10 @@ export default async function ArchivePage() {
         Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ||
         "None";
 
-      const label = `${format(startDate, "MMM d")} – ${format(
+      const label = `${formatDateServer(startDate, "MMM d", locale)} – ${formatDateServer(
         endDate,
-        "MMM d, yyyy"
+        "MMM d, yyyy",
+        locale
       )}`;
 
       return {
@@ -121,7 +127,7 @@ export default async function ArchivePage() {
         <div className="flex items-center gap-2.5">
           <Link
             href="/"
-            aria-label="Back to tracker"
+            aria-label={t.archive.backToTracker}
             className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -129,9 +135,9 @@ export default async function ArchivePage() {
           <div>
             <h1 className="font-bold tracking-tight text-lg flex items-center gap-1.5">
               <Archive className="w-4 h-4 text-amber-400" />
-              Archive
+              {t.archive.title}
             </h1>
-            <p className="text-[11px] text-zinc-400">Past weeks spending history</p>
+            <p className="text-[11px] text-zinc-400">{t.archive.subtitle}</p>
           </div>
         </div>
 
@@ -142,30 +148,30 @@ export default async function ArchivePage() {
       {archivedWeeks.length > 0 && (
         <div className="rounded-2xl border border-zinc-800 bg-linear-to-b from-zinc-900 to-zinc-950 p-4 shadow-sm">
           <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-            Historical Summary
+            {t.archive.historicalSummary}
           </p>
 
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div>
-              <p className="text-[10px] text-zinc-400">Total Spent</p>
+              <p className="text-[10px] text-zinc-400">{t.archive.totalSpent}</p>
               <p className="mt-0.5 text-xs font-bold text-white truncate">
                 Rp {totalArchivedSpend.toLocaleString("id-ID")}
               </p>
             </div>
 
             <div className="border-l border-zinc-800/80 pl-2.5">
-              <p className="text-[10px] text-zinc-400">Weekly Avg</p>
+              <p className="text-[10px] text-zinc-400">{t.archive.weeklyAvg}</p>
               <p className="mt-0.5 text-xs font-bold text-zinc-200 truncate">
                 Rp {avgArchivedSpend.toLocaleString("id-ID")}
               </p>
             </div>
 
             <div className="border-l border-zinc-800/80 pl-2.5">
-              <p className="text-[10px] text-zinc-400">History</p>
+              <p className="text-[10px] text-zinc-400">{t.archive.history}</p>
               <p className="mt-0.5 text-xs font-bold text-zinc-200">
-                {archivedWeeks.length} {archivedWeeks.length === 1 ? "week" : "weeks"}
+                {archivedWeeks.length} {archivedWeeks.length === 1 ? t.archive.weekCount : t.archive.weeksCount}
               </p>
-              <p className="text-[9px] text-zinc-500">{totalEntries} entries</p>
+              <p className="text-[9px] text-zinc-500">{totalEntries} {totalEntries === 1 ? t.archive.entryCount : t.archive.entriesCount}</p>
             </div>
           </div>
         </div>

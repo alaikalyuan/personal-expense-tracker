@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { format, parseISO } from "date-fns";
 import { Pencil, Trash2, X } from "lucide-react";
 import { updateExpense, deleteExpense } from "@/app/actions";
+import { useTranslation } from "@/utils/i18n/context";
+import { CATEGORY_KEYS } from "@/utils/i18n/dictionaries";
 
 export interface ExpenseItem {
   id: string;
@@ -24,12 +25,13 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function ExpenseList({ expenses }: { expenses: ExpenseItem[] }) {
+  const { t, formatDate, getCategoryLabel } = useTranslation();
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this expense?")) {
+    if (!confirm(t.expenses.deleteConfirm)) {
       return;
     }
     try {
@@ -54,7 +56,7 @@ export default function ExpenseList({ expenses }: { expenses: ExpenseItem[] }) {
   if (!expenses || expenses.length === 0) {
     return (
       <p className="text-sm text-zinc-500 py-8 text-center">
-        No expenses recorded this week yet.
+        {t.dashboard.noExpenses}
       </p>
     );
   }
@@ -73,11 +75,11 @@ export default function ExpenseList({ expenses }: { expenses: ExpenseItem[] }) {
               <p className="text-sm font-medium text-zinc-100">{item.name}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 {item.category && (
-                  <span className="text-xs text-zinc-400">{item.category}</span>
+                  <span className="text-xs text-zinc-400">{getCategoryLabel(item.category)}</span>
                 )}
                 <span className="text-[10px] text-zinc-600">•</span>
                 <span className="text-xs text-zinc-500">
-                  {format(parseISO(item.spent_at), "MMM d, yyyy")}
+                  {formatDate(item.spent_at, "MMM d, yyyy")}
                 </span>
               </div>
               {item.note && (
@@ -120,17 +122,17 @@ export default function ExpenseList({ expenses }: { expenses: ExpenseItem[] }) {
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
               <div>
                 <h3 className="text-sm font-semibold text-zinc-100">
-                  Edit expense
+                  {t.expenses.editTitle}
                 </h3>
                 <p className="text-[11px] text-zinc-400">
-                  Update details or delete this entry
+                  {t.expenses.editSubtitle}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingExpense(null)}
-                aria-label="Close edit popup"
-                className="p-1 text-zinc-500 hover:text-zinc-200 rounded-md transition-colors"
+                aria-label={t.common.close}
+                className="p-1 text-zinc-500 hover:text-zinc-200 rounded-md transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -160,12 +162,11 @@ export default function ExpenseList({ expenses }: { expenses: ExpenseItem[] }) {
                   defaultValue={editingExpense.category}
                   className="w-1/2 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-500"
                 >
-                  <option value="Food & Dining">Food & Dining</option>
-                  <option value="Transportation">Transportation</option>
-                  <option value="Utilities">Utilities</option>
-                  <option value="Academics">Academics</option>
-                  <option value="Entertainment">Entertainment</option>
-                  <option value="Others">Others</option>
+                  {CATEGORY_KEYS.map((catKey) => (
+                    <option key={catKey} value={catKey}>
+                      {getCategoryLabel(catKey)}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -185,7 +186,7 @@ export default function ExpenseList({ expenses }: { expenses: ExpenseItem[] }) {
                 name="name"
                 type="text"
                 defaultValue={editingExpense.name}
-                placeholder="Expense name"
+                placeholder={t.expenses.namePlaceholder}
                 required
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-500"
               />
@@ -194,7 +195,7 @@ export default function ExpenseList({ expenses }: { expenses: ExpenseItem[] }) {
                 name="note"
                 type="text"
                 defaultValue={editingExpense.note || ""}
-                placeholder="Optional note"
+                placeholder={t.expenses.notePlaceholder}
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-500"
               />
 
@@ -207,7 +208,7 @@ export default function ExpenseList({ expenses }: { expenses: ExpenseItem[] }) {
                   className="flex items-center gap-1.5 rounded-xl border border-rose-900/50 bg-rose-950/20 px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-950/50 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  {isDeleting ? "Deleting..." : "Delete"}
+                  {isDeleting ? t.common.deleting : t.common.delete}
                 </button>
 
                 <div className="flex items-center gap-2">
@@ -216,14 +217,14 @@ export default function ExpenseList({ expenses }: { expenses: ExpenseItem[] }) {
                     onClick={() => setEditingExpense(null)}
                     className="rounded-xl border border-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors cursor-pointer"
                   >
-                    Cancel
+                    {t.common.cancel}
                   </button>
                   <button
                     type="submit"
                     disabled={isDeleting || isUpdating}
                     className="rounded-xl bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-950 hover:bg-zinc-200 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    {isUpdating ? "Saving..." : "Save changes"}
+                    {isUpdating ? t.common.saving : t.expenses.saveChanges}
                   </button>
                 </div>
               </div>

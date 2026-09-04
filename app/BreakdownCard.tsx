@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Calendar, PieChart, ChevronDown } from "lucide-react";
+import { useTranslation } from "@/utils/i18n/context";
 
 export interface DaySpend {
   dayName: string;
@@ -38,6 +39,7 @@ export default function BreakdownCard({
   categoryData,
   weeklyTotal,
 }: BreakdownCardProps) {
+  const { t, getCategoryLabel } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState<"daily" | "category">("daily");
 
@@ -66,18 +68,18 @@ export default function BreakdownCard({
         >
           <div className="flex items-center gap-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-300 group-hover:text-zinc-100 transition-colors">
-              Breakdown
+              {t.breakdown.title}
             </h3>
             <span className="text-[10px] text-zinc-500 rounded-md bg-zinc-800/60 px-1.5 py-0.5">
-              {isExpanded ? "Hide" : "Show"}
+              {isExpanded ? t.breakdown.hide : t.breakdown.show}
             </span>
           </div>
           <p className="text-[10px] text-zinc-500 mt-0.5 truncate">
             {isExpanded
               ? activeTab === "daily"
-                ? "Past 7 days"
-                : `Rp ${weeklyTotal.toLocaleString("id-ID")} total`
-              : "7-day activity & category split"}
+                ? t.breakdown.pastSevenDays
+                : `${t.breakdown.totalAmount} Rp ${weeklyTotal.toLocaleString("id-ID")}`
+              : t.breakdown.summarySubtitle}
           </p>
         </div>
 
@@ -88,26 +90,26 @@ export default function BreakdownCard({
               <button
                 type="button"
                 onClick={() => setActiveTab("daily")}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
                   activeTab === "daily"
                     ? "bg-zinc-800 text-white shadow-xs"
                     : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5" />
-                Daily
+                {t.breakdown.tabDaily}
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("category")}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
                   activeTab === "category"
                     ? "bg-zinc-800 text-white shadow-xs"
                     : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 <PieChart className="w-3.5 h-3.5" />
-                Categories
+                {t.breakdown.tabCategories}
               </button>
             </div>
           )}
@@ -116,14 +118,14 @@ export default function BreakdownCard({
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            aria-label={isExpanded ? "Hide breakdown" : "Show breakdown"}
+            aria-label={isExpanded ? t.breakdown.hideBreakdownAria : t.breakdown.showBreakdownAria}
             className={`flex items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-colors cursor-pointer shrink-0 ${
               isExpanded
                 ? "h-7 w-7 p-1.5"
                 : "gap-1.5 py-1 px-2.5 text-xs font-medium"
             }`}
           >
-            {!isExpanded && <span>Show</span>}
+            {!isExpanded && <span>{t.breakdown.show}</span>}
             <ChevronDown
               className={`w-3.5 h-3.5 transition-transform duration-300 ${
                 isExpanded ? "rotate-180" : "rotate-0"
@@ -210,7 +212,7 @@ export default function BreakdownCard({
                             : "text-zinc-500"
                         }`}
                       >
-                        {day.isToday ? "Today" : day.dayName}
+                        {day.isToday ? t.common.today : day.dayName}
                       </span>
                     </button>
                   );
@@ -223,7 +225,7 @@ export default function BreakdownCard({
                   {selectedDay.formattedDate}
                   {selectedDay.isToday && (
                     <span className="ml-1 text-[10px] text-emerald-400 font-medium">
-                      (Today)
+                      ({t.common.today})
                     </span>
                   )}
                 </span>
@@ -233,7 +235,7 @@ export default function BreakdownCard({
               </div>
               {peakDay && peakDay.amount > 0 && (
                 <p className="mt-1 text-[10px] text-zinc-500 text-center">
-                  Peak: {peakDay.dayName} (Rp {peakDay.amount.toLocaleString("id-ID")})
+                  {t.breakdown.peakDay}: {peakDay.dayName} (Rp {peakDay.amount.toLocaleString("id-ID")})
                 </p>
               )}
             </div>
@@ -244,7 +246,7 @@ export default function BreakdownCard({
             <div className="space-y-3 animate-fade-in">
               {categoryData.length === 0 ? (
                 <p className="py-6 text-center text-xs text-zinc-500">
-                  No category data recorded for this week yet.
+                  {t.breakdown.noCategories}
                 </p>
               ) : (
                 categoryData.map((item) => (
@@ -256,7 +258,7 @@ export default function BreakdownCard({
                             categoryBgColors[item.category] || "bg-zinc-500"
                           }`}
                         />
-                        {item.category}
+                        {getCategoryLabel(item.category)}
                       </span>
                       <span className="font-medium text-zinc-200">
                         Rp {item.amount.toLocaleString("id-ID")}{" "}

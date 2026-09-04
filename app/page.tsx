@@ -15,10 +15,16 @@ import ExpenseList from "./ExpenseList";
 import BudgetProgress from "./BudgetProgress";
 import InstallPrompt from "./InstallPrompt";
 import { getNowInTimezone } from "@/utils/date";
+import {
+  getDictionaryServer,
+  formatDateServer,
+  getCategoryLabelServer,
+} from "@/utils/i18n/server";
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
+  const { t, locale } = await getDictionaryServer();
 
   const {
     data: { user },
@@ -68,6 +74,10 @@ export default async function DashboardPage() {
   }, {});
 
   const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0] || ["None", 0];
+  const topCategoryName =
+    topCategory[0] === "None"
+      ? t.common.none
+      : getCategoryLabelServer(topCategory[0], locale);
 
   // 4. Daily breakdown (Mon - Sun)
   const dailyData: DaySpend[] = Array.from({ length: 7 }, (_, i) => {
@@ -81,9 +91,9 @@ export default async function DashboardPage() {
     }, 0);
 
     return {
-      dayName: format(dayDate, "EEE"),
+      dayName: formatDateServer(dayDate, "EEE", locale),
       dateStr,
-      formattedDate: format(dayDate, "EEEE, MMM d"),
+      formattedDate: formatDateServer(dayDate, "EEEE, MMM d", locale),
       amount: dayTotal,
       isToday: isSameDay(dayDate, now),
       isFuture: isAfter(dayDate, now),
@@ -103,7 +113,7 @@ export default async function DashboardPage() {
     <main className="max-w-md mx-auto p-4 pb-48 flex flex-col gap-6">
       {/* Header */}
       <div className="flex justify-between items-center pt-2">
-        <h1 className="font-bold tracking-tight text-lg">Weekly Expenses</h1>
+        <h1 className="font-bold tracking-tight text-lg">{t.dashboard.title}</h1>
         <UserMenu />
       </div>
 
@@ -115,7 +125,7 @@ export default async function DashboardPage() {
         <div className="flex items-baseline justify-between">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">
-              Spent this week
+              {t.dashboard.spentThisWeek}
             </p>
             <p className="mt-1 text-3xl font-extrabold tracking-tight text-white">
               Rp {weeklyTotal.toLocaleString("id-ID")}
@@ -135,23 +145,23 @@ export default async function DashboardPage() {
         {/* Daily Average */}
         <div>
           <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-400">
-            Daily Avg
+            {t.dashboard.dailyAvg}
           </p>
           <p className="mt-0.5 text-xs font-semibold text-zinc-200">
             Rp {Math.round(avgDailySpend).toLocaleString("id-ID")}
           </p>
           <p className="mt-0.5 text-[10px] text-zinc-500">
-            {todayDayIndex} of 7 days
+            {todayDayIndex} {t.dashboard.dayOfSeven}
           </p>
         </div>
 
         {/* Top Category */}
         <div className="border-l border-zinc-800/60 pl-2">
           <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-400">
-            Top Category
+            {t.dashboard.topCategory}
           </p>
-          <p className="mt-0.5 truncate text-xs font-semibold text-zinc-200" title={topCategory[0]}>
-            {topCategory[0]}
+          <p className="mt-0.5 truncate text-xs font-semibold text-zinc-200" title={topCategoryName}>
+            {topCategoryName}
           </p>
           <p className="mt-0.5 truncate text-[10px] text-zinc-500">
             Rp {Number(topCategory[1]).toLocaleString("id-ID")}
@@ -161,13 +171,13 @@ export default async function DashboardPage() {
         {/* Max Spend */}
         <div className="border-l border-zinc-800/60 pl-2">
           <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-400">
-            Largest
+            {t.dashboard.largest}
           </p>
           <p className="mt-0.5 text-xs font-semibold text-zinc-200">
             Rp {largestSpend.toLocaleString("id-ID")}
           </p>
-          <p className="mt-0.5 truncate text-[10px] text-zinc-500" title={largestExpense?.name ?? "None"}>
-            {largestExpense?.name ?? "None"}
+          <p className="mt-0.5 truncate text-[10px] text-zinc-500" title={largestExpense?.name ?? t.common.none}>
+            {largestExpense?.name ?? t.common.none}
           </p>
         </div>
         </div>
@@ -183,7 +193,7 @@ export default async function DashboardPage() {
       {/* Expense Log */}
       <div className="flex flex-col gap-2">
         <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-400">
-          Recent entries
+          {t.dashboard.recentEntries}
         </h2>
         <ExpenseList expenses={expenses || []} />
       </div>
