@@ -128,16 +128,16 @@ export default async function ArchivePage() {
           <Link
             href="/"
             aria-label={t.archive.backToTracker}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="font-bold tracking-tight text-lg flex items-center gap-1.5">
-              <Archive className="w-4 h-4 text-amber-400" />
+            <h1 className="font-bold tracking-tight text-lg flex items-center gap-1.5 text-zinc-900 dark:text-white">
+              <Archive className="w-4 h-4 text-amber-500 dark:text-amber-400" />
               {t.archive.title}
             </h1>
-            <p className="text-[11px] text-zinc-400">{t.archive.subtitle}</p>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{t.archive.subtitle}</p>
           </div>
         </div>
 
@@ -146,29 +146,29 @@ export default async function ArchivePage() {
 
       {/* Historical Overview Banner */}
       {archivedWeeks.length > 0 && (
-        <div className="rounded-2xl border border-zinc-800 bg-linear-to-b from-zinc-900 to-zinc-950 p-4 shadow-sm">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
+        <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-linear-to-b dark:from-zinc-900 dark:to-zinc-950 dark:shadow-sm">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             {t.archive.historicalSummary}
           </p>
 
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div>
-              <p className="text-[10px] text-zinc-400">{t.archive.totalSpent}</p>
-              <p className="mt-0.5 text-xs font-bold text-white truncate">
+              <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.archive.totalSpent}</p>
+              <p className="mt-0.5 text-xs font-bold text-zinc-900 dark:text-white truncate">
                 Rp {totalArchivedSpend.toLocaleString("id-ID")}
               </p>
             </div>
 
-            <div className="border-l border-zinc-800/80 pl-2.5">
-              <p className="text-[10px] text-zinc-400">{t.archive.weeklyAvg}</p>
-              <p className="mt-0.5 text-xs font-bold text-zinc-200 truncate">
+            <div className="border-l border-zinc-200/80 pl-2.5 dark:border-zinc-800/80">
+              <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.archive.weeklyAvg}</p>
+              <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">
                 Rp {avgArchivedSpend.toLocaleString("id-ID")}
               </p>
             </div>
 
-            <div className="border-l border-zinc-800/80 pl-2.5">
-              <p className="text-[10px] text-zinc-400">{t.archive.history}</p>
-              <p className="mt-0.5 text-xs font-bold text-zinc-200">
+            <div className="border-l border-zinc-200/80 pl-2.5 dark:border-zinc-800/80">
+              <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.archive.history}</p>
+              <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
                 {archivedWeeks.length} {archivedWeeks.length === 1 ? t.archive.weekCount : t.archive.weeksCount}
               </p>
               <p className="text-[9px] text-zinc-500">{totalEntries} {totalEntries === 1 ? t.archive.entryCount : t.archive.entriesCount}</p>

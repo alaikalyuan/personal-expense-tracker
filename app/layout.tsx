@@ -5,6 +5,8 @@ import type { Viewport } from "next";
 import BottomNav from "./BottomNav";
 import { LanguageProvider } from "@/utils/i18n/context";
 import { getLocaleServer } from "@/utils/i18n/server";
+import { ThemeProvider } from "@/utils/theme/context";
+import { getThemeServer } from "@/utils/theme/server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,15 +41,29 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const locale = await getLocaleServer();
+  const [locale, theme] = await Promise.all([getLocaleServer(), getThemeServer()]);
 
   return (
-    <html lang={locale} className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans bg-zinc-950 text-zinc-100 antialiased min-h-screen relative`}>
-        <LanguageProvider initialLocale={locale}>
-          {children}
-          <BottomNav />
-        </LanguageProvider>
+    <html
+      lang={locale}
+      className={theme === "dark" ? "dark" : ""}
+      style={{ colorScheme: theme }}
+      suppressHydrationWarning
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var c=document.cookie.match(/(?:^|;\\s*)THEME=([^;]+)/);var t=c?c[1]:(localStorage.getItem('theme')||'dark');if(t==='dark'){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}else{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light';}}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased min-h-screen relative`}>
+        <ThemeProvider initialTheme={theme}>
+          <LanguageProvider initialLocale={locale}>
+            {children}
+            <BottomNav />
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

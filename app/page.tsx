@@ -121,13 +121,13 @@ export default async function DashboardPage() {
       <InstallPrompt />
 
       {/* Burn Rate Summary */}
-      <div className="rounded-2xl border border-zinc-800 bg-linear-to-b from-zinc-900 to-zinc-950 p-5 shadow-sm">
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-linear-to-b dark:from-zinc-900 dark:to-zinc-950 dark:shadow-sm">
         <div className="flex items-baseline justify-between">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               {t.dashboard.spentThisWeek}
             </p>
-            <p className="mt-1 text-3xl font-extrabold tracking-tight text-white">
+            <p className="mt-1 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
               Rp {weeklyTotal.toLocaleString("id-ID")}
             </p>
           </div>
@@ -141,45 +141,45 @@ export default async function DashboardPage() {
         />
 
         {/* Micro-Stats Shelf */}
-        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-zinc-800/80 pt-4">
-        {/* Daily Average */}
-        <div>
-          <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-400">
-            {t.dashboard.dailyAvg}
-          </p>
-          <p className="mt-0.5 text-xs font-semibold text-zinc-200">
-            Rp {Math.round(avgDailySpend).toLocaleString("id-ID")}
-          </p>
-          <p className="mt-0.5 text-[10px] text-zinc-500">
-            {todayDayIndex} {t.dashboard.dayOfSeven}
-          </p>
-        </div>
+        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-zinc-200/80 pt-4 dark:border-zinc-800/80">
+          {/* Daily Average */}
+          <div>
+            <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-500 dark:text-zinc-400">
+              {t.dashboard.dailyAvg}
+            </p>
+            <p className="mt-0.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+              Rp {Math.round(avgDailySpend).toLocaleString("id-ID")}
+            </p>
+            <p className="mt-0.5 text-[10px] text-zinc-500">
+              {todayDayIndex} {t.dashboard.dayOfSeven}
+            </p>
+          </div>
 
-        {/* Top Category */}
-        <div className="border-l border-zinc-800/60 pl-2">
-          <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-400">
-            {t.dashboard.topCategory}
-          </p>
-          <p className="mt-0.5 truncate text-xs font-semibold text-zinc-200" title={topCategoryName}>
-            {topCategoryName}
-          </p>
-          <p className="mt-0.5 truncate text-[10px] text-zinc-500">
-            Rp {Number(topCategory[1]).toLocaleString("id-ID")}
-          </p>
-        </div>
+          {/* Top Category */}
+          <div className="border-l border-zinc-200/80 pl-2 dark:border-zinc-800/60">
+            <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-500 dark:text-zinc-400">
+              {t.dashboard.topCategory}
+            </p>
+            <p className="mt-0.5 truncate text-xs font-semibold text-zinc-800 dark:text-zinc-200" title={topCategoryName}>
+              {topCategoryName}
+            </p>
+            <p className="mt-0.5 truncate text-[10px] text-zinc-500">
+              Rp {Number(topCategory[1]).toLocaleString("id-ID")}
+            </p>
+          </div>
 
-        {/* Max Spend */}
-        <div className="border-l border-zinc-800/60 pl-2">
-          <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-400">
-            {t.dashboard.largest}
-          </p>
-          <p className="mt-0.5 text-xs font-semibold text-zinc-200">
-            Rp {largestSpend.toLocaleString("id-ID")}
-          </p>
-          <p className="mt-0.5 truncate text-[10px] text-zinc-500" title={largestExpense?.name ?? t.common.none}>
-            {largestExpense?.name ?? t.common.none}
-          </p>
-        </div>
+          {/* Max Spend */}
+          <div className="border-l border-zinc-200/80 pl-2 dark:border-zinc-800/60">
+            <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-500 dark:text-zinc-400">
+              {t.dashboard.largest}
+            </p>
+            <p className="mt-0.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+              Rp {largestSpend.toLocaleString("id-ID")}
+            </p>
+            <p className="mt-0.5 truncate text-[10px] text-zinc-500" title={largestExpense?.name ?? t.common.none}>
+              {largestExpense?.name ?? t.common.none}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -192,7 +192,7 @@ export default async function DashboardPage() {
 
       {/* Expense Log */}
       <div className="flex flex-col gap-2">
-        <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+        <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
           {t.dashboard.recentEntries}
         </h2>
         <ExpenseList expenses={expenses || []} />

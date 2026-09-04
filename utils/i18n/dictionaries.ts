@@ -38,6 +38,10 @@ export interface Dictionary {
     language: string;
     indonesian: string;
     english: string;
+    theme: string;
+    light: string;
+    dark: string;
+    quickAddAria: string;
   };
   categories: Record<CategoryKey, string>;
   dashboard: {
@@ -178,6 +182,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       language: "Bahasa",
       indonesian: "Bahasa Indonesia",
       english: "English",
+      theme: "Tema",
+      light: "Terang",
+      dark: "Gelap",
+      quickAddAria: "Tambah pengeluaran",
     },
     categories: {
       "Food & Dining": "Makanan & Minuman",
@@ -324,6 +332,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       language: "Language",
       indonesian: "Bahasa Indonesia",
       english: "English",
+      theme: "Theme",
+      light: "Light",
+      dark: "Dark",
+      quickAddAria: "Add expense",
     },
     categories: {
       "Food & Dining": "Food & Dining",

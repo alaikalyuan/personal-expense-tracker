@@ -59,7 +59,7 @@ export default function BreakdownCard({
       : null;
 
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-sm backdrop-blur-xs transition-all duration-300">
+    <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs backdrop-blur-xs transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">
       {/* Header with Retract / Expand Controls */}
       <div className="flex items-center justify-between select-none gap-2">
         <div
@@ -67,10 +67,10 @@ export default function BreakdownCard({
           className="cursor-pointer group flex-1 min-w-0 pr-1"
         >
           <div className="flex items-center gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-300 group-hover:text-zinc-100 transition-colors">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-700 group-hover:text-zinc-900 dark:text-zinc-300 dark:group-hover:text-zinc-100 transition-colors">
               {t.breakdown.title}
             </h3>
-            <span className="text-[10px] text-zinc-500 rounded-md bg-zinc-800/60 px-1.5 py-0.5">
+            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 rounded-md bg-zinc-100 dark:bg-zinc-800/60 px-1.5 py-0.5">
               {isExpanded ? t.breakdown.hide : t.breakdown.show}
             </span>
           </div>
@@ -86,14 +86,14 @@ export default function BreakdownCard({
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Segmented Toggle */}
           {isExpanded && (
-            <div className="flex rounded-lg bg-zinc-950 p-1 border border-zinc-800 text-xs animate-fade-in">
+            <div className="flex rounded-lg bg-zinc-100 dark:bg-zinc-950 p-1 border border-zinc-200 dark:border-zinc-800 text-xs animate-fade-in">
               <button
                 type="button"
                 onClick={() => setActiveTab("daily")}
                 className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
                   activeTab === "daily"
-                    ? "bg-zinc-800 text-white shadow-xs"
-                    : "text-zinc-400 hover:text-zinc-200"
+                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5" />
@@ -104,8 +104,8 @@ export default function BreakdownCard({
                 onClick={() => setActiveTab("category")}
                 className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
                   activeTab === "category"
-                    ? "bg-zinc-800 text-white shadow-xs"
-                    : "text-zinc-400 hover:text-zinc-200"
+                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
                 }`}
               >
                 <PieChart className="w-3.5 h-3.5" />
@@ -119,7 +119,7 @@ export default function BreakdownCard({
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
             aria-label={isExpanded ? t.breakdown.hideBreakdownAria : t.breakdown.showBreakdownAria}
-            className={`flex items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-colors cursor-pointer shrink-0 ${
+            className={`flex items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer shrink-0 ${
               isExpanded
                 ? "h-7 w-7 p-1.5"
                 : "gap-1.5 py-1 px-2.5 text-xs font-medium"
@@ -144,7 +144,7 @@ export default function BreakdownCard({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="pt-3 mt-3 border-t border-zinc-800/80">
+          <div className="pt-3 mt-3 border-t border-zinc-200/80 dark:border-zinc-800/80">
             {/* Tab 1: Daily Mini Bar Chart */}
             {activeTab === "daily" && (
               <div className="animate-fade-in">
@@ -172,8 +172,8 @@ export default function BreakdownCard({
                         <span
                           className={`text-[10px] font-medium leading-none transition-all truncate ${
                             isSelected
-                              ? "opacity-100 text-zinc-200 font-semibold"
-                              : "opacity-0 group-hover:opacity-100 text-zinc-400"
+                              ? "opacity-100 text-zinc-900 dark:text-zinc-200 font-semibold"
+                              : "opacity-0 group-hover:opacity-100 text-zinc-500 dark:text-zinc-400"
                           }`}
                         >
                           {day.amount > 0
@@ -191,13 +191,13 @@ export default function BreakdownCard({
                           className={`w-full rounded-t-md transition-all duration-300 ${
                             day.isToday
                               ? isSelected
-                                ? "bg-emerald-400 shadow-md shadow-emerald-500/30"
-                                : "bg-emerald-500/80 hover:bg-emerald-400"
+                                ? "bg-emerald-500 shadow-md shadow-emerald-500/30 dark:bg-emerald-400"
+                                : "bg-emerald-500/80 hover:bg-emerald-500"
                               : isSelected
-                              ? "bg-blue-400 shadow-md shadow-blue-500/30"
+                              ? "bg-blue-500 shadow-md shadow-blue-500/30 dark:bg-blue-400"
                               : day.amount > 0
                               ? "bg-blue-600/70 hover:bg-blue-500"
-                              : "bg-zinc-800"
+                              : "bg-zinc-200 dark:bg-zinc-800"
                           }`}
                         />
                       </div>
@@ -206,9 +206,9 @@ export default function BreakdownCard({
                       <span
                         className={`text-[10px] pt-0.5 ${
                           day.isToday
-                            ? "font-bold text-emerald-400"
+                            ? "font-bold text-emerald-600 dark:text-emerald-400"
                             : isSelected
-                            ? "font-semibold text-zinc-200"
+                            ? "font-semibold text-zinc-900 dark:text-zinc-200"
                             : "text-zinc-500"
                         }`}
                       >
@@ -220,16 +220,16 @@ export default function BreakdownCard({
               </div>
 
               {/* Selected day summary line */}
-              <div className="mt-3 flex items-center justify-between border-t border-zinc-800/60 pt-2.5 text-[11px]">
-                <span className="text-zinc-400">
+              <div className="mt-3 flex items-center justify-between border-t border-zinc-200/80 dark:border-zinc-800/60 pt-2.5 text-[11px]">
+                <span className="text-zinc-500 dark:text-zinc-400">
                   {selectedDay.formattedDate}
                   {selectedDay.isToday && (
-                    <span className="ml-1 text-[10px] text-emerald-400 font-medium">
+                    <span className="ml-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
                       ({t.common.today})
                     </span>
                   )}
                 </span>
-                <span className="font-semibold text-zinc-200">
+                <span className="font-semibold text-zinc-900 dark:text-zinc-200">
                   Rp {selectedDay.amount.toLocaleString("id-ID")}
                 </span>
               </div>
@@ -252,7 +252,7 @@ export default function BreakdownCard({
                 categoryData.map((item) => (
                   <div key={item.category}>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="flex items-center gap-1.5 text-zinc-300">
+                      <span className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
                         <span
                           className={`w-2 h-2 rounded-full ${
                             categoryBgColors[item.category] || "bg-zinc-500"
@@ -260,14 +260,14 @@ export default function BreakdownCard({
                         />
                         {getCategoryLabel(item.category)}
                       </span>
-                      <span className="font-medium text-zinc-200">
+                      <span className="font-medium text-zinc-900 dark:text-zinc-200">
                         Rp {item.amount.toLocaleString("id-ID")}{" "}
                         <span className="text-zinc-500 text-[10px]">
                           ({item.percentage}%)
                         </span>
                       </span>
                     </div>
-                    <div className="w-full bg-zinc-950 rounded-full h-1.5 overflow-hidden">
+                    <div className="w-full bg-zinc-100 dark:bg-zinc-950 rounded-full h-1.5 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           categoryBgColors[item.category] || "bg-zinc-500"
