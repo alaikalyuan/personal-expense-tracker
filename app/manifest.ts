@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Catatan Pengeluaran Pribadi",
+    name: "SakuTrack : Student Budget Tracker",
     short_name: "SakuTrack",
     description: "Catat pengeluaran mingguan kuliah dan pribadi",
     start_url: "/",
