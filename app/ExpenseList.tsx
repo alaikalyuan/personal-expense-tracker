@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
 import { updateExpense, deleteExpense } from "@/app/actions";
 import { useTranslation } from "@/utils/i18n/context";
 import { CATEGORY_KEYS } from "@/utils/i18n/dictionaries";
+import { getTodayString, getNowInTimezone } from "@/utils/date";
+import { format, parseISO, subDays } from "date-fns";
 
 export interface ExpenseItem {
   id: string;
@@ -24,11 +26,81 @@ const categoryColors: Record<string, string> = {
   Others: "border-l-zinc-500 dark:border-l-zinc-500",
 };
 
-export default function ExpenseList({ expenses }: { expenses: ExpenseItem[] }) {
+interface ExpenseListProps {
+  expenses: ExpenseItem[];
+  showPeriodToggle?: boolean;
+  title?: string;
+}
+
+export default function ExpenseList({
+  expenses,
+  showPeriodToggle = false,
+  title,
+}: ExpenseListProps) {
   const { t, formatDate, getCategoryLabel } = useTranslation();
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [period, setPeriod] = useState<"today" | "week">("today");
+
+  const todayStr = useMemo(() => getTodayString(), []);
+  const yesterdayStr = useMemo(
+    () => format(subDays(getNowInTimezone(), 1), "yyyy-MM-dd"),
+    []
+  );
+
+  const getItemDateStr = (item: ExpenseItem) => {
+    return item.spent_at.includes("T")
+      ? item.spent_at.split("T")[0]
+      : item.spent_at;
+  };
+
+  const todayExpenses = useMemo(() => {
+    return (expenses || []).filter((item) => getItemDateStr(item) === todayStr);
+  }, [expenses, todayStr]);
+
+  const groupedWeekExpenses = useMemo(() => {
+    const groups: {
+      dateStr: string;
+      dayName: string;
+      formattedDate: string;
+      isToday: boolean;
+      isYesterday: boolean;
+      totalAmount: number;
+      items: ExpenseItem[];
+    }[] = [];
+
+    const groupMap = new Map<string, (typeof groups)[0]>();
+
+    (expenses || []).forEach((item) => {
+      const dateStr = getItemDateStr(item);
+      if (!groupMap.has(dateStr)) {
+        const isToday = dateStr === todayStr;
+        const isYesterday = dateStr === yesterdayStr;
+        const parsedDate = parseISO(dateStr);
+        const dayName = formatDate(parsedDate, "EEEE");
+        const formattedDate = formatDate(parsedDate, "d MMM");
+
+        const group = {
+          dateStr,
+          dayName,
+          formattedDate,
+          isToday,
+          isYesterday,
+          totalAmount: 0,
+          items: [],
+        };
+        groupMap.set(dateStr, group);
+        groups.push(group);
+      }
+
+      const group = groupMap.get(dateStr)!;
+      group.totalAmount += Number(item.amount);
+      group.items.push(item);
+    });
+
+    return groups;
+  }, [expenses, todayStr, yesterdayStr, formatDate]);
 
   const handleDelete = async (id: string) => {
     if (!confirm(t.expenses.deleteConfirm)) {
@@ -53,59 +125,180 @@ export default function ExpenseList({ expenses }: { expenses: ExpenseItem[] }) {
     }
   };
 
-  if (!expenses || expenses.length === 0) {
-    return (
-      <p className="text-sm text-zinc-500 py-8 text-center">
-        {t.dashboard.noExpenses}
-      </p>
-    );
-  }
+  const renderExpenseCard = (item: ExpenseItem) => (
+    <div
+      key={item.id}
+      className={`flex items-center justify-between rounded-xl border border-zinc-200/80 border-l-4 bg-white p-3.5 shadow-2xs transition-colors hover:bg-zinc-50/80 dark:border-zinc-800/80 dark:bg-zinc-900/30 dark:hover:bg-zinc-900/50 ${
+        categoryColors[item.category] || "border-l-zinc-500"
+      }`}
+    >
+      <div className="flex-1 pr-3">
+        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{item.name}</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          {item.category && (
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">{getCategoryLabel(item.category)}</span>
+          )}
+          <span className="text-[10px] text-zinc-300 dark:text-zinc-600">•</span>
+          <span className="text-xs text-zinc-500">
+            {formatDate(item.spent_at, "MMM d, yyyy")}
+          </span>
+        </div>
+        {item.note && (
+          <p className="text-[11px] text-zinc-500 italic mt-0.5 line-clamp-1">
+            &ldquo;{item.note}&rdquo;
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2.5">
+        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          Rp {Number(item.amount).toLocaleString("id-ID")}
+        </span>
+
+        {/* Accessible, Non-Distracting Edit Button */}
+        <button
+          type="button"
+          onClick={() => setEditingExpense(item)}
+          aria-label={`Edit ${item.name}`}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <>
-      <div className="flex flex-col gap-2">
-        {expenses.map((item) => (
-          <div
-            key={item.id}
-            className={`flex items-center justify-between rounded-xl border border-zinc-200/80 border-l-4 bg-white p-3.5 shadow-2xs transition-colors hover:bg-zinc-50/80 dark:border-zinc-800/80 dark:bg-zinc-900/30 dark:hover:bg-zinc-900/50 ${
-              categoryColors[item.category] || "border-l-zinc-500"
-            }`}
-          >
-            <div className="flex-1 pr-3">
-              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{item.name}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                {item.category && (
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">{getCategoryLabel(item.category)}</span>
-                )}
-                <span className="text-[10px] text-zinc-300 dark:text-zinc-600">•</span>
-                <span className="text-xs text-zinc-500">
-                  {formatDate(item.spent_at, "MMM d, yyyy")}
-                </span>
-              </div>
-              {item.note && (
-                <p className="text-[11px] text-zinc-500 italic mt-0.5 line-clamp-1">
-                  &ldquo;{item.note}&rdquo;
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Rp {Number(item.amount).toLocaleString("id-ID")}
-              </span>
-
-              {/* Accessible, Non-Distracting Edit Button */}
+      <div className="flex flex-col gap-3">
+        {/* Optional Header with Segmented Period Toggle */}
+        {showPeriodToggle && (
+          <div className="flex items-center justify-between select-none gap-2">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              {title || t.dashboard.recentEntries}
+            </h2>
+            <div className="flex rounded-lg bg-zinc-100 dark:bg-zinc-950 p-1 border border-zinc-200 dark:border-zinc-800 text-xs shrink-0 animate-fade-in">
               <button
                 type="button"
-                onClick={() => setEditingExpense(item)}
-                aria-label={`Edit ${item.name}`}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
+                onClick={() => setPeriod("today")}
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
+                  period === "today"
+                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                }`}
               >
-                <Pencil className="w-3.5 h-3.5" />
+                {t.dashboard.tabToday}
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
+                    period === "today"
+                      ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100"
+                      : "bg-zinc-200/70 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                  }`}
+                >
+                  {todayExpenses.length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPeriod("week")}
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
+                  period === "week"
+                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                }`}
+              >
+                {t.dashboard.tabThisWeek}
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
+                    period === "week"
+                      ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100"
+                      : "bg-zinc-200/70 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                  }`}
+                >
+                  {(expenses || []).length}
+                </span>
               </button>
             </div>
           </div>
-        ))}
+        )}
+
+        {/* Main Content: Either Mode-based or Plain List */}
+        {!showPeriodToggle ? (
+          // Plain list for archive / simple contexts
+          !expenses || expenses.length === 0 ? (
+            <p className="text-sm text-zinc-500 py-8 text-center">
+              {t.dashboard.noExpenses}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {expenses.map((item) => renderExpenseCard(item))}
+            </div>
+          )
+        ) : period === "today" ? (
+          // Today view
+          todayExpenses.length > 0 ? (
+            <div className="flex flex-col gap-2 animate-fade-in">
+              {todayExpenses.map((item) => renderExpenseCard(item))}
+            </div>
+          ) : !expenses || expenses.length === 0 ? (
+            <p className="text-sm text-zinc-500 py-8 text-center">
+              {t.dashboard.noExpenses}
+            </p>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-zinc-200/90 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/30 p-6 text-center animate-fade-in">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                {t.dashboard.noExpensesToday}
+              </p>
+              <button
+                type="button"
+                onClick={() => setPeriod("week")}
+                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
+              >
+                <span>{t.dashboard.viewWeekExpenses} ({expenses.length})</span>
+                <span aria-hidden="true">&rarr;</span>
+              </button>
+            </div>
+          )
+        ) : (
+          // This Week view (Non-collapsible date-grouped)
+          !expenses || expenses.length === 0 ? (
+            <p className="text-sm text-zinc-500 py-8 text-center">
+              {t.dashboard.noExpenses}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-4 animate-fade-in">
+              {groupedWeekExpenses.map((group) => (
+                <div key={group.dateStr} className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                      {group.isToday ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                          {t.common.today}
+                        </span>
+                      ) : group.isYesterday ? (
+                        <span className="text-zinc-900 dark:text-zinc-100 font-semibold">
+                          {t.common.yesterday}
+                        </span>
+                      ) : (
+                        <span>{group.dayName}</span>
+                      )}
+                      <span className="text-[10px] text-zinc-300 dark:text-zinc-600">•</span>
+                      <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
+                        {group.formattedDate}
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                      Rp {group.totalAmount.toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {group.items.map((item) => renderExpenseCard(item))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
       </div>
 
       {/* Edit & Delete Modal */}

@@ -13,7 +13,7 @@ export default async function LoginPage({
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900/50">
-        <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">{t.login.title}</h1>
+        <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">SakuTrack</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">{t.login.subtitle}</p>
 
         {error && (

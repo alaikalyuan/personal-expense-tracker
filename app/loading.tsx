@@ -53,8 +53,11 @@ export default function DashboardLoading() {
       </div>
 
       {/* Recent Entries Skeleton */}
-      <div className="flex flex-col gap-2">
-        <div className="h-3 w-24 bg-zinc-800 rounded-xs mb-1" />
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between mb-1">
+          <div className="h-3 w-24 bg-zinc-800 rounded-xs" />
+          <div className="h-7 w-36 bg-zinc-800/80 rounded-lg" />
+        </div>
         <div className="space-y-2">
           {[1, 2, 3, 4].map((item) => (
             <div

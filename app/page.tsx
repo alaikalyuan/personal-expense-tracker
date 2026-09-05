@@ -191,12 +191,11 @@ export default async function DashboardPage() {
       />
 
       {/* Expense Log */}
-      <div className="flex flex-col gap-2">
-        <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-          {t.dashboard.recentEntries}
-        </h2>
-        <ExpenseList expenses={expenses || []} />
-      </div>
+      <ExpenseList
+        expenses={expenses || []}
+        showPeriodToggle={true}
+        title={t.dashboard.recentEntries}
+      />
 
       {/* Bottom spacer for clearance above floating navbar and gradient */}
       <div className="h-8 shrink-0" aria-hidden="true" />

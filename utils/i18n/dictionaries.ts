@@ -24,6 +24,7 @@ export interface Dictionary {
     adding: string;
     close: string;
     today: string;
+    yesterday: string;
     none: string;
     vs: string;
     error: string;
@@ -53,6 +54,10 @@ export interface Dictionary {
     largest: string;
     recentEntries: string;
     noExpenses: string;
+    tabToday: string;
+    tabThisWeek: string;
+    noExpensesToday: string;
+    viewWeekExpenses: string;
   };
   breakdown: {
     title: string;
@@ -170,6 +175,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       adding: "Menambahkan...",
       close: "Tutup",
       today: "Hari Ini",
+      yesterday: "Kemarin",
       none: "Tidak ada",
       vs: "dibanding",
       error: "Terjadi kesalahan",
@@ -177,7 +183,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     nav: {
       tracker: "Pelacak",
       archive: "Arsip & Riwayat Minggu",
-      compare: "Bandingkan Minggu",
+      compare: "Bandingkan",
       signOut: "Keluar",
       addExpense: "Tambah pengeluaran",
       openMenu: "Buka menu",
@@ -206,6 +212,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       largest: "Terbesar",
       recentEntries: "Entri Terbaru",
       noExpenses: "Belum ada pengeluaran yang dicatat minggu ini.",
+      tabToday: "Hari Ini",
+      tabThisWeek: "Minggu Ini",
+      noExpensesToday: "Belum ada pengeluaran yang dicatat hari ini.",
+      viewWeekExpenses: "Lihat pengeluaran minggu ini",
     },
     breakdown: {
       title: "Rincian",
@@ -223,12 +233,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     budget: {
       percentUsedOf: "terpakai dari",
-      editLimit: "Ubah batas",
+      editLimit: "Ubah budget",
       overBudgetBy: "Melebihi anggaran sebesar",
       left: "sisa",
       dailyAllowance: "hari",
-      modalTitle: "Batas Anggaran Mingguan",
-      modalSubtitle: "Tentukan target batas pengeluaran mingguanmu",
+      modalTitle: "Budget Mingguan",
+      modalSubtitle: "Tentukan target budget pengeluaran mingguanmu",
       quickPresets: "Pilihan Cepat",
       saveBudget: "Simpan Anggaran",
       preset250k: "250rb",
@@ -322,6 +332,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       adding: "Adding...",
       close: "Close",
       today: "Today",
+      yesterday: "Yesterday",
       none: "None",
       vs: "vs",
       error: "An error occurred",
@@ -358,6 +369,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       largest: "Largest",
       recentEntries: "Recent entries",
       noExpenses: "No expenses recorded this week yet.",
+      tabToday: "Today",
+      tabThisWeek: "This Week",
+      noExpensesToday: "No expenses recorded today yet.",
+      viewWeekExpenses: "View this week's expenses",
     },
     breakdown: {
       title: "Breakdown",

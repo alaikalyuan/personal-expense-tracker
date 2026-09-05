@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Personal Expense Tracker",
+  title: "SakuTrack : Student Budget Tracker",
   description: "Track weekly college and personal expenses",
   manifest: "/manifest.webmanifest",
   icons: {
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Expenses",
+    title: "SakuTrack : Student Budget Tracker",
   },
 };
 
