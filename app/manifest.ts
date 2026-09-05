@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Catatan Pengeluaran Pribadi",
-    short_name: "Pengeluaran",
+    short_name: "SakuTrack",
     description: "Catat pengeluaran mingguan kuliah dan pribadi",
     start_url: "/",
     id: "/",
