@@ -102,6 +102,33 @@ export interface Dictionary {
     failedToDelete: string;
     amountPositiveError: string;
     nameRequiredError: string;
+    standardTab: string;
+    quickTypeTab: string;
+    clearAmount: string;
+    categoryLabel: string;
+    whenLabel: string;
+    customDate: string;
+    addNote: string;
+    hideNote: string;
+    quickShortcuts: string;
+    manageChips: string;
+    manageChipsTitle: string;
+    manageChipsSubtitle: string;
+    addChip: string;
+    editChip: string;
+    deleteChip: string;
+    chipNamePlaceholder: string;
+    chipEmojiPlaceholder: string;
+    defaultAmountOptional: string;
+    resetDefaults: string;
+    noCustomChips: string;
+    saveChip: string;
+    quickBarPlaceholder: string;
+    quickBarHint: string;
+    detectedPreview: string;
+    keepOpenBatch: string;
+    expenseLoggedBatch: string;
+    quickTypeParseError: string;
   };
   archive: {
     title: string;
@@ -262,6 +289,33 @@ export const dictionaries: Record<Locale, Dictionary> = {
       failedToDelete: "Gagal menghapus pengeluaran",
       amountPositiveError: "Nominal harus lebih dari 0",
       nameRequiredError: "Nama pengeluaran wajib diisi",
+      standardTab: "Standar",
+      quickTypeTab: "Ketik Cepat",
+      clearAmount: "Hapus",
+      categoryLabel: "Kategori",
+      whenLabel: "Kapan",
+      customDate: "Pilih Tanggal",
+      addNote: "+ Catatan",
+      hideNote: "- Catatan",
+      quickShortcuts: "Pintasan Cepat",
+      manageChips: "Kelola",
+      manageChipsTitle: "Kelola Pintasan Cepat",
+      manageChipsSubtitle: "Kustomisasi tombol pintasan untuk entri cepat pengeluaran",
+      addChip: "Tambah Pintasan",
+      editChip: "Ubah Pintasan",
+      deleteChip: "Hapus",
+      chipNamePlaceholder: "Contoh: Makan Siang, Bensin",
+      chipEmojiPlaceholder: "Emoji (opsional, cth: 🍔)",
+      defaultAmountOptional: "Nominal bawaan (opsional, cth: 20000)",
+      resetDefaults: "Kembalikan Bawaan",
+      noCustomChips: "Belum ada pintasan khusus.",
+      saveChip: "Simpan Pintasan",
+      quickBarPlaceholder: "Ketik: cth. Makan siang 25k, Bensin 20rb kemarin...",
+      quickBarHint: "Tekan Enter untuk langsung simpan",
+      detectedPreview: "Terdeteksi",
+      keepOpenBatch: "Tetap buka untuk input berturut-turut",
+      expenseLoggedBatch: "Tersimpan! Siap untuk entri berikutnya...",
+      quickTypeParseError: "Masukkan nama dan nominal (cth: Kopi 18k)",
     },
     archive: {
       title: "Arsip",
@@ -421,6 +475,33 @@ export const dictionaries: Record<Locale, Dictionary> = {
       failedToDelete: "Failed to delete expense",
       amountPositiveError: "Amount must be greater than 0",
       nameRequiredError: "Expense name is required",
+      standardTab: "Standard",
+      quickTypeTab: "Quick Type",
+      clearAmount: "Clear",
+      categoryLabel: "Category",
+      whenLabel: "When",
+      customDate: "Pick Date",
+      addNote: "+ Note",
+      hideNote: "- Note",
+      quickShortcuts: "Quick Shortcuts",
+      manageChips: "Manage",
+      manageChipsTitle: "Manage Shortcuts",
+      manageChipsSubtitle: "Customize 1-tap shortcut chips for fast logging",
+      addChip: "Add Shortcut",
+      editChip: "Edit Shortcut",
+      deleteChip: "Delete",
+      chipNamePlaceholder: "e.g. Lunch, Coffee, Gas",
+      chipEmojiPlaceholder: "Emoji (optional, e.g. 🍔)",
+      defaultAmountOptional: "Default amount (optional, e.g. 20000)",
+      resetDefaults: "Reset Defaults",
+      noCustomChips: "No custom shortcuts yet.",
+      saveChip: "Save Shortcut",
+      quickBarPlaceholder: "Type: e.g. Lunch 25k, Gas 20000 yesterday...",
+      quickBarHint: "Press Enter to add instantly",
+      detectedPreview: "Detected",
+      keepOpenBatch: "Keep open for rapid consecutive logging",
+      expenseLoggedBatch: "Saved! Ready for next log...",
+      quickTypeParseError: "Please enter a name and amount (e.g. Coffee 18k)",
     },
     archive: {
       title: "Archive",
