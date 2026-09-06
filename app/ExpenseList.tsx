@@ -41,7 +41,14 @@ export default function ExpenseList({
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<"today" | "week">("today");
+
+  const closeModal = () => {
+    if (isDeleting || isUpdating) return;
+    setError(null);
+    setEditingExpense(null);
+  };
 
   const todayStr = useMemo(() => getTodayString(), []);
   const yesterdayStr = useMemo(
@@ -108,8 +115,11 @@ export default function ExpenseList({
     }
     try {
       setIsDeleting(true);
+      setError(null);
       await deleteExpense(id);
-      setEditingExpense(null);
+      closeModal();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.expenses.failedToDelete);
     } finally {
       setIsDeleting(false);
     }
@@ -118,8 +128,11 @@ export default function ExpenseList({
   const handleUpdate = async (formData: FormData) => {
     try {
       setIsUpdating(true);
+      setError(null);
       await updateExpense(formData);
-      setEditingExpense(null);
+      closeModal();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.expenses.failedToUpdate);
     } finally {
       setIsUpdating(false);
     }
@@ -158,7 +171,10 @@ export default function ExpenseList({
         {/* Accessible, Non-Distracting Edit Button */}
         <button
           type="button"
-          onClick={() => setEditingExpense(item)}
+          onClick={() => {
+            setError(null);
+            setEditingExpense(item);
+          }}
           aria-label={`Edit ${item.name}`}
           className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
         >
@@ -306,8 +322,8 @@ export default function ExpenseList({
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !isDeleting && !isUpdating) {
-              setEditingExpense(null);
+            if (e.target === e.currentTarget) {
+              closeModal();
             }
           }}
         >
@@ -323,15 +339,26 @@ export default function ExpenseList({
               </div>
               <button
                 type="button"
-                onClick={() => setEditingExpense(null)}
+                onClick={closeModal}
+                disabled={isDeleting || isUpdating}
                 aria-label={t.common.close}
-                className="p-1 text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200 rounded-md transition-colors cursor-pointer"
+                className="p-1 text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form action={handleUpdate} className="flex flex-col gap-3 pt-3">
+            {error && (
+              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950/40 p-2.5 text-xs text-rose-600 dark:text-rose-300">
+                {error}
+              </div>
+            )}
+
+            <form
+              key={editingExpense.id}
+              action={handleUpdate}
+              className="flex flex-col gap-3 pt-3"
+            >
               <input type="hidden" name="id" value={editingExpense.id} />
 
               <div className="flex gap-2">
@@ -407,8 +434,9 @@ export default function ExpenseList({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setEditingExpense(null)}
-                    className="rounded-xl border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                    onClick={closeModal}
+                    disabled={isDeleting || isUpdating}
+                    className="rounded-xl border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50 transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     {t.common.cancel}
                   </button>

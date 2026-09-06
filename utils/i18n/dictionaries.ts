@@ -98,6 +98,8 @@ export interface Dictionary {
     saveChanges: string;
     addTitle: string;
     failedToAdd: string;
+    failedToUpdate: string;
+    failedToDelete: string;
     amountPositiveError: string;
     nameRequiredError: string;
   };
@@ -256,6 +258,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       saveChanges: "Simpan perubahan",
       addTitle: "Tambah pengeluaran",
       failedToAdd: "Gagal menambahkan pengeluaran",
+      failedToUpdate: "Gagal memperbarui pengeluaran",
+      failedToDelete: "Gagal menghapus pengeluaran",
       amountPositiveError: "Nominal harus lebih dari 0",
       nameRequiredError: "Nama pengeluaran wajib diisi",
     },
@@ -413,6 +417,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       saveChanges: "Save changes",
       addTitle: "Add expense",
       failedToAdd: "Failed to add expense",
+      failedToUpdate: "Failed to update expense",
+      failedToDelete: "Failed to delete expense",
       amountPositiveError: "Amount must be greater than 0",
       nameRequiredError: "Expense name is required",
     },

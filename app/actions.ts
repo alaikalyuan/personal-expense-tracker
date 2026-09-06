@@ -63,7 +63,7 @@ export async function addExpense(formData: FormData) {
     throw new Error("Expense name is required");
   }
 
-  await supabase.from("expenses").insert({
+  const { error: insertError } = await supabase.from("expenses").insert({
     user_id: user.id,
     category,
     name,
@@ -71,6 +71,10 @@ export async function addExpense(formData: FormData) {
     amount,
     spent_at: spentAt,
   });
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
 
   revalidatePath("/");
   revalidatePath("/compare");
@@ -105,7 +109,7 @@ export async function updateExpense(formData: FormData) {
     throw new Error("Expense name is required");
   }
 
-  await supabase
+  const { data: updatedRows, error: updateError } = await supabase
     .from("expenses")
     .update({
       category,
@@ -115,7 +119,18 @@ export async function updateExpense(formData: FormData) {
       spent_at: spentAt,
     })
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select();
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    throw new Error(
+      "Failed to update expense: record not found or permission denied"
+    );
+  }
 
   revalidatePath("/");
   revalidatePath("/compare");
@@ -135,11 +150,15 @@ export async function deleteExpense(id: string) {
     throw new Error("Unauthorized");
   }
 
-  await supabase
+  const { error: deleteError } = await supabase
     .from("expenses")
     .delete()
     .eq("id", id)
     .eq("user_id", user.id);
+
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
 
   revalidatePath("/");
   revalidatePath("/compare");
