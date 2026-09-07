@@ -220,7 +220,7 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
     e.preventDefault();
     if (isSubmitting) return;
 
-    if (amount <= 0) {
+    if (amount < 0) {
       setError(t.expenses.amountPositiveError);
       amountInputRef.current?.focus();
       return;

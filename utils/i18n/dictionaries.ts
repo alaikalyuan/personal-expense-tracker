@@ -77,6 +77,10 @@ export interface Dictionary {
     percentUsedOf: string;
     editLimit: string;
     overBudgetBy: string;
+    aboveTargetBy: string;
+    honestTrackingBadge: string;
+    overBudgetEncouragement: string;
+    focusPacingNote: string;
     left: string;
     dailyAllowance: string;
     modalTitle: string;
@@ -87,6 +91,21 @@ export interface Dictionary {
     preset500k: string;
     preset1m: string;
     preset2m: string;
+  };
+  streak: {
+    title: string;
+    dayStreak: string;
+    daysStreak: string;
+    loggedToday: string;
+    logTodayNudge: string;
+    weekConsistency: string;
+    noSpendButton: string;
+    noSpendToast: string;
+    noSpendDescription: string;
+    encouragementActive: string;
+    encouragementOverBudget: string;
+    encouragementStart: string;
+    zeroSpendCelebration: string;
   };
   expenses: {
     deleteConfirm: string;
@@ -299,6 +318,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       percentUsedOf: "terpakai dari",
       editLimit: "Ubah budget",
       overBudgetBy: "Melebihi anggaran sebesar",
+      aboveTargetBy: "di atas target",
+      honestTrackingBadge: "Dicatat Jujur ✨",
+      overBudgetEncouragement: "Target terlampaui? Wajar terjadi! Yang terpenting kamu tetap mencatatnya dengan jujur. Mengetahui angka sebenarnya adalah kemenangan sejati.",
+      focusPacingNote: "Target minggu ini terlampaui • Fokus catat sisa minggu tanpa beban",
       left: "sisa",
       dailyAllowance: "hari",
       modalTitle: "Budget Mingguan",
@@ -309,6 +332,21 @@ export const dictionaries: Record<Locale, Dictionary> = {
       preset500k: "500rb",
       preset1m: "1jt",
       preset2m: "2jt",
+    },
+    streak: {
+      title: "Logging Streak",
+      dayStreak: "Hari Streak",
+      daysStreak: "Hari Streak",
+      loggedToday: "Hari ini sudah dicatat!",
+      logTodayNudge: "Catat pengeluaran hari ini untuk jaga streak 🔥",
+      weekConsistency: "Konsistensi Minggu Ini",
+      noSpendButton: "Hari Tanpa Pengeluaran 🎉",
+      noSpendToast: "Hari tanpa pengeluaran berhasil dicatat!",
+      noSpendDescription: "Hemat maksimal! Rp 0 pengeluaran hari ini.",
+      encouragementActive: "Konsistensi hebat! Api streakmu terus menyala.",
+      encouragementOverBudget: "Pengeluaran naik turun itu wajar, kejujuran mencatat adalah kemenanganmu!",
+      encouragementStart: "Mulai streak pertamamu dengan mencatat hari ini!",
+      zeroSpendCelebration: "Hari Bebas Pengeluaran",
     },
     expenses: {
       deleteConfirm: "Apakah kamu yakin ingin menghapus pengeluaran ini?",
@@ -520,6 +558,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       percentUsedOf: "used of",
       editLimit: "Edit limit",
       overBudgetBy: "Over budget by",
+      aboveTargetBy: "above goal",
+      honestTrackingBadge: "Tracked Honestly ✨",
+      overBudgetEncouragement: "Over your target? Life happens! What matters most is that you stayed aware and tracked it. Knowing your true numbers is the real victory.",
+      focusPacingNote: "Weekly target passed • Focus on tracking the rest of the week guilt-free",
       left: "left",
       dailyAllowance: "left",
       modalTitle: "Weekly Budget Limit",
@@ -530,6 +572,21 @@ export const dictionaries: Record<Locale, Dictionary> = {
       preset500k: "500k",
       preset1m: "1jt",
       preset2m: "2jt",
+    },
+    streak: {
+      title: "Logging Streak",
+      dayStreak: "Day Streak",
+      daysStreak: "Days Streak",
+      loggedToday: "Logged today!",
+      logTodayNudge: "Log an expense today to keep your streak 🔥",
+      weekConsistency: "This Week's Consistency",
+      noSpendButton: "No-Spend Day 🎉",
+      noSpendToast: "No-spend day recorded!",
+      noSpendDescription: "Total save! Rp 0 spent today.",
+      encouragementActive: "Awesome consistency! Your streak is burning bright.",
+      encouragementOverBudget: "Spikes happen! Staying honest with your tracking is the ultimate win.",
+      encouragementStart: "Start your streak by logging today!",
+      zeroSpendCelebration: "Zero-Spend Day",
     },
     expenses: {
       deleteConfirm: "Are you sure you want to delete this expense?",

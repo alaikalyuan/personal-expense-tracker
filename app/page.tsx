@@ -13,8 +13,10 @@ import {
 import BreakdownCard, { DaySpend, CategorySpend } from "./BreakdownCard";
 import ExpenseList from "./ExpenseList";
 import BudgetProgress from "./BudgetProgress";
+import TrackingStreak from "./TrackingStreak";
 import InstallPrompt from "./InstallPrompt";
 import { getNowInTimezone } from "@/utils/date";
+import { calculateStreak } from "@/utils/streak";
 import {
   getDictionaryServer,
   formatDateServer,
@@ -41,13 +43,23 @@ export default async function DashboardPage() {
   const startOfWeekStr = format(startOfWeekDate, "yyyy-MM-dd");
   const endOfWeekStr = format(endOfWeekDate, "yyyy-MM-dd");
 
-  const { data: expenses } = await supabase
-    .from("expenses")
-    .select("*")
-    .eq("user_id", user.id)
-    .gte("spent_at", startOfWeekStr)
-    .lte("spent_at", endOfWeekStr)
-    .order("spent_at", { ascending: false });
+  const [{ data: expenses }, { data: allUserExpenseDates }] = await Promise.all([
+    supabase
+      .from("expenses")
+      .select("*")
+      .eq("user_id", user.id)
+      .gte("spent_at", startOfWeekStr)
+      .lte("spent_at", endOfWeekStr)
+      .order("spent_at", { ascending: false }),
+    supabase
+      .from("expenses")
+      .select("spent_at")
+      .eq("user_id", user.id)
+      .order("spent_at", { ascending: false }),
+  ]);
+
+  const spentDates = (allUserExpenseDates || []).map((e) => e.spent_at);
+  const streakData = calculateStreak(spentDates, now, locale);
 
   const weeklyTotal = (expenses || []).reduce(
     (acc, curr) => acc + Number(curr.amount),
@@ -65,6 +77,7 @@ export default async function DashboardPage() {
   const avgDailySpend = weeklyTotal / todayDayIndex;
   const daysRemaining = Math.max(7 - todayDayIndex + 1, 1);
   const weeklyBudget = Number(user.user_metadata?.weekly_budget || 500000);
+  const isOverBudget = weeklyBudget > 0 && weeklyTotal > weeklyBudget;
 
   // 3. Top Category by total sum
   const categoryTotals = (expenses || []).reduce<Record<string, number>>((acc, curr) => {
@@ -114,7 +127,13 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex justify-between items-center pt-2">
         <h1 className="font-bold tracking-tight text-lg">{t.dashboard.title}</h1>
-        <UserMenu />
+        <div className="flex items-center gap-2">
+          <TrackingStreak
+            streakData={streakData}
+            isOverBudget={isOverBudget}
+          />
+          <UserMenu />
+        </div>
       </div>
 
       {/* PWA Install Banner */}

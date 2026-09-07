@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, X, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Pencil, X, Sparkles, CheckCircle2 } from "lucide-react";
 import { setWeeklyBudget } from "@/app/actions";
 import { useTranslation } from "@/utils/i18n/context";
 
@@ -34,18 +34,17 @@ export default function BudgetProgress({
   const isOver = remaining < 0;
   const dailyAllowance = Math.max(Math.round(remaining / Math.max(daysRemaining, 1)), 0);
 
-  // Health status
-  const isDanger = isOver || rawPercent >= 90;
-  const isWarning = !isDanger && rawPercent >= 75;
+  // Health status with calm, non-punitive tone
+  const isWarning = !isOver && rawPercent >= 75;
 
-  const barColor = isDanger
-    ? "bg-rose-500 shadow-md shadow-rose-500/30"
+  const barColor = isOver
+    ? "bg-amber-500 shadow-md shadow-amber-500/25 dark:bg-amber-500"
     : isWarning
     ? "bg-amber-500 shadow-md shadow-amber-500/20"
     : "bg-emerald-500 shadow-md shadow-emerald-500/20";
 
-  const textColor = isDanger
-    ? "text-rose-400"
+  const textColor = isOver
+    ? "text-amber-500 dark:text-amber-400"
     : isWarning
     ? "text-amber-400"
     : "text-emerald-400";
@@ -65,8 +64,8 @@ export default function BudgetProgress({
       {/* Progress Track & Header */}
       <div className="flex items-center justify-between text-xs">
         <span className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 font-medium">
-          {isDanger ? (
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+          {isOver ? (
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
           ) : (
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
           )}
@@ -100,27 +99,47 @@ export default function BudgetProgress({
         />
       </div>
 
-      {/* Remaining Allowance Line */}
-      <div className="flex items-center justify-between text-[11px]">
+      {/* Remaining Allowance / Reframed Pace Line */}
+      <div className="flex items-center justify-between text-[11px] gap-2">
         {isOver ? (
-          <span className="font-semibold text-rose-500 dark:text-rose-400">
-            {t.budget.overBudgetBy} Rp {Math.abs(remaining).toLocaleString("id-ID")}
-          </span>
+          <>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-semibold text-amber-600 dark:text-amber-400">
+                +Rp {Math.abs(remaining).toLocaleString("id-ID")} {t.budget.aboveTargetBy}
+              </span>
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                {t.budget.honestTrackingBadge}
+              </span>
+            </div>
+            <span className="text-[10px] text-zinc-500 text-right truncate">
+              {t.budget.focusPacingNote}
+            </span>
+          </>
         ) : (
-          <span className="text-zinc-500 dark:text-zinc-400">
-            <span className={`font-semibold ${textColor}`}>
-              Rp {remaining.toLocaleString("id-ID")}
-            </span>{" "}
-            {t.budget.left}
-          </span>
-        )}
+          <>
+            <span className="text-zinc-500 dark:text-zinc-400">
+              <span className={`font-semibold ${textColor}`}>
+                Rp {remaining.toLocaleString("id-ID")}
+              </span>{" "}
+              {t.budget.left}
+            </span>
 
-        {!isOver && (
-          <span className="text-zinc-500">
-            ~Rp {dailyAllowance.toLocaleString("id-ID")}/{locale === "id" ? "hari" : "day"} ({locale === "id" ? `sisa ${daysRemaining} hari` : `${daysRemaining}d left`})
-          </span>
+            <span className="text-zinc-500">
+              ~Rp {dailyAllowance.toLocaleString("id-ID")}/{locale === "id" ? "hari" : "day"} ({locale === "id" ? `sisa ${daysRemaining} hari` : `${daysRemaining}d left`})
+            </span>
+          </>
         )}
       </div>
+
+      {/* Empathetic Encouragement Banner when Over Budget */}
+      {isOver && (
+        <div className="mt-1 flex items-start gap-2.5 rounded-xl bg-amber-50/80 p-2.5 text-[11px] text-amber-900 border border-amber-200/70 dark:bg-amber-950/25 dark:text-amber-200 dark:border-amber-800/50 animate-fade-in">
+          <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
+          <p className="leading-relaxed font-normal">
+            {t.budget.overBudgetEncouragement}
+          </p>
+        </div>
+      )}
 
       {/* Edit Budget Modal */}
       {isEditOpen && (

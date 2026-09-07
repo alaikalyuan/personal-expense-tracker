@@ -223,9 +223,15 @@ export default function ExpenseList({
       </div>
 
       <div className="flex items-center gap-2.5">
-        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-          Rp {Number(item.amount).toLocaleString("id-ID")}
-        </span>
+        {Number(item.amount) === 0 ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+            Rp 0 🎉
+          </span>
+        ) : (
+          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            Rp {Number(item.amount).toLocaleString("id-ID")}
+          </span>
+        )}
 
         {/* Accessible, Non-Distracting Edit Button */}
         <button

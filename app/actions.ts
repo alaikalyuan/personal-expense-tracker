@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
+import { getTodayString } from "@/utils/date";
 
 export async function login(formData: FormData) {
   const cookieStore = await cookies();
@@ -55,8 +56,8 @@ export async function addExpense(formData: FormData) {
   const amount = Number(formData.get("amount"));
   const spentAt = formData.get("spent_at") as string;
 
-  if (isNaN(amount) || amount <= 0) {
-    throw new Error("Amount must be greater than 0");
+  if (isNaN(amount) || amount < 0) {
+    throw new Error("Amount must be greater than or equal to 0");
   }
 
   if (!name) {
@@ -69,6 +70,41 @@ export async function addExpense(formData: FormData) {
     name,
     note,
     amount,
+    spent_at: spentAt,
+  });
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/compare");
+  revalidatePath("/archive");
+}
+
+export async function logNoSpendDay(customDate?: string, locale: "id" | "en" = "id") {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const spentAt = customDate || getTodayString();
+  const name = locale === "id" ? "Hari Tanpa Pengeluaran 🎉" : "No-Spend Day 🎉";
+  const note = locale === "id" ? "Rp 0 pengeluaran. Hemat maksimal!" : "Rp 0 spent. Total save!";
+
+  const { error: insertError } = await supabase.from("expenses").insert({
+    user_id: user.id,
+    category: "Others",
+    name,
+    note,
+    amount: 0,
     spent_at: spentAt,
   });
 
@@ -101,8 +137,8 @@ export async function updateExpense(formData: FormData) {
   const amount = Number(formData.get("amount"));
   const spentAt = formData.get("spent_at") as string;
 
-  if (isNaN(amount) || amount <= 0) {
-    throw new Error("Amount must be greater than 0");
+  if (isNaN(amount) || amount < 0) {
+    throw new Error("Amount must be greater than or equal to 0");
   }
 
   if (!name) {
