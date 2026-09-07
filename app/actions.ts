@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { getTodayString } from "@/utils/date";
+import { attachExemptTag } from "@/utils/exemptions";
 
 export async function login(formData: FormData) {
   const cookieStore = await cookies();
@@ -231,4 +232,86 @@ export async function setWeeklyBudget(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/compare");
+}
+
+export async function setMonthlyBudget(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const budget = Number(formData.get("budget"));
+  if (isNaN(budget) || budget <= 0) {
+    throw new Error("Invalid budget amount");
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: {
+      monthly_budget: budget,
+    },
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/compare");
+}
+
+export async function setDashboardCadence(cadence: "week" | "month") {
+  const cookieStore = await cookies();
+  cookieStore.set("dashboard_cadence", cadence, {
+    maxAge: 60 * 60 * 24 * 365,
+    path: "/",
+    sameSite: "lax",
+  });
+}
+
+export async function toggleExpenseExemption(id: string, isExempt: boolean) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("expenses")
+    .select("note")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (fetchError || !existing) {
+    throw new Error("Expense not found");
+  }
+
+  const updatedNote = attachExemptTag(existing.note, isExempt);
+
+  const { error: updateError } = await supabase
+    .from("expenses")
+    .update({ note: updatedNote })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/compare");
+  revalidatePath("/archive");
 }

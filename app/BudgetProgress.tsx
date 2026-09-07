@@ -1,36 +1,56 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, X, Sparkles, CheckCircle2 } from "lucide-react";
-import { setWeeklyBudget } from "@/app/actions";
+import { Pencil, X, Sparkles, CheckCircle2, Tag } from "lucide-react";
+import { setWeeklyBudget, setMonthlyBudget, toggleExpenseExemption } from "@/app/actions";
 import { useTranslation } from "@/utils/i18n/context";
 
 interface BudgetProgressProps {
+  period?: "week" | "month";
   weeklyTotal: number;
   weeklyBudget: number;
   daysRemaining: number;
+  regularTotal?: number;
+  exemptTotal?: number;
+  exemptCount?: number;
+  unexemptAnomaly?: { id: string; name: string; amount: number } | null;
 }
 
 export default function BudgetProgress({
+  period = "week",
   weeklyTotal,
   weeklyBudget,
   daysRemaining,
+  regularTotal,
+  exemptTotal,
+  exemptCount,
+  unexemptAnomaly,
 }: BudgetProgressProps) {
   const { t, locale } = useTranslation();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [budgetInput, setBudgetInput] = useState(String(weeklyBudget));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExempting, setIsExempting] = useState(false);
 
-  const presetBudgets = [
-    { label: t.budget.preset250k, value: 250000 },
-    { label: t.budget.preset500k, value: 500000 },
-    { label: t.budget.preset1m, value: 1000000 },
-    { label: t.budget.preset2m, value: 2000000 },
-  ];
+  const presetBudgets = period === "month"
+    ? [
+        { label: t.budget.preset1m5, value: 1500000 },
+        { label: t.budget.preset2m5, value: 2500000 },
+        { label: t.budget.preset5m, value: 5000000 },
+        { label: t.budget.preset10m, value: 10000000 },
+      ]
+    : [
+        { label: t.budget.preset250k, value: 250000 },
+        { label: t.budget.preset500k, value: 500000 },
+        { label: t.budget.preset1m, value: 1000000 },
+        { label: t.budget.preset2m, value: 2000000 },
+      ];
 
-  const rawPercent = weeklyBudget > 0 ? Math.round((weeklyTotal / weeklyBudget) * 100) : 0;
+  // Base calculation on regular operational spend if one-offs exist
+  const activeSpend = regularTotal !== undefined ? regularTotal : weeklyTotal;
+  const rawPercent = weeklyBudget > 0 ? Math.round((activeSpend / weeklyBudget) * 100) : 0;
   const barWidth = Math.min(rawPercent, 100);
-  const remaining = weeklyBudget - weeklyTotal;
+  const remaining = weeklyBudget - activeSpend;
   const isOver = remaining < 0;
   const dailyAllowance = Math.max(Math.round(remaining / Math.max(daysRemaining, 1)), 0);
 
@@ -52,7 +72,11 @@ export default function BudgetProgress({
   const handleFormSubmit = async (formData: FormData) => {
     try {
       setIsSubmitting(true);
-      await setWeeklyBudget(formData);
+      if (period === "month") {
+        await setMonthlyBudget(formData);
+      } else {
+        await setWeeklyBudget(formData);
+      }
       setIsEditOpen(false);
     } finally {
       setIsSubmitting(false);
@@ -126,6 +150,47 @@ export default function BudgetProgress({
         )}
       </div>
 
+      {/* Exemption summary pill if one-offs exist */}
+      {exemptTotal && exemptTotal > 0 ? (
+        <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 dark:text-zinc-400 pt-0.5">
+          <Tag className="w-3 h-3 text-amber-500 shrink-0" />
+          <span>
+            {t.budget.exemptSummary
+              .replace("{amount}", exemptTotal.toLocaleString("id-ID"))
+              .replace("{count}", String(exemptCount || 1))}
+          </span>
+        </div>
+      ) : null}
+
+      {/* 1-Tap Retroactive Anomaly Suggestion Chip when overbudget */}
+      {unexemptAnomaly && isOver && (
+        <div className="mt-1 flex items-center justify-between gap-2 rounded-xl bg-amber-50/90 p-2.5 text-xs text-amber-950 border border-amber-300/80 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800/80 animate-fade-in">
+          <div className="flex items-start gap-2 min-w-0 flex-1">
+            <Tag className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-[11px] leading-snug font-medium break-words">
+              {t.budget.exemptSuggestTitle
+                .replace("{name}", unexemptAnomaly.name)
+                .replace("{amount}", unexemptAnomaly.amount.toLocaleString("id-ID"))}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={isExempting}
+            onClick={async () => {
+              try {
+                setIsExempting(true);
+                await toggleExpenseExemption(unexemptAnomaly.id, true);
+              } finally {
+                setIsExempting(false);
+              }
+            }}
+            className="shrink-0 rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-amber-700 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+          >
+            {isExempting ? "..." : t.budget.exemptSuggestAction}
+          </button>
+        </div>
+      )}
+
       {/* Empathetic Encouragement Banner when Over Budget */}
       {isOver && (
         <div className="mt-1 flex items-start gap-2.5 rounded-xl bg-amber-50/80 p-2.5 text-[11px] text-amber-900 border border-amber-200/70 dark:bg-amber-950/25 dark:text-amber-200 dark:border-amber-800/50 animate-fade-in">
@@ -150,10 +215,10 @@ export default function BudgetProgress({
             <div className="flex items-center justify-between pb-3 border-b border-zinc-200/80 dark:border-zinc-800/80">
               <div>
                 <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  {t.budget.modalTitle}
+                  {period === "month" ? t.budget.monthlyModalTitle : t.budget.modalTitle}
                 </h3>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                  {t.budget.modalSubtitle}
+                  {period === "month" ? t.budget.monthlyModalSubtitle : t.budget.modalSubtitle}
                 </p>
               </div>
               <button

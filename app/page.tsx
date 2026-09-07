@@ -1,32 +1,35 @@
 import { createClient } from "@/utils/supabase/server";
-import UserMenu from "./UserMenu";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
-  addDays,
-  endOfWeek,
   format,
-  isAfter,
-  isSameDay,
   startOfWeek,
+  startOfMonth,
+  endOfMonth,
+  getDaysInMonth,
+  getDate,
+  subMonths,
+  setDate,
+  addDays,
 } from "date-fns";
-import BreakdownCard, { DaySpend, CategorySpend } from "./BreakdownCard";
-import ExpenseList from "./ExpenseList";
-import BudgetProgress from "./BudgetProgress";
-import TrackingStreak from "./TrackingStreak";
-import InstallPrompt from "./InstallPrompt";
+import DashboardClient from "./DashboardClient";
 import { getNowInTimezone } from "@/utils/date";
 import { calculateStreak } from "@/utils/streak";
-import {
-  getDictionaryServer,
-  formatDateServer,
-  getCategoryLabelServer,
-} from "@/utils/i18n/server";
+import { getDictionaryServer } from "@/utils/i18n/server";
 
-export default async function DashboardPage() {
+export default async function DashboardPage(props: {
+  searchParams?: Promise<{ period?: string }>;
+}) {
   const cookieStore = await cookies();
+  const searchParams = await props.searchParams;
+  const cookieCadence = cookieStore.get("dashboard_cadence")?.value;
+  const initialCadence: "week" | "month" =
+    searchParams?.period === "month" || (!searchParams?.period && cookieCadence === "month")
+      ? "month"
+      : "week";
+
   const supabase = await createClient(cookieStore);
-  const { t, locale } = await getDictionaryServer();
+  const { locale } = await getDictionaryServer();
 
   const {
     data: { user },
@@ -36,191 +39,82 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Calculate start and end of the current week (Monday 00:00 to Sunday 23:59) in local timezone
   const now = getNowInTimezone();
+
+  // Weekly boundaries (Monday 00:00 to Sunday 23:59)
   const startOfWeekDate = startOfWeek(now, { weekStartsOn: 1 });
-  const endOfWeekDate = endOfWeek(now, { weekStartsOn: 1 });
+  const endOfWeekDate = addDays(startOfWeekDate, 6);
   const startOfWeekStr = format(startOfWeekDate, "yyyy-MM-dd");
   const endOfWeekStr = format(endOfWeekDate, "yyyy-MM-dd");
 
-  const [{ data: expenses }, { data: allUserExpenseDates }] = await Promise.all([
+  // Monthly boundaries (1st to end of month)
+  const startOfMonthDate = startOfMonth(now);
+  const endOfMonthDate = endOfMonth(now);
+  const startOfMonthStr = format(startOfMonthDate, "yyyy-MM-dd");
+  const endOfMonthStr = format(endOfMonthDate, "yyyy-MM-dd");
+  const currentDay = getDate(now);
+  const totalDaysInMonth = getDaysInMonth(now);
+
+  // Unified fetch window covering BOTH week and month in a single query
+  const rangeStartStr = startOfWeekStr < startOfMonthStr ? startOfWeekStr : startOfMonthStr;
+  const rangeEndStr = endOfWeekStr > endOfMonthStr ? endOfWeekStr : endOfMonthStr;
+
+  // Prior Month MTD boundaries (for MoM comparison)
+  const lastMonthDate = subMonths(now, 1);
+  const startOfLastMonth = startOfMonth(lastMonthDate);
+  const daysInLastMonth = getDaysInMonth(lastMonthDate);
+  const priorMtdEndDay = Math.min(currentDay, daysInLastMonth);
+  const priorMtdEndDate = setDate(startOfLastMonth, priorMtdEndDay);
+  const startOfLastMonthStr = format(startOfLastMonth, "yyyy-MM-dd");
+  const priorMtdEndStr = format(priorMtdEndDate, "yyyy-MM-dd");
+
+  const [
+    { data: unifiedExpenses },
+    { data: allUserExpenseDates },
+    { data: priorMtdExpenses },
+  ] = await Promise.all([
     supabase
       .from("expenses")
       .select("*")
       .eq("user_id", user.id)
-      .gte("spent_at", startOfWeekStr)
-      .lte("spent_at", endOfWeekStr)
+      .gte("spent_at", rangeStartStr)
+      .lte("spent_at", rangeEndStr)
       .order("spent_at", { ascending: false }),
     supabase
       .from("expenses")
       .select("spent_at")
       .eq("user_id", user.id)
       .order("spent_at", { ascending: false }),
+    supabase
+      .from("expenses")
+      .select("amount")
+      .eq("user_id", user.id)
+      .gte("spent_at", startOfLastMonthStr)
+      .lte("spent_at", priorMtdEndStr),
   ]);
 
   const spentDates = (allUserExpenseDates || []).map((e) => e.spent_at);
   const streakData = calculateStreak(spentDates, now, locale);
 
-  const weeklyTotal = (expenses || []).reduce(
+  const priorMtdSpend = (priorMtdExpenses || []).reduce(
     (acc, curr) => acc + Number(curr.amount),
     0
   );
-  // 1. Largest Single Spend
-  const largestExpense = expenses && expenses.length > 0
-    ? expenses.reduce((largest, expense) =>
-      Number(expense.amount) > Number(largest.amount) ? expense : largest
-    )
-    : null;
-  const largestSpend = Number(largestExpense?.amount ?? 0);
 
-  const todayDayIndex = (now.getDay() + 6) % 7 + 1; // Mon=1, Tue=2, ..., Sun=7
-  const avgDailySpend = weeklyTotal / todayDayIndex;
-  const daysRemaining = Math.max(7 - todayDayIndex + 1, 1);
   const weeklyBudget = Number(user.user_metadata?.weekly_budget || 500000);
-  const isOverBudget = weeklyBudget > 0 && weeklyTotal > weeklyBudget;
-
-  // 3. Top Category by total sum
-  const categoryTotals = (expenses || []).reduce<Record<string, number>>((acc, curr) => {
-    const amt = Number(curr.amount);
-    acc[curr.category] = (acc[curr.category] || 0) + amt;
-    return acc;
-  }, {});
-
-  const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0] || ["None", 0];
-  const topCategoryName =
-    topCategory[0] === "None"
-      ? t.common.none
-      : getCategoryLabelServer(topCategory[0], locale);
-
-  // 4. Daily breakdown (Mon - Sun)
-  const dailyData: DaySpend[] = Array.from({ length: 7 }, (_, i) => {
-    const dayDate = addDays(startOfWeekDate, i);
-    const dateStr = format(dayDate, "yyyy-MM-dd");
-    const dayTotal = (expenses || []).reduce((acc, curr) => {
-      if (curr.spent_at && curr.spent_at.startsWith(dateStr)) {
-        return acc + Number(curr.amount);
-      }
-      return acc;
-    }, 0);
-
-    return {
-      dayName: formatDateServer(dayDate, "EEE", locale),
-      dateStr,
-      formattedDate: formatDateServer(dayDate, "EEEE, MMM d", locale),
-      amount: dayTotal,
-      isToday: isSameDay(dayDate, now),
-      isFuture: isAfter(dayDate, now),
-    };
-  });
-
-  // 5. Category breakdown
-  const categoryData: CategorySpend[] = Object.entries(categoryTotals)
-    .map(([category, amount]) => ({
-      category,
-      amount,
-      percentage: weeklyTotal > 0 ? Math.round((amount / weeklyTotal) * 100) : 0,
-    }))
-    .sort((a, b) => b.amount - a.amount);
+  const monthlyBudget = Number(
+    user.user_metadata?.monthly_budget || Math.round((weeklyBudget / 7) * totalDaysInMonth)
+  );
 
   return (
-    <main className="max-w-md mx-auto p-4 pb-48 flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex justify-between items-center pt-2">
-        <h1 className="font-bold tracking-tight text-lg">{t.dashboard.title}</h1>
-        <div className="flex items-center gap-2">
-          <TrackingStreak
-            streakData={streakData}
-            isOverBudget={isOverBudget}
-          />
-          <UserMenu />
-        </div>
-      </div>
-
-      {/* PWA Install Banner */}
-      <InstallPrompt />
-
-      {/* Burn Rate Summary */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-linear-to-b dark:from-zinc-900 dark:to-zinc-950 dark:shadow-sm">
-        <div className="flex items-baseline justify-between">
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              {t.dashboard.spentThisWeek}
-            </p>
-            <p className="mt-1 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-              Rp {weeklyTotal.toLocaleString("id-ID")}
-            </p>
-          </div>
-        </div>
-
-        {/* Budget Progress & Allowance Pace */}
-        <BudgetProgress
-          weeklyTotal={weeklyTotal}
-          weeklyBudget={weeklyBudget}
-          daysRemaining={daysRemaining}
-        />
-
-        {/* Micro-Stats Shelf */}
-        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-zinc-200/80 pt-4 dark:border-zinc-800/80">
-          {/* Daily Average */}
-          <div>
-            <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-500 dark:text-zinc-400">
-              {t.dashboard.dailyAvg}
-            </p>
-            <p className="mt-0.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-              Rp {Math.round(avgDailySpend).toLocaleString("id-ID")}
-            </p>
-            <p className="mt-0.5 text-[10px] text-zinc-500">
-              {todayDayIndex} {t.dashboard.dayOfSeven}
-            </p>
-          </div>
-
-          {/* Top Category */}
-          <div className="border-l border-zinc-200/80 pl-2 dark:border-zinc-800/60">
-            <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-500 dark:text-zinc-400">
-              {t.dashboard.topCategory}
-            </p>
-            <p className="mt-0.5 truncate text-xs font-semibold text-zinc-800 dark:text-zinc-200" title={topCategoryName}>
-              {topCategoryName}
-            </p>
-            <p className="mt-0.5 truncate text-[10px] text-zinc-500">
-              Rp {Number(topCategory[1]).toLocaleString("id-ID")}
-            </p>
-          </div>
-
-          {/* Max Spend */}
-          <div className="border-l border-zinc-200/80 pl-2 dark:border-zinc-800/60">
-            <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-500 dark:text-zinc-400">
-              {t.dashboard.largest}
-            </p>
-            <p className="mt-0.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-              Rp {largestSpend.toLocaleString("id-ID")}
-            </p>
-            <p className="mt-0.5 truncate text-[10px] text-zinc-500" title={largestExpense?.name ?? t.common.none}>
-              {largestExpense?.name ?? t.common.none}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Breakdown Card */}
-      <BreakdownCard
-        dailyData={dailyData}
-        categoryData={categoryData}
-        weeklyTotal={weeklyTotal}
-      />
-
-      {/* Expense Log */}
-      <ExpenseList
-        expenses={expenses || []}
-        showPeriodToggle={true}
-        title={t.dashboard.recentEntries}
-        weeklyBudget={weeklyBudget}
-        startDateStr={startOfWeekStr}
-        endDateStr={endOfWeekStr}
-      />
-
-      {/* Bottom spacer for clearance above floating navbar and gradient */}
-      <div className="h-8 shrink-0" aria-hidden="true" />
-    </main>
+    <DashboardClient
+      initialCadence={initialCadence}
+      allExpenses={unifiedExpenses || []}
+      priorMtdSpend={priorMtdSpend}
+      weeklyBudget={weeklyBudget}
+      monthlyBudget={monthlyBudget}
+      streakData={streakData}
+      nowIso={format(now, "yyyy-MM-dd'T'HH:mm:ss")}
+    />
   );
 }

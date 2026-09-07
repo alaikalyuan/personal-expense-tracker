@@ -20,8 +20,11 @@ import {
   RotateCcw,
   FileText,
   Pencil,
+  Tag,
+  Sparkles,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
+import { detectOneOffAnomaly, attachExemptTag } from "@/utils/exemptions";
 import { CATEGORY_KEYS, CategoryKey } from "@/utils/i18n/dictionaries";
 import {
   QuickChip,
@@ -123,6 +126,17 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
   const [customDate, setCustomDate] = useState<string>(today);
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
 
+  // One-off exemption states
+  const [isExempt, setIsExempt] = useState(false);
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [dismissedAnomalySuggestion, setDismissedAnomalySuggestion] = useState(false);
+
+  // Proactive anomaly detection
+  const isAnomaly = useMemo(() => {
+    if (dismissedAnomalySuggestion || isExempt) return false;
+    return detectOneOffAnomaly(name, amount);
+  }, [name, amount, isExempt, dismissedAnomalySuggestion]);
+
   // Quick Type state
   const [quickInput, setQuickInput] = useState<string>("");
   const [batchFeedback, setBatchFeedback] = useState<string | null>(null);
@@ -177,15 +191,11 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
       if (inputMode === "quick_type") {
         quickInputRef.current?.focus();
       } else {
-        if (!name) {
-          nameInputRef.current?.focus();
-        } else {
-          amountInputRef.current?.focus();
-        }
+        amountInputRef.current?.focus();
       }
     }, 100);
     return () => clearTimeout(timer);
-  }, [inputMode, name]);
+  }, [inputMode]);
 
   const handleClose = () => {
     if (isSubmitting) return;
@@ -247,8 +257,9 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
       formData.set("amount", String(amount));
       formData.set("category", category);
       formData.set("spent_at", spentAt);
-      if (note.trim()) {
-        formData.set("note", note.trim());
+      const finalNote = attachExemptTag(note.trim(), isExempt);
+      if (finalNote) {
+        formData.set("note", finalNote);
       }
 
       await addExpense(formData);
@@ -280,6 +291,14 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
       formData.set("amount", String(parsedExpense.amount));
       formData.set("category", parsedExpense.category);
       formData.set("spent_at", parsedExpense.spentAt);
+
+      const hasQuickTag =
+        quickInput.toLowerCase().includes("#one-off") ||
+        quickInput.toLowerCase().includes("#splurge");
+      const finalNote = attachExemptTag("", hasQuickTag);
+      if (finalNote) {
+        formData.set("note", finalNote);
+      }
 
       await addExpense(formData);
 
@@ -674,6 +693,80 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
+                )}
+              </div>
+            )}
+
+            {/* Smart Anomaly Suggestion Banner */}
+            {isAnomaly && (
+              <div className="flex items-start justify-between gap-2.5 rounded-xl border border-amber-200/90 bg-amber-50/80 p-2.5 text-xs text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200 animate-fade-in">
+                <div className="flex items-start gap-2 min-w-0">
+                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="leading-snug text-[11px]">
+                    {t.expenses.oneOffDetectBanner}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsExempt(true)}
+                    className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-amber-600 active:scale-95 transition-all cursor-pointer"
+                  >
+                    {t.expenses.oneOffMarkButton}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDismissedAnomalySuggestion(true)}
+                    className="p-1 text-amber-600 hover:text-amber-900 dark:text-amber-400 rounded-md cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Active One-Off Tag Pill */}
+            {isExempt && (
+              <div className="flex items-center justify-between rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/90 dark:border-amber-800/70 px-3 py-2 text-xs text-amber-800 dark:text-amber-300 animate-fade-in">
+                <span className="flex items-center gap-1.5 font-semibold text-xs">
+                  <Tag className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  {t.expenses.oneOffTaggedIndicator}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsExempt(false)}
+                  className="text-[11px] text-amber-600 hover:text-amber-900 dark:text-amber-400 font-semibold cursor-pointer underline"
+                >
+                  {t.expenses.oneOffRemoveButton}
+                </button>
+              </div>
+            )}
+
+            {/* Subtle More Options Toggle for manual one-off tag */}
+            {!isExempt && !isAnomaly && (
+              <div className="pt-0.5">
+                {!showMoreOptions ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowMoreOptions(true)}
+                    className="text-[11px] font-medium text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors cursor-pointer"
+                  >
+                    + {t.expenses.moreOptions}
+                  </button>
+                ) : (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-zinc-200/80 bg-zinc-50/50 p-2.5 dark:border-zinc-800/70 dark:bg-zinc-950/40 animate-fade-in">
+                    <input
+                      type="checkbox"
+                      id="manualOneOff"
+                      checked={isExempt}
+                      onChange={(e) => setIsExempt(e.target.checked)}
+                      className="rounded border-zinc-300 text-amber-500 focus:ring-amber-500 h-4 w-4 mt-0.5 cursor-pointer"
+                    />
+                    <label htmlFor="manualOneOff" className="text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
+                      <p className="font-semibold text-xs text-zinc-900 dark:text-zinc-100">{t.expenses.oneOffCheckbox}</p>
+                      <p className="text-[10px] text-zinc-500">{t.expenses.oneOffHelp}</p>
+                    </label>
+                  </div>
                 )}
               </div>
             )}

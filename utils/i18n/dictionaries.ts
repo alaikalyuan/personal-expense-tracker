@@ -58,6 +58,13 @@ export interface Dictionary {
     tabThisWeek: string;
     noExpensesToday: string;
     viewWeekExpenses: string;
+    cadenceWeek: string;
+    cadenceMonth: string;
+    spentThisMonth: string;
+    monthToDate: string;
+    dayOfMonth: string;
+    noExpensesMonth: string;
+    tabThisMonth: string;
   };
   breakdown: {
     title: string;
@@ -68,6 +75,8 @@ export interface Dictionary {
     summarySubtitle: string;
     tabDaily: string;
     tabCategories: string;
+    tabWeekly: string;
+    monthActivitySubtitle: string;
     peakDay: string;
     noCategories: string;
     hideBreakdownAria: string;
@@ -85,12 +94,39 @@ export interface Dictionary {
     dailyAllowance: string;
     modalTitle: string;
     modalSubtitle: string;
+    monthlyModalTitle: string;
+    monthlyModalSubtitle: string;
     quickPresets: string;
     saveBudget: string;
     preset250k: string;
     preset500k: string;
     preset1m: string;
+    preset1m5: string;
     preset2m: string;
+    preset2m5: string;
+    preset5m: string;
+    preset10m: string;
+    exemptSummary: string;
+    exemptSuggestTitle: string;
+    exemptSuggestAction: string;
+  };
+  burnRate: {
+    cardTitle: string;
+    projectedEndMonth: string;
+    dailyVelocity: string;
+    targetDailyPace: string;
+    paceSafe: string;
+    paceTight: string;
+    paceExceeded: string;
+    monthProgress: string;
+    budgetConsumed: string;
+    momPaceTitle: string;
+    momHigher: string;
+    momLower: string;
+    momEven: string;
+    momVsSameTime: string;
+    projectedSafeNote: string;
+    projectedExceedNote: string;
   };
   streak: {
     title: string;
@@ -154,6 +190,15 @@ export interface Dictionary {
     noMatchingExpenses: string;
     clearSearch: string;
     shareExport: string;
+    oneOffBadge: string;
+    oneOffCheckbox: string;
+    oneOffHelp: string;
+    oneOffDetectBanner: string;
+    oneOffMarkButton: string;
+    oneOffTaggedIndicator: string;
+    oneOffRemoveButton: string;
+    moreOptions: string;
+    lessOptions: string;
   };
   exportShare: {
     modalTitle: string;
@@ -299,6 +344,13 @@ export const dictionaries: Record<Locale, Dictionary> = {
       tabThisWeek: "Minggu Ini",
       noExpensesToday: "Belum ada pengeluaran yang dicatat hari ini.",
       viewWeekExpenses: "Lihat pengeluaran minggu ini",
+      cadenceWeek: "Mingguan",
+      cadenceMonth: "Bulanan",
+      spentThisMonth: "Pengeluaran Bulan Ini",
+      monthToDate: "Bulan Berjalan (MTD)",
+      dayOfMonth: "hari",
+      noExpensesMonth: "Belum ada pengeluaran yang dicatat bulan ini.",
+      tabThisMonth: "Bulan Ini",
     },
     breakdown: {
       title: "Rincian",
@@ -309,6 +361,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       summarySubtitle: "Aktivitas 7 hari & pembagian kategori",
       tabDaily: "Harian",
       tabCategories: "Kategori",
+      tabWeekly: "Mingguan",
+      monthActivitySubtitle: "Aktivitas mingguan & pembagian kategori",
       peakDay: "Puncak",
       noCategories: "Belum ada data kategori yang dicatat minggu ini.",
       hideBreakdownAria: "Sembunyikan rincian",
@@ -326,12 +380,39 @@ export const dictionaries: Record<Locale, Dictionary> = {
       dailyAllowance: "hari",
       modalTitle: "Budget Mingguan",
       modalSubtitle: "Tentukan target budget pengeluaran mingguanmu",
+      monthlyModalTitle: "Budget Bulanan",
+      monthlyModalSubtitle: "Tentukan target budget pengeluaran bulananmu",
       quickPresets: "Pilihan Cepat",
       saveBudget: "Simpan Anggaran",
       preset250k: "250rb",
       preset500k: "500rb",
       preset1m: "1jt",
+      preset1m5: "1.5jt",
       preset2m: "2jt",
+      preset2m5: "2.5jt",
+      preset5m: "5jt",
+      preset10m: "10jt",
+      exemptSummary: "Rp {amount} ({count} sekali pakai) dikecualikan",
+      exemptSuggestTitle: "{name} (Rp {amount}) membuatmu overbudget. Mau tandai sebagai One-Off?",
+      exemptSuggestAction: "Kecualikan",
+    },
+    burnRate: {
+      cardTitle: "Proyeksi Pengeluaran Bulanan",
+      projectedEndMonth: "Estimasi Akhir Bulan",
+      dailyVelocity: "Kecepatan Harian",
+      targetDailyPace: "Batas Aman Harian",
+      paceSafe: "Aman & Terkendali",
+      paceTight: "Mendekati Batas",
+      paceExceeded: "Beresiko Overbudget",
+      monthProgress: "Waktu Berjalan",
+      budgetConsumed: "Budget Terpakai",
+      momPaceTitle: "Perbandingan Bulan Lalu (MTD)",
+      momHigher: "lebih tinggi dari bulan lalu",
+      momLower: "lebih hemat dari bulan lalu",
+      momEven: "seimbang dengan bulan lalu",
+      momVsSameTime: "vs periode sama bulan lalu",
+      projectedSafeNote: "Di kecepatan belanja saat ini, kamu diproyeksikan hemat",
+      projectedExceedNote: "Di kecepatan belanja saat ini, kamu berpotensi melebihi target sebesar",
     },
     streak: {
       title: "Logging Streak",
@@ -395,6 +476,15 @@ export const dictionaries: Record<Locale, Dictionary> = {
       noMatchingExpenses: "Tidak ada pengeluaran yang cocok.",
       clearSearch: "Reset filter",
       shareExport: "Bagikan / Ekspor",
+      oneOffBadge: "Sekali Pakai",
+      oneOffCheckbox: "Tandai sebagai Pengeluaran Sekali Pakai (One-Off)",
+      oneOffHelp: "Kecualikan dari batas budget rutin mingguan",
+      oneOffDetectBanner: "Pengeluaran ini terlihat cukup besar / anomali. Mau tandai sebagai One-Off agar tidak membebani budget rutin?",
+      oneOffMarkButton: "✨ Tandai One-Off",
+      oneOffTaggedIndicator: "Ditandai sebagai One-Off",
+      oneOffRemoveButton: "Batal Tandai",
+      moreOptions: "Opsi lainnya",
+      lessOptions: "Sembunyikan opsi",
     },
     exportShare: {
       modalTitle: "Bagikan & Ekspor",
@@ -539,6 +629,13 @@ export const dictionaries: Record<Locale, Dictionary> = {
       tabThisWeek: "This Week",
       noExpensesToday: "No expenses recorded today yet.",
       viewWeekExpenses: "View this week's expenses",
+      cadenceWeek: "Weekly",
+      cadenceMonth: "Monthly",
+      spentThisMonth: "Spent this month",
+      monthToDate: "Month-to-Date (MTD)",
+      dayOfMonth: "days",
+      noExpensesMonth: "No expenses recorded this month yet.",
+      tabThisMonth: "This Month",
     },
     breakdown: {
       title: "Breakdown",
@@ -549,6 +646,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       summarySubtitle: "7-day activity & category split",
       tabDaily: "Daily",
       tabCategories: "Categories",
+      tabWeekly: "Weekly",
+      monthActivitySubtitle: "Weekly activity & category split",
       peakDay: "Peak",
       noCategories: "No category data recorded for this week yet.",
       hideBreakdownAria: "Hide breakdown",
@@ -566,12 +665,39 @@ export const dictionaries: Record<Locale, Dictionary> = {
       dailyAllowance: "left",
       modalTitle: "Weekly Budget Limit",
       modalSubtitle: "Set your maximum weekly spending goal",
+      monthlyModalTitle: "Monthly Budget Limit",
+      monthlyModalSubtitle: "Set your maximum monthly spending goal",
       quickPresets: "Quick Presets",
       saveBudget: "Save Budget",
       preset250k: "250k",
       preset500k: "500k",
       preset1m: "1jt",
+      preset1m5: "1.5jt",
       preset2m: "2jt",
+      preset2m5: "2.5jt",
+      preset5m: "5jt",
+      preset10m: "10jt",
+      exemptSummary: "Rp {amount} ({count} one-off) excluded from routine budget",
+      exemptSuggestTitle: "{name} (Rp {amount}) caused you to go overbudget. Mark as One-Off?",
+      exemptSuggestAction: "Exempt",
+    },
+    burnRate: {
+      cardTitle: "Projected Monthly Burn",
+      projectedEndMonth: "Month-End Estimate",
+      dailyVelocity: "Daily Velocity",
+      targetDailyPace: "Safe Target Pace",
+      paceSafe: "Safe & On Track",
+      paceTight: "Pacing Tight",
+      paceExceeded: "Risk of Overspending",
+      monthProgress: "Month Elapsed",
+      budgetConsumed: "Budget Used",
+      momPaceTitle: "Prior Month Comparison (MTD)",
+      momHigher: "higher than last month",
+      momLower: "lower than last month",
+      momEven: "even with last month",
+      momVsSameTime: "vs same period last month",
+      projectedSafeNote: "At your current pace, you are projected to save",
+      projectedExceedNote: "At your current pace, you are projected to exceed target by",
     },
     streak: {
       title: "Logging Streak",
@@ -635,6 +761,15 @@ export const dictionaries: Record<Locale, Dictionary> = {
       noMatchingExpenses: "No expenses found matching your search.",
       clearSearch: "Clear filters",
       shareExport: "Share / Export",
+      oneOffBadge: "One-Off",
+      oneOffCheckbox: "Mark as One-Off / Splurge",
+      oneOffHelp: "Exclude from regular weekly budget pace",
+      oneOffDetectBanner: "This looks like a large one-off expense. Tag it as a One-Off Splurge so it doesn't skew your weekly budget?",
+      oneOffMarkButton: "✨ Mark One-Off",
+      oneOffTaggedIndicator: "Tagged as One-Off",
+      oneOffRemoveButton: "Remove Tag",
+      moreOptions: "More options",
+      lessOptions: "Hide options",
     },
     exportShare: {
       modalTitle: "Share & Export",

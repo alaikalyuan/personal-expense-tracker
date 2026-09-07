@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Pencil, Trash2, X, Search, Share2, RotateCcw } from "lucide-react";
+import { Pencil, Trash2, X, Search, Share2, RotateCcw, Tag } from "lucide-react";
 import { updateExpense, deleteExpense } from "@/app/actions";
 import { useTranslation } from "@/utils/i18n/context";
+import { isExpenseExempt, cleanNote, attachExemptTag } from "@/utils/exemptions";
 import { CATEGORY_KEYS } from "@/utils/i18n/dictionaries";
 import { getTodayString, getNowInTimezone } from "@/utils/date";
 import { format, parseISO, subDays } from "date-fns";
@@ -16,6 +17,7 @@ export interface ExpenseItem {
   category: string;
   note?: string | null;
   spent_at: string;
+  is_exempt?: boolean | null;
 }
 
 const categoryColors: Record<string, string> = {
@@ -34,6 +36,7 @@ interface ExpenseListProps {
   weeklyBudget?: number;
   startDateStr?: string;
   endDateStr?: string;
+  dashboardPeriod?: "week" | "month";
 }
 
 export default function ExpenseList({
@@ -43,9 +46,11 @@ export default function ExpenseList({
   weeklyBudget,
   startDateStr,
   endDateStr,
+  dashboardPeriod = "week",
 }: ExpenseListProps) {
   const { t, formatDate, getCategoryLabel } = useTranslation();
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
+  const [editIsExempt, setEditIsExempt] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -188,6 +193,9 @@ export default function ExpenseList({
     try {
       setIsUpdating(true);
       setError(null);
+      const rawNote = (formData.get("note") as string)?.trim() || "";
+      const updatedNote = attachExemptTag(rawNote, editIsExempt);
+      formData.set("note", updatedNote);
       await updateExpense(formData);
       closeModal();
     } catch (err) {
@@ -197,57 +205,71 @@ export default function ExpenseList({
     }
   };
 
-  const renderExpenseCard = (item: ExpenseItem) => (
-    <div
-      key={item.id}
-      className={`flex items-center justify-between rounded-xl border border-zinc-200/80 border-l-4 bg-white p-3.5 shadow-2xs transition-colors hover:bg-zinc-50/80 dark:border-zinc-800/80 dark:bg-zinc-900/30 dark:hover:bg-zinc-900/50 ${
-        categoryColors[item.category] || "border-l-zinc-500"
-      }`}
-    >
-      <div className="flex-1 pr-3">
-        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{item.name}</p>
-        <div className="flex items-center gap-2 mt-0.5">
-          {item.category && (
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">{getCategoryLabel(item.category)}</span>
+  const renderExpenseCard = (item: ExpenseItem) => {
+    const isExempt = isExpenseExempt(item);
+    const cleanedNote = cleanNote(item.note);
+
+    return (
+      <div
+        key={item.id}
+        className={`flex items-center justify-between rounded-xl border border-zinc-200/80 border-l-4 bg-white p-3.5 shadow-2xs transition-colors hover:bg-zinc-50/80 dark:border-zinc-800/80 dark:bg-zinc-900/30 dark:hover:bg-zinc-900/50 ${
+          categoryColors[item.category] || "border-l-zinc-500"
+        }`}
+      >
+        <div className="flex-1 pr-3">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{item.name}</p>
+            {isExempt && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                <Tag className="w-2.5 h-2.5 text-amber-500" />
+                {t.expenses.oneOffBadge}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            {item.category && (
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">{getCategoryLabel(item.category)}</span>
+            )}
+            <span className="text-[10px] text-zinc-300 dark:text-zinc-600">•</span>
+            <span className="text-xs text-zinc-500">
+              {formatDate(item.spent_at, "MMM d, yyyy")}
+            </span>
+          </div>
+          {cleanedNote && (
+            <p className="text-[11px] text-zinc-500 italic mt-0.5 line-clamp-1">
+              &ldquo;{cleanedNote}&rdquo;
+            </p>
           )}
-          <span className="text-[10px] text-zinc-300 dark:text-zinc-600">•</span>
-          <span className="text-xs text-zinc-500">
-            {formatDate(item.spent_at, "MMM d, yyyy")}
-          </span>
         </div>
-        {item.note && (
-          <p className="text-[11px] text-zinc-500 italic mt-0.5 line-clamp-1">
-            &ldquo;{item.note}&rdquo;
-          </p>
-        )}
-      </div>
 
-      <div className="flex items-center gap-2.5">
-        {Number(item.amount) === 0 ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-            Rp 0 🎉
-          </span>
-        ) : (
-          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Rp {Number(item.amount).toLocaleString("id-ID")}
-          </span>
-        )}
+        <div className="flex items-center gap-2.5">
+          {Number(item.amount) === 0 ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+              Rp 0 🎉
+            </span>
+          ) : (
+            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              Rp {Number(item.amount).toLocaleString("id-ID")}
+            </span>
+          )}
 
-        {/* Accessible, Non-Distracting Edit Button */}
-        <button
-          type="button"
-          onClick={() => {
-            setError(null);
-            setEditingExpense(item);
-          }}
-          aria-label={`Edit ${item.name}`}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
+          {/* Accessible, Non-Distracting Edit Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setEditingExpense(item);
+              setEditIsExempt(isExpenseExempt(item));
+            }}
+            aria-label={`Edit ${item.name}`}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -320,7 +342,7 @@ export default function ExpenseList({
                       : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
                   }`}
                 >
-                  {t.dashboard.tabThisWeek}
+                  {dashboardPeriod === "month" ? t.dashboard.tabThisMonth : t.dashboard.tabThisWeek}
                   <span
                     className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
                       period === "week"
@@ -665,10 +687,25 @@ export default function ExpenseList({
               <input
                 name="note"
                 type="text"
-                defaultValue={editingExpense.note || ""}
+                defaultValue={cleanNote(editingExpense.note)}
                 placeholder={t.expenses.notePlaceholder}
                 className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-zinc-400 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:text-zinc-100"
               />
+
+              {/* One-off Exemption Toggle */}
+              <div className="flex items-start gap-2.5 rounded-xl border border-zinc-200/80 bg-zinc-50/50 p-2.5 dark:border-zinc-800/70 dark:bg-zinc-950/40">
+                <input
+                  type="checkbox"
+                  id="editIsExempt"
+                  checked={editIsExempt}
+                  onChange={(e) => setEditIsExempt(e.target.checked)}
+                  className="rounded border-zinc-300 text-amber-500 focus:ring-amber-500 h-4 w-4 mt-0.5 cursor-pointer"
+                />
+                <label htmlFor="editIsExempt" className="text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
+                  <p className="font-semibold text-xs text-zinc-900 dark:text-zinc-100">{t.expenses.oneOffCheckbox}</p>
+                  <p className="text-[10px] text-zinc-500">{t.expenses.oneOffHelp}</p>
+                </label>
+              </div>
 
               {/* Action Buttons: Delete & Save */}
               <div className="flex items-center justify-between pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 mt-1">
