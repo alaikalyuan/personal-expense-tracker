@@ -561,7 +561,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     login: {
       title: "Catatan Pengeluaran",
       subtitle: "Masuk atau buat akun baru",
-      emailPlaceholder: "nama@kampus.ac.id",
+      emailPlaceholder: "nama@email.com",
       passwordPlaceholder: "••••••••",
       logIn: "Masuk",
       signUp: "Daftar",
@@ -846,7 +846,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     login: {
       title: "Campus Expenses",
       subtitle: "Log in or create an account",
-      emailPlaceholder: "student@university.edu",
+      emailPlaceholder: "name@email.com",
       passwordPlaceholder: "••••••••",
       logIn: "Log In",
       signUp: "Sign Up",
