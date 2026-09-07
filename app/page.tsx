@@ -195,6 +195,9 @@ export default async function DashboardPage() {
         expenses={expenses || []}
         showPeriodToggle={true}
         title={t.dashboard.recentEntries}
+        weeklyBudget={weeklyBudget}
+        startDateStr={startOfWeekStr}
+        endDateStr={endOfWeekStr}
       />
 
       {/* Bottom spacer for clearance above floating navbar and gradient */}

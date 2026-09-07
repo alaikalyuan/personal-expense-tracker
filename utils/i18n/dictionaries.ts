@@ -129,6 +129,41 @@ export interface Dictionary {
     keepOpenBatch: string;
     expenseLoggedBatch: string;
     quickTypeParseError: string;
+    searchPlaceholder: string;
+    allCategories: string;
+    showingFiltered: string;
+    noMatchingExpenses: string;
+    clearSearch: string;
+    shareExport: string;
+  };
+  exportShare: {
+    modalTitle: string;
+    modalSubtitle: string;
+    tabWhatsApp: string;
+    tabCsv: string;
+    recapTitle: string;
+    recapWeek: string;
+    recapTotal: string;
+    recapBudget: string;
+    recapRemaining: string;
+    recapOverBudget: string;
+    recapDailyAvg: string;
+    recapTopCategories: string;
+    recapLargestSpend: string;
+    recapFooter: string;
+    copyRecap: string;
+    recapCopied: string;
+    openWhatsApp: string;
+    csvTitle: string;
+    csvSubtitle: string;
+    downloadCsv: string;
+    csvScopeWeek: string;
+    csvScopeAll: string;
+    csvColDate: string;
+    csvColName: string;
+    csvColCategory: string;
+    csvColAmount: string;
+    csvColNote: string;
   };
   archive: {
     title: string;
@@ -316,6 +351,41 @@ export const dictionaries: Record<Locale, Dictionary> = {
       keepOpenBatch: "Tetap buka untuk input berturut-turut",
       expenseLoggedBatch: "Tersimpan! Siap untuk entri berikutnya...",
       quickTypeParseError: "Masukkan nama dan nominal (cth: Kopi 18k)",
+      searchPlaceholder: "Cari nama atau catatan pengeluaran...",
+      allCategories: "Semua",
+      showingFiltered: "Menampilkan {count} dari {total} entri",
+      noMatchingExpenses: "Tidak ada pengeluaran yang cocok.",
+      clearSearch: "Reset filter",
+      shareExport: "Bagikan / Ekspor",
+    },
+    exportShare: {
+      modalTitle: "Bagikan & Ekspor",
+      modalSubtitle: "Salin ringkasan ke WhatsApp atau unduh file CSV spreadsheet",
+      tabWhatsApp: "Rekap WhatsApp",
+      tabCsv: "Unduh CSV",
+      recapTitle: "Laporan Pengeluaran SakuTrack",
+      recapWeek: "Minggu",
+      recapTotal: "Total Pengeluaran",
+      recapBudget: "Target Anggaran",
+      recapRemaining: "Sisa Saldo",
+      recapOverBudget: "Kelebihan Anggaran",
+      recapDailyAvg: "Rata-rata Harian",
+      recapTopCategories: "Rincian Kategori Terbesar",
+      recapLargestSpend: "Pengeluaran Terbesar",
+      recapFooter: "Dicatat praktis dengan SakuTrack",
+      copyRecap: "Salin Rekap",
+      recapCopied: "Rekap Berhasil Disalin!",
+      openWhatsApp: "Kirim ke WhatsApp",
+      csvTitle: "Ekspor Spreadsheet CSV",
+      csvSubtitle: "Unduh data pengeluaran dalam format .csv yang rapi untuk Microsoft Excel atau Google Sheets.",
+      downloadCsv: "Unduh CSV",
+      csvScopeWeek: "Minggu Ini Saja",
+      csvScopeAll: "Semua Riwayat Tercatat",
+      csvColDate: "Tanggal",
+      csvColName: "Nama Pengeluaran",
+      csvColCategory: "Kategori",
+      csvColAmount: "Nominal (Rp)",
+      csvColNote: "Catatan",
     },
     archive: {
       title: "Arsip",
@@ -502,6 +572,41 @@ export const dictionaries: Record<Locale, Dictionary> = {
       keepOpenBatch: "Keep open for rapid consecutive logging",
       expenseLoggedBatch: "Saved! Ready for next log...",
       quickTypeParseError: "Please enter a name and amount (e.g. Coffee 18k)",
+      searchPlaceholder: "Search expense name or notes...",
+      allCategories: "All",
+      showingFiltered: "Showing {count} of {total} entries",
+      noMatchingExpenses: "No expenses found matching your search.",
+      clearSearch: "Clear filters",
+      shareExport: "Share / Export",
+    },
+    exportShare: {
+      modalTitle: "Share & Export",
+      modalSubtitle: "Copy weekly recap for WhatsApp or download CSV file for spreadsheets",
+      tabWhatsApp: "WhatsApp Recap",
+      tabCsv: "Download CSV",
+      recapTitle: "SakuTrack Expense Report",
+      recapWeek: "Week",
+      recapTotal: "Total Spent",
+      recapBudget: "Budget Target",
+      recapRemaining: "Remaining Balance",
+      recapOverBudget: "Over Budget by",
+      recapDailyAvg: "Daily Average",
+      recapTopCategories: "Top Spending Categories",
+      recapLargestSpend: "Largest Spend",
+      recapFooter: "Tracked effortlessly with SakuTrack",
+      copyRecap: "Copy Recap",
+      recapCopied: "Recap Copied to Clipboard!",
+      openWhatsApp: "Send via WhatsApp",
+      csvTitle: "CSV Spreadsheet Export",
+      csvSubtitle: "Download your expense data in standard .csv format compatible with Excel or Google Sheets.",
+      downloadCsv: "Download CSV",
+      csvScopeWeek: "Current Week Only",
+      csvScopeAll: "All Recorded History",
+      csvColDate: "Date",
+      csvColName: "Expense Name",
+      csvColCategory: "Category",
+      csvColAmount: "Amount (IDR)",
+      csvColNote: "Note",
     },
     archive: {
       title: "Archive",

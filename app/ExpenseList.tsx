@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Pencil, Trash2, X, Search, Share2, RotateCcw } from "lucide-react";
 import { updateExpense, deleteExpense } from "@/app/actions";
 import { useTranslation } from "@/utils/i18n/context";
 import { CATEGORY_KEYS } from "@/utils/i18n/dictionaries";
 import { getTodayString, getNowInTimezone } from "@/utils/date";
 import { format, parseISO, subDays } from "date-fns";
+import ExportShareModal from "./ExportShareModal";
 
 export interface ExpenseItem {
   id: string;
@@ -30,12 +31,18 @@ interface ExpenseListProps {
   expenses: ExpenseItem[];
   showPeriodToggle?: boolean;
   title?: string;
+  weeklyBudget?: number;
+  startDateStr?: string;
+  endDateStr?: string;
 }
 
 export default function ExpenseList({
   expenses,
   showPeriodToggle = false,
   title,
+  weeklyBudget,
+  startDateStr,
+  endDateStr,
 }: ExpenseListProps) {
   const { t, formatDate, getCategoryLabel } = useTranslation();
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
@@ -43,6 +50,12 @@ export default function ExpenseList({
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<"today" | "week">("today");
+
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const closeModal = () => {
     if (isDeleting || isUpdating) return;
@@ -66,6 +79,52 @@ export default function ExpenseList({
     return (expenses || []).filter((item) => getItemDateStr(item) === todayStr);
   }, [expenses, todayStr]);
 
+  // Base set of expenses for the active period
+  const baseExpenses = useMemo(() => {
+    if (!showPeriodToggle) return expenses || [];
+    return period === "today" ? todayExpenses : expenses || [];
+  }, [showPeriodToggle, period, todayExpenses, expenses]);
+
+  // Category counts within current period
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    baseExpenses.forEach((item) => {
+      counts[item.category] = (counts[item.category] || 0) + 1;
+    });
+    return counts;
+  }, [baseExpenses]);
+
+  // Filtered expenses based on search query and category
+  const filteredExpenses = useMemo(() => {
+    let result = baseExpenses;
+    const q = searchQuery.trim().toLowerCase();
+
+    if (q) {
+      result = result.filter(
+        (item) =>
+          item.name.toLowerCase().includes(q) ||
+          (item.note && item.note.toLowerCase().includes(q))
+      );
+    }
+
+    if (selectedCategory) {
+      result = result.filter((item) => item.category === selectedCategory);
+    }
+
+    return result;
+  }, [baseExpenses, searchQuery, selectedCategory]);
+
+  const hasActiveFilter = searchQuery.trim() !== "" || selectedCategory !== null;
+
+  const resetFilters = () => {
+    setSearchQuery("");
+    setSelectedCategory(null);
+  };
+
+  const filteredTotal = useMemo(() => {
+    return filteredExpenses.reduce((acc, curr) => acc + Number(curr.amount), 0);
+  }, [filteredExpenses]);
+
   const groupedWeekExpenses = useMemo(() => {
     const groups: {
       dateStr: string;
@@ -79,7 +138,7 @@ export default function ExpenseList({
 
     const groupMap = new Map<string, (typeof groups)[0]>();
 
-    (expenses || []).forEach((item) => {
+    filteredExpenses.forEach((item) => {
       const dateStr = getItemDateStr(item);
       if (!groupMap.has(dateStr)) {
         const isToday = dateStr === todayStr;
@@ -107,7 +166,7 @@ export default function ExpenseList({
     });
 
     return groups;
-  }, [expenses, todayStr, yesterdayStr, formatDate]);
+  }, [filteredExpenses, todayStr, yesterdayStr, formatDate]);
 
   const handleDelete = async (id: string) => {
     if (!confirm(t.expenses.deleteConfirm)) {
@@ -187,74 +246,242 @@ export default function ExpenseList({
   return (
     <>
       <div className="flex flex-col gap-3">
-        {/* Optional Header with Segmented Period Toggle */}
-        {showPeriodToggle && (
-          <div className="flex items-center justify-between select-none gap-2">
-            <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              {title || t.dashboard.recentEntries}
-            </h2>
-            <div className="flex rounded-lg bg-zinc-100 dark:bg-zinc-950 p-1 border border-zinc-200 dark:border-zinc-800 text-xs shrink-0 animate-fade-in">
-              <button
-                type="button"
-                onClick={() => setPeriod("today")}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
-                  period === "today"
-                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
-                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-                }`}
-              >
-                {t.dashboard.tabToday}
-                <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
+        {/* Header: Title + Action Buttons (Search Toggle, Export/Share, Segmented Period Toggle) */}
+        <div className="flex items-center justify-between select-none gap-2">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            {title || t.dashboard.recentEntries}
+          </h2>
+
+          <div className="flex items-center gap-1.5">
+            {/* Filter & Search Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              aria-label="Toggle search and filters"
+              aria-expanded={isFilterOpen}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-medium transition-all cursor-pointer relative ${
+                isFilterOpen || hasActiveFilter
+                  ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/60 dark:text-blue-300"
+                  : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              }`}
+            >
+              <Search className="w-3.5 h-3.5" />
+              {hasActiveFilter && (
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
+              )}
+            </button>
+
+            {/* Export & Share Button */}
+            <button
+              type="button"
+              onClick={() => setIsExportOpen(true)}
+              aria-label={t.expenses.shareExport}
+              title={t.expenses.shareExport}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition-all cursor-pointer shadow-2xs"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Segmented Period Toggle */}
+            {showPeriodToggle && (
+              <div className="flex rounded-lg bg-zinc-100 dark:bg-zinc-950 p-1 border border-zinc-200 dark:border-zinc-800 text-xs shrink-0 animate-fade-in">
+                <button
+                  type="button"
+                  onClick={() => setPeriod("today")}
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
                     period === "today"
-                      ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100"
-                      : "bg-zinc-200/70 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                      ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                      : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
                   }`}
                 >
-                  {todayExpenses.length}
-                </span>
-              </button>
+                  {t.dashboard.tabToday}
+                  <span
+                    className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
+                      period === "today"
+                        ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100"
+                        : "bg-zinc-200/70 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                    }`}
+                  >
+                    {todayExpenses.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPeriod("week")}
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
+                    period === "week"
+                      ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
+                      : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  }`}
+                >
+                  {t.dashboard.tabThisWeek}
+                  <span
+                    className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
+                      period === "week"
+                        ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100"
+                        : "bg-zinc-200/70 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                    }`}
+                  >
+                    {(expenses || []).length}
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Expandable Search & Category Filter Bar */}
+        {(isFilterOpen || hasActiveFilter) && (
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-zinc-200/90 bg-white/90 p-3 shadow-2xs backdrop-blur-xs dark:border-zinc-800/90 dark:bg-zinc-900/70 animate-fade-in">
+            {/* Search Input */}
+            <div className="relative flex items-center">
+              <Search className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 absolute left-3 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t.expenses.searchPlaceholder}
+                className="w-full rounded-xl border border-zinc-200 bg-zinc-50/70 pl-8.5 pr-8 py-2 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 p-0.5 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Category Filter Pills (Horizontal Scroll) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
               <button
                 type="button"
-                onClick={() => setPeriod("week")}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
-                  period === "week"
-                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
-                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                onClick={() => setSelectedCategory(null)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                  selectedCategory === null
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-xs"
+                    : "border border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/80"
                 }`}
               >
-                {t.dashboard.tabThisWeek}
+                <span>{t.expenses.allCategories}</span>
                 <span
                   className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
-                    period === "week"
-                      ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100"
+                    selectedCategory === null
+                      ? "bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900"
                       : "bg-zinc-200/70 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
                   }`}
                 >
-                  {(expenses || []).length}
+                  {baseExpenses.length}
                 </span>
               </button>
+
+              {CATEGORY_KEYS.map((catKey) => {
+                const count = categoryCounts[catKey] || 0;
+                const isSelected = selectedCategory === catKey;
+                return (
+                  <button
+                    key={catKey}
+                    type="button"
+                    onClick={() =>
+                      setSelectedCategory(isSelected ? null : catKey)
+                    }
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-xs"
+                        : "border border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/80"
+                    }`}
+                  >
+                    <span>{getCategoryLabel(catKey)}</span>
+                    {count > 0 && (
+                      <span
+                        className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
+                          isSelected
+                            ? "bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900"
+                            : "bg-zinc-200/70 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+
+            {/* Active Filter Summary Bar */}
+            {hasActiveFilter && (
+              <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-zinc-200/60 dark:border-zinc-800/60 text-zinc-500 dark:text-zinc-400">
+                <span>
+                  {t.expenses.showingFiltered
+                    .replace("{count}", String(filteredExpenses.length))
+                    .replace("{total}", String(baseExpenses.length))}
+                  {" • "}
+                  <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Rp {filteredTotal.toLocaleString("id-ID")}
+                  </strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="flex items-center gap-1 text-blue-600 hover:text-blue-500 dark:text-blue-400 font-semibold cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>{t.expenses.clearSearch}</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
         {/* Main Content: Either Mode-based or Plain List */}
         {!showPeriodToggle ? (
           // Plain list for archive / simple contexts
-          !expenses || expenses.length === 0 ? (
-            <p className="text-sm text-zinc-500 py-8 text-center">
-              {t.dashboard.noExpenses}
-            </p>
+          filteredExpenses.length === 0 ? (
+            hasActiveFilter ? (
+              <div className="rounded-2xl border border-dashed border-zinc-200/90 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/30 p-6 text-center animate-fade-in">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {t.expenses.noMatchingExpenses}
+                </p>
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{t.expenses.clearSearch}</span>
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500 py-8 text-center">
+                {t.dashboard.noExpenses}
+              </p>
+            )
           ) : (
             <div className="flex flex-col gap-2">
-              {expenses.map((item) => renderExpenseCard(item))}
+              {filteredExpenses.map((item) => renderExpenseCard(item))}
             </div>
           )
         ) : period === "today" ? (
           // Today view
-          todayExpenses.length > 0 ? (
+          filteredExpenses.length > 0 ? (
             <div className="flex flex-col gap-2 animate-fade-in">
-              {todayExpenses.map((item) => renderExpenseCard(item))}
+              {filteredExpenses.map((item) => renderExpenseCard(item))}
+            </div>
+          ) : hasActiveFilter ? (
+            <div className="rounded-2xl border border-dashed border-zinc-200/90 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/30 p-6 text-center animate-fade-in">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                {t.expenses.noMatchingExpenses}
+              </p>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{t.expenses.clearSearch}</span>
+              </button>
             </div>
           ) : !expenses || expenses.length === 0 ? (
             <p className="text-sm text-zinc-500 py-8 text-center">
@@ -270,17 +497,35 @@ export default function ExpenseList({
                 onClick={() => setPeriod("week")}
                 className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
               >
-                <span>{t.dashboard.viewWeekExpenses} ({expenses.length})</span>
+                <span>
+                  {t.dashboard.viewWeekExpenses} ({expenses.length})
+                </span>
                 <span aria-hidden="true">&rarr;</span>
               </button>
             </div>
           )
         ) : (
           // This Week view (Non-collapsible date-grouped)
-          !expenses || expenses.length === 0 ? (
-            <p className="text-sm text-zinc-500 py-8 text-center">
-              {t.dashboard.noExpenses}
-            </p>
+          filteredExpenses.length === 0 ? (
+            hasActiveFilter ? (
+              <div className="rounded-2xl border border-dashed border-zinc-200/90 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/30 p-6 text-center animate-fade-in">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {t.expenses.noMatchingExpenses}
+                </p>
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{t.expenses.clearSearch}</span>
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500 py-8 text-center">
+                {t.dashboard.noExpenses}
+              </p>
+            )
           ) : (
             <div className="flex flex-col gap-4 animate-fade-in">
               {groupedWeekExpenses.map((group) => (
@@ -453,6 +698,16 @@ export default function ExpenseList({
           </div>
         </div>
       )}
+
+      {/* Export & Share Modal */}
+      <ExportShareModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        expenses={expenses || []}
+        weeklyBudget={weeklyBudget}
+        startDateStr={startDateStr}
+        endDateStr={endDateStr}
+      />
     </>
   );
 }

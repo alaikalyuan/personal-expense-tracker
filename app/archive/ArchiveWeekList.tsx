@@ -189,7 +189,11 @@ export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
               {/* Accordion Body */}
               {isExpanded && (
                 <div className="border-t border-zinc-200/80 bg-zinc-50/50 p-3 pt-3 dark:border-zinc-800/60 dark:bg-zinc-950/40 animate-fade-in">
-                  <ExpenseList expenses={week.expenses} />
+                  <ExpenseList
+                    expenses={week.expenses}
+                    startDateStr={week.startDateStr}
+                    endDateStr={week.endDateStr}
+                  />
                 </div>
               )}
             </div>
