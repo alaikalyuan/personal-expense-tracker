@@ -103,16 +103,11 @@ export default function BudgetProgress({
       <div className="flex items-center justify-between text-[11px] gap-2">
         {isOver ? (
           <>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-semibold text-amber-600 dark:text-amber-400">
-                +Rp {Math.abs(remaining).toLocaleString("id-ID")} {t.budget.aboveTargetBy}
-              </span>
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
-                {t.budget.honestTrackingBadge}
-              </span>
-            </div>
-            <span className="text-[10px] text-zinc-500 text-right truncate">
-              {t.budget.focusPacingNote}
+            <span className="font-semibold text-amber-600 dark:text-amber-400">
+              +Rp {Math.abs(remaining).toLocaleString("id-ID")} {t.budget.aboveTargetBy}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+              {t.budget.honestTrackingBadge}
             </span>
           </>
         ) : (
