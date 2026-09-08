@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import UserMenu from "@/app/UserMenu";
+import DailyTrendComparison from "./DailyTrendComparison";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -157,10 +158,18 @@ export default async function ComparePage() {
       0
     );
 
+    const diff = thisDayAmt - lastDayAmt;
+    const diffPct =
+      lastDayAmt > 0 ? Math.round(((thisDayAmt - lastDayAmt) / lastDayAmt) * 100) : null;
+
     return {
       dayName: formatDateServer(thisDayDate, "EEE", locale),
+      fullDayName: formatDateServer(thisDayDate, "EEEE", locale),
+      dateFormatted: formatDateServer(thisDayDate, "d MMM", locale),
       thisAmt: thisDayAmt,
       lastAmt: lastDayAmt,
+      diff,
+      diffPct,
       isToday: isSameDay(thisDayDate, now),
       isFuture: isAfter(thisDayDate, now),
     };
@@ -170,6 +179,34 @@ export default async function ComparePage() {
     ...dayComparison.map((d) => Math.max(d.thisAmt, d.lastAmt)),
     1
   );
+
+  // Compute daily trend summary insights
+  const elapsedDaysList = dayComparison.filter((d) => !d.isFuture);
+  const activeDays = elapsedDaysList.length;
+  const daysLower = elapsedDaysList.filter((d) => d.thisAmt < d.lastAmt).length;
+  const daysHigher = elapsedDaysList.filter((d) => d.thisAmt > d.lastAmt).length;
+
+  const peakDayCandidate = [...elapsedDaysList]
+    .filter((d) => d.thisAmt > 0)
+    .sort((a, b) => b.thisAmt - a.thisAmt)[0];
+  const peakDay = peakDayCandidate
+    ? { dayName: peakDayCandidate.fullDayName, amount: peakDayCandidate.thisAmt }
+    : null;
+
+  const bestSavingCandidate = [...elapsedDaysList]
+    .filter((d) => d.diff < 0)
+    .sort((a, b) => a.diff - b.diff)[0];
+  const bestSavingDay = bestSavingCandidate
+    ? { dayName: bestSavingCandidate.fullDayName, amount: Math.abs(bestSavingCandidate.diff) }
+    : null;
+
+  const dailyTrendStats = {
+    activeDays,
+    daysLower,
+    daysHigher,
+    peakDay,
+    bestSavingDay,
+  };
 
   return (
     <main className="max-w-md mx-auto p-4 pb-48 flex flex-col gap-6 font-sans">
@@ -282,75 +319,30 @@ export default async function ComparePage() {
         </p>
       </div>
 
-      {/* Day-by-Day Side-by-Side Sparkline */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs backdrop-blur-xs dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">
-        <div className="flex items-center justify-between pb-3 border-b border-zinc-200/80 dark:border-zinc-800/80">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-            {t.compare.trendTitle}
-          </h3>
-          <div className="flex items-center gap-3 text-[10px]">
-            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-xs bg-emerald-500"></span> {t.compare.thisWeek}
-            </span>
-            <span className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400 font-medium">
-              <span className="w-2 h-2 rounded-xs bg-zinc-300 dark:bg-zinc-700"></span> {t.compare.lastWeek}
-            </span>
-          </div>
-        </div>
-
-        <div className="pt-3">
-          <div className="flex items-end justify-between gap-2 h-28 px-1">
-            {dayComparison.map((day) => {
-              const thisHeight =
-                maxDayAmount > 0
-                  ? Math.max(Math.round((day.thisAmt / maxDayAmount) * 100), 4)
-                  : 4;
-              const lastHeight =
-                maxDayAmount > 0
-                  ? Math.max(Math.round((day.lastAmt / maxDayAmount) * 100), 4)
-                  : 4;
-
-              return (
-                <div
-                  key={day.dayName}
-                  className={`flex-1 flex flex-col items-center gap-1 h-full justify-end ${
-                    day.isFuture ? "opacity-35" : "opacity-100"
-                  }`}
-                >
-                  {/* Paired vertical bars */}
-                  <div className="w-full flex items-end justify-center gap-1 h-20">
-                    {/* Last Week Bar (Zinc) */}
-                    <div
-                      style={{ height: `${day.lastAmt > 0 ? lastHeight : 4}%` }}
-                      className="w-1/2 rounded-t-xs bg-zinc-300 dark:bg-zinc-700 transition-all"
-                      title={`${t.compare.lastWeek} ${day.dayName}: Rp ${day.lastAmt.toLocaleString("id-ID")}`}
-                    />
-                    {/* This Week Bar (Emerald) */}
-                    <div
-                      style={{ height: `${day.thisAmt > 0 ? thisHeight : 4}%` }}
-                      className={`w-1/2 rounded-t-xs transition-all ${
-                        day.isToday ? "bg-emerald-500 dark:bg-emerald-400" : "bg-emerald-500/80"
-                      }`}
-                      title={`${t.compare.thisWeek} ${day.dayName}: Rp ${day.thisAmt.toLocaleString("id-ID")}`}
-                    />
-                  </div>
-
-                  {/* Day label */}
-                  <span
-                    className={`text-[10px] ${
-                      day.isToday
-                        ? "font-bold text-emerald-600 dark:text-emerald-400"
-                        : "text-zinc-500 font-medium"
-                    }`}
-                  >
-                    {day.isToday ? t.common.today : day.dayName}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      {/* Daily Trend Comparison (Readable Breakdown & Interactive Chart) */}
+      <DailyTrendComparison
+        dayComparison={dayComparison}
+        maxDayAmount={maxDayAmount}
+        stats={dailyTrendStats}
+        dict={{
+          trendTitle: t.compare.trendTitle,
+          thisWeek: t.compare.thisWeek,
+          lastWeek: t.compare.lastWeek,
+          viewBreakdown: t.compare.viewBreakdown,
+          viewChart: t.compare.viewChart,
+          daysLower: t.compare.daysLower,
+          daysHigher: t.compare.daysHigher,
+          allDaysEven: t.compare.allDaysEven,
+          highestSpend: t.compare.highestSpend,
+          biggestSaving: t.compare.biggestSaving,
+          upcoming: t.compare.upcoming,
+          today: t.common.today,
+          noSpendDay: t.compare.noSpendDay,
+          selectedDayDetails: t.compare.selectedDayDetails,
+          vs: t.common.vs,
+          noChange: t.compare.noChange,
+        }}
+      />
 
       {/* Category Delta Comparison */}
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs backdrop-blur-xs dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">

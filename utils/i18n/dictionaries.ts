@@ -267,6 +267,16 @@ export interface Dictionary {
     pacingSaving: string;
     pacingOver: string;
     trendTitle: string;
+    viewBreakdown: string;
+    viewChart: string;
+    daysLower: string;
+    daysHigher: string;
+    allDaysEven: string;
+    highestSpend: string;
+    biggestSaving: string;
+    upcoming: string;
+    noSpendDay: string;
+    selectedDayDetails: string;
     categoryChangesTitle: string;
     noExpensesBothWeeks: string;
     noChange: string;
@@ -554,6 +564,16 @@ export const dictionaries: Record<Locale, Dictionary> = {
       pacingSaving: "Kamu lebih hemat ~Rp {amount} per hari sejauh ini!",
       pacingOver: "Pacing ~Rp {amount} lebih boros per hari dibanding minggu lalu.",
       trendTitle: "Perbandingan Tren Harian",
+      viewBreakdown: "Rincian",
+      viewChart: "Grafik",
+      daysLower: "{count} dari {total} hari lebih hemat",
+      daysHigher: "{count} dari {total} hari lebih tinggi",
+      allDaysEven: "Pengeluaran harian seimbang",
+      highestSpend: "Puncak: {day} ({amount})",
+      biggestSaving: "Hemat terbaik: {day} ({amount})",
+      upcoming: "Akan datang",
+      noSpendDay: "Tanpa pengeluaran",
+      selectedDayDetails: "Detail Hari Terpilih",
       categoryChangesTitle: "Perubahan Kategori",
       noExpensesBothWeeks: "Belum ada pengeluaran tercatat untuk kedua minggu ini.",
       noChange: "Tidak ada perubahan",
@@ -596,7 +616,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     nav: {
       tracker: "Tracker",
       archive: "Archive & Past Weeks",
-      compare: "Compare Weeks",
+      compare: "Compare",
       signOut: "Sign out",
       addExpense: "Add expense",
       openMenu: "Open menu",
@@ -839,6 +859,16 @@ export const dictionaries: Record<Locale, Dictionary> = {
       pacingSaving: "You are spending ~Rp {amount} less per day so far!",
       pacingOver: "Pacing ~Rp {amount} more per day than last week.",
       trendTitle: "Daily Trend Comparison",
+      viewBreakdown: "Breakdown",
+      viewChart: "Chart",
+      daysLower: "{count} of {total} days lower",
+      daysHigher: "{count} of {total} days higher",
+      allDaysEven: "Daily spend is even",
+      highestSpend: "Peak: {day} ({amount})",
+      biggestSaving: "Best saving: {day} ({amount})",
+      upcoming: "Upcoming",
+      noSpendDay: "No spend",
+      selectedDayDetails: "Selected Day Details",
       categoryChangesTitle: "Category Changes",
       noExpensesBothWeeks: "No expenses recorded for either week yet.",
       noChange: "No change",

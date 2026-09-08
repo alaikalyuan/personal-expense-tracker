@@ -52,16 +52,33 @@ export default function CompareLoading() {
         <div className="h-3 w-56 bg-zinc-800/60 rounded-xs mx-auto mt-2" />
       </div>
 
-      {/* Daily Trend Sparkline Skeleton */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-sm space-y-4">
+      {/* Daily Trend Comparison Skeleton */}
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-sm space-y-3">
         <div className="flex justify-between items-center pb-3 border-b border-zinc-800/80">
           <div className="h-3 w-40 bg-zinc-800 rounded-xs" />
-          <div className="h-3 w-28 bg-zinc-800/70 rounded-xs" />
+          <div className="h-6 w-32 bg-zinc-800 rounded-lg" />
         </div>
 
-        <div className="flex items-end justify-between gap-2 h-28 px-1 pt-3">
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex gap-3">
+            <div className="h-3 w-16 bg-zinc-800/70 rounded-xs" />
+            <div className="h-3 w-16 bg-zinc-800/70 rounded-xs" />
+          </div>
+          <div className="h-2.5 w-14 bg-zinc-800/50 rounded-xs" />
+        </div>
+
+        <div className="flex gap-2">
+          <div className="h-4 w-28 bg-zinc-800 rounded-full" />
+          <div className="h-4 w-32 bg-zinc-800 rounded-full" />
+        </div>
+
+        {/* Chart View Skeleton */}
+        <div className="flex items-end justify-between gap-1.5 h-32 px-1 pt-2">
           {[1, 2, 3, 4, 5, 6, 7].map((day) => (
-            <div key={day} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+            <div
+              key={day}
+              className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end rounded-lg p-1"
+            >
               <div className="w-full flex items-end justify-center gap-1 h-20">
                 <div className="w-1/2 rounded-t-xs bg-zinc-800 h-10" />
                 <div className="w-1/2 rounded-t-xs bg-zinc-700 h-14" />
@@ -69,6 +86,19 @@ export default function CompareLoading() {
               <div className="h-2.5 w-5 bg-zinc-800/80 rounded-xs" />
             </div>
           ))}
+        </div>
+
+        {/* Selected Day Details Card Skeleton */}
+        <div className="rounded-xl border border-zinc-800/60 bg-zinc-950/60 p-3.5 space-y-2.5">
+          <div className="flex justify-between items-center">
+            <div className="h-3.5 w-28 bg-zinc-800 rounded-xs" />
+            <div className="h-3 w-20 bg-zinc-800/60 rounded-xs" />
+          </div>
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div className="h-12 bg-zinc-900 rounded-lg border border-zinc-800" />
+            <div className="h-12 bg-zinc-900 rounded-lg border border-zinc-800" />
+          </div>
+          <div className="h-3 w-40 bg-zinc-800/50 rounded-xs pt-1" />
         </div>
       </div>
 
