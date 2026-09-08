@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Flame, CheckCircle2, Sparkles, Check, X } from "lucide-react";
+import { Flame, CheckCircle2, Sparkles, X } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { StreakData } from "@/utils/streak";
 import { logNoSpendDay } from "@/app/actions";

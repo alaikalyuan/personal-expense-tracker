@@ -43,6 +43,7 @@ export interface Dictionary {
     light: string;
     dark: string;
     quickAddAria: string;
+    savings: string;
   };
   categories: Record<CategoryKey, string>;
   dashboard: {
@@ -297,6 +298,80 @@ export interface Dictionary {
     install: string;
     dismiss: string;
   };
+  savings: {
+    title: string;
+    subtitle: string;
+    totalSaved: string;
+    availableSavings: string;
+    allocatedToGoals: string;
+    totalPatched: string;
+    unspentSurplusTotal: string;
+    availableDescription: string;
+    ongoingWeekLabel: string;
+    ongoingWeekNotice: string;
+    goalsTitle: string;
+    goalsSubtitle: string;
+    noGoalTitle: string;
+    noGoalDescription: string;
+    createGoalButton: string;
+    addGoalButton: string;
+    editGoalTitle: string;
+    createGoalTitle: string;
+    goalNameLabel: string;
+    goalTargetLabel: string;
+    goalEmojiLabel: string;
+    goalNamePlaceholder: string;
+    targetAmountPlaceholder: string;
+    allocateButton: string;
+    withdrawButton: string;
+    allocateModalTitle: string;
+    allocateModalSubtitle: string;
+    withdrawModalTitle: string;
+    withdrawModalSubtitle: string;
+    allocationAmountLabel: string;
+    maxAvailable: string;
+    maxAllocated: string;
+    quickAll: string;
+    quickHalf: string;
+    confirmAllocate: string;
+    confirmWithdraw: string;
+    goalReached: string;
+    goalProgress: string;
+    deleteGoalConfirm: string;
+    patchSectionTitle: string;
+    patchSectionSubtitle: string;
+    noBadWeeksTitle: string;
+    noBadWeeksDescription: string;
+    badWeekOverBy: string;
+    badWeekPatchedBadge: string;
+    badWeekUnpatchedBadge: string;
+    patchWithSavingsButton: string;
+    patchModalTitle: string;
+    patchModalSubtitle: string;
+    patchAmountLabel: string;
+    confirmPatch: string;
+    unpatchButton: string;
+    insufficientSavingsNotice: string;
+    historyTitle: string;
+    historySubtitle: string;
+    surplusWeekContribution: string;
+    noSurplusWeeks: string;
+    noSurplusWeeksDesc: string;
+    weekPacingLabel: string;
+    supportiveTitle: string;
+    nextQuote: string;
+    quotes: string[];
+    zeroSavingsEncouragement: string;
+    allGoodPacingEncouragement: string;
+    manualAdjustmentButton: string;
+    manualAdjustmentTitle: string;
+    manualAdjustmentSubtitle: string;
+    adjustmentAmountLabel: string;
+    adjustmentTypeDeposit: string;
+    adjustmentTypeWithdraw: string;
+    adjustmentNoteLabel: string;
+    adjustmentSuccess: string;
+  };
 }
 
 export const dictionaries: Record<Locale, Dictionary> = {
@@ -332,6 +407,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       light: "Terang",
       dark: "Gelap",
       quickAddAria: "Tambah pengeluaran",
+      savings: "Tabungan",
     },
     categories: {
       "Food & Dining": "Makanan & Minuman",
@@ -594,6 +670,87 @@ export const dictionaries: Record<Locale, Dictionary> = {
       install: "Pasang",
       dismiss: "Tutup info pemasangan",
     },
+    savings: {
+      title: "Tabungan",
+      subtitle: "Sisa anggaran mingguan & resolusi finansial",
+      totalSaved: "Total Tabungan",
+      availableSavings: "Dana Tersedia",
+      allocatedToGoals: "Dialokasikan ke Target",
+      totalPatched: "Dipakai Tambal Minggu",
+      unspentSurplusTotal: "Akumulasi Sisa Anggaran",
+      availableDescription: "Bebas dialokasikan ke target atau dipakai menutup minggu berlebih.",
+      ongoingWeekLabel: "Minggu Berjalan (Estimasi)",
+      ongoingWeekNotice: "Sisa anggaran minggu ini akan difinalisasi saat minggu berakhir.",
+      goalsTitle: "Target Tabungan",
+      goalsSubtitle: "Rencanakan tujuan finansial atau simpan sebagai dana siaga",
+      noGoalTitle: "Belum Ada Target Tabungan",
+      noGoalDescription: "Kamu bisa menyimpan saldo tabungan secara bebas, atau buat target jika ingin menabung untuk tujuan tertentu.",
+      createGoalButton: "Buat Target Tabungan",
+      addGoalButton: "Tambah Target Baru",
+      editGoalTitle: "Ubah Target Tabungan",
+      createGoalTitle: "Target Tabungan Baru",
+      goalNameLabel: "Nama Target",
+      goalTargetLabel: "Jumlah Target (Rp)",
+      goalEmojiLabel: "Ikon",
+      goalNamePlaceholder: "cth. Dana Darurat, Liburan, Laptop",
+      targetAmountPlaceholder: "cth. 1.000.000",
+      allocateButton: "Alokasikan Dana",
+      withdrawButton: "Tarik ke Saldo Bebas",
+      allocateModalTitle: "Alokasikan ke Target",
+      allocateModalSubtitle: "Pindahkan sebagian dari dana tersedia ke target ini",
+      withdrawModalTitle: "Tarik dari Target",
+      withdrawModalSubtitle: "Kembalikan saldo target ke dana tabungan tersedia",
+      allocationAmountLabel: "Nominal (Rp)",
+      maxAvailable: "Maks. Tersedia",
+      maxAllocated: "Maks. Terkumpul",
+      quickAll: "Semua",
+      quickHalf: "50%",
+      confirmAllocate: "Alokasikan",
+      confirmWithdraw: "Tarik Dana",
+      goalReached: "Target Tercapai! 🎉",
+      goalProgress: "terkumpul",
+      deleteGoalConfirm: "Hapus target ini? Dana yang telah dialokasikan akan otomatis kembali ke saldo tersedia.",
+      patchSectionTitle: "Tambal Pengeluaran Berlebih",
+      patchSectionSubtitle: "Gunakan saldo tabungan untuk menutup minggu yang melebihi batas anggaran",
+      noBadWeeksTitle: "Semua Minggu Terkendali",
+      noBadWeeksDescription: "Seluruh minggu yang tercatat berada dalam batas anggaran. Ritme pengeluaranmu terjaga dengan baik!",
+      badWeekOverBy: "Melebihi anggaran sebesar",
+      badWeekPatchedBadge: "Ditambal dari tabungan",
+      badWeekUnpatchedBadge: "Belum ditambal",
+      patchWithSavingsButton: "Tambal dengan Tabungan",
+      patchModalTitle: "Tambal Minggu Ini",
+      patchModalSubtitle: "Gunakan saldo tabungan untuk menyeimbangkan pengeluaran minggu ini",
+      patchAmountLabel: "Nominal Penambalan (Rp)",
+      confirmPatch: "Tambal Sekarang",
+      unpatchButton: "Kembalikan ke Tabungan",
+      insufficientSavingsNotice: "Saldo tabungan belum mencukupi untuk menutup minggu ini. Surplus dari minggu berikutnya akan membantu menyeimbangkannya.",
+      historyTitle: "Riwayat Sisa Anggaran",
+      historySubtitle: "Daftar minggu yang berhasil menyisihkan anggaran ke tabungan",
+      surplusWeekContribution: "disisihkan ke tabungan",
+      noSurplusWeeks: "Belum Ada Sisa Anggaran Terkumpul",
+      noSurplusWeeksDesc: "Ketika pengeluaran dalam satu minggu di bawah batas mingguan, sisanya otomatis terkumpul di sini.",
+      weekPacingLabel: "Terpakai",
+      supportiveTitle: "Pesan Pengingat",
+      nextQuote: "Ganti Pesan",
+      quotes: [
+        "Mencatat pengeluaran secara jujur adalah kemenangan utama. Tabungan akan menyusul dengan konsistensi.",
+        "Wajar bila ada minggu dengan pengeluaran ekstra. Penganggaran adalah latihan ketahanan, bukan ujian kesempurnaan.",
+        "Menabung bukan tentang membatasi diri berlebihan, melainkan memberi ruang bernapas dan pilihan di masa depan.",
+        "Langkah kecil awal dari hal besar. Setiap minggu baru adalah lembaran bersih untuk memulai kembali.",
+        "Jangan cemas jika belum ada saldo tersimpan. Kesadaran finansialmu saat ini sedang membangun fondasi yang kokoh.",
+        "Keuangan memiliki pasang surutnya sendiri. Tetap tenang, pantau dengan mindful, dan lanjutkan perjalananmu."
+      ],
+      zeroSavingsEncouragement: "Belum ada tabungan terkumpul saat ini. Tetap rileks dan lanjutkan pencatatan harianmu!",
+      allGoodPacingEncouragement: "Terus pertahankan ritme pengeluaran yang nyaman dan terencana.",
+      manualAdjustmentButton: "Penyesuaian Manual",
+      manualAdjustmentTitle: "Catat Tabungan Manual",
+      manualAdjustmentSubtitle: "Tambahkan saldo ekstra dari bonus, THR, atau penyesuaian khusus",
+      adjustmentAmountLabel: "Nominal (Rp)",
+      adjustmentTypeDeposit: "Tambah ke Tabungan (+)",
+      adjustmentTypeWithdraw: "Kurangi Tabungan (-)",
+      adjustmentNoteLabel: "Keterangan (opsional)",
+      adjustmentSuccess: "Saldo tabungan berhasil disesuaikan.",
+    },
   },
   en: {
     common: {
@@ -627,6 +784,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       light: "Light",
       dark: "Dark",
       quickAddAria: "Add expense",
+      savings: "Savings",
     },
     categories: {
       "Food & Dining": "Food & Dining",
@@ -888,6 +1046,87 @@ export const dictionaries: Record<Locale, Dictionary> = {
       subtitle: "Add to home screen for full-screen mode",
       install: "Install",
       dismiss: "Dismiss install banner",
+    },
+    savings: {
+      title: "Savings",
+      subtitle: "Unspent weekly budget & mindful financial buffers",
+      totalSaved: "Total Savings",
+      availableSavings: "Available Funds",
+      allocatedToGoals: "Allocated to Goals",
+      totalPatched: "Used to Patch Weeks",
+      unspentSurplusTotal: "Accumulated Unspent Budget",
+      availableDescription: "Free to allocate to goals or use to cover extra expenses.",
+      ongoingWeekLabel: "Current Week (Estimated)",
+      ongoingWeekNotice: "Unspent budget from this week will be finalized once the week closes.",
+      goalsTitle: "Savings Goals",
+      goalsSubtitle: "Plan for meaningful milestones or maintain a general rainy day buffer",
+      noGoalTitle: "No Savings Goal Set Yet",
+      noGoalDescription: "You can freely accumulate your savings buffer, or set a target if you're saving for something specific.",
+      createGoalButton: "Create a Savings Goal",
+      addGoalButton: "Add New Goal",
+      editGoalTitle: "Edit Savings Goal",
+      createGoalTitle: "New Savings Goal",
+      goalNameLabel: "Goal Name",
+      goalTargetLabel: "Target Amount (Rp)",
+      goalEmojiLabel: "Icon",
+      goalNamePlaceholder: "e.g. Emergency Fund, Vacation, New Laptop",
+      targetAmountPlaceholder: "e.g. 1,000,000",
+      allocateButton: "Allocate Funds",
+      withdrawButton: "Withdraw to Available",
+      allocateModalTitle: "Allocate to Goal",
+      allocateModalSubtitle: "Move funds from your available savings into this goal",
+      withdrawModalTitle: "Withdraw from Goal",
+      withdrawModalSubtitle: "Return funds from this goal back to your available pool",
+      allocationAmountLabel: "Amount (Rp)",
+      maxAvailable: "Max Available",
+      maxAllocated: "Max Allocated",
+      quickAll: "All",
+      quickHalf: "50%",
+      confirmAllocate: "Allocate",
+      confirmWithdraw: "Withdraw",
+      goalReached: "Goal Reached! 🎉",
+      goalProgress: "saved",
+      deleteGoalConfirm: "Delete this goal? Any allocated funds will automatically return to your available savings pool.",
+      patchSectionTitle: "Patch Extra Expenses",
+      patchSectionSubtitle: "Use your accumulated savings to balance out weeks that went over budget",
+      noBadWeeksTitle: "All Weeks Balanced",
+      noBadWeeksDescription: "Every past recorded week stayed within budget. Your spending pacing is steady and calm!",
+      badWeekOverBy: "Exceeded budget by",
+      badWeekPatchedBadge: "Covered by savings",
+      badWeekUnpatchedBadge: "Unpatched",
+      patchWithSavingsButton: "Patch with Savings",
+      patchModalTitle: "Patch This Week",
+      patchModalSubtitle: "Use your savings to absorb the extra expenses from this week",
+      patchAmountLabel: "Patch Amount (Rp)",
+      confirmPatch: "Apply Patch",
+      unpatchButton: "Return to Savings",
+      insufficientSavingsNotice: "Savings balance is not yet high enough to patch this week. Future weekly surpluses will help build your buffer.",
+      historyTitle: "Unspent Budget Rollover",
+      historySubtitle: "Completed weeks that successfully contributed unspent budget to savings",
+      surplusWeekContribution: "rolled into savings",
+      noSurplusWeeks: "No Unspent Surpluses Yet",
+      noSurplusWeeksDesc: "When a week wraps up with spending below your weekly budget, the leftover amount rolls over here.",
+      weekPacingLabel: "Used",
+      supportiveTitle: "Mindful Reminder",
+      nextQuote: "New Thought",
+      quotes: [
+        "Tracking your expenses honestly is your biggest win. Savings will naturally follow with patience.",
+        "It is completely okay to have tight weeks. Healthy finances are about resilience, not perfection.",
+        "Saving isn't about extreme restriction; it's about giving your future self breathing room and choices.",
+        "Small mindful choices lead to great milestones. Every new week is a fresh slate.",
+        "Don't worry if nothing was saved this week. Your awareness right now is building lasting habits.",
+        "Every financial journey has ebbs and flows. Stay kind to yourself and keep pacing forward."
+      ],
+      zeroSavingsEncouragement: "No savings accumulated yet. Keep calm and take it one day at a time!",
+      allGoodPacingEncouragement: "Keep up your steady, mindful pacing.",
+      manualAdjustmentButton: "Manual Adjustment",
+      manualAdjustmentTitle: "Record Manual Savings",
+      manualAdjustmentSubtitle: "Add extra funds from bonuses, gifts, or adjust your balance",
+      adjustmentAmountLabel: "Amount (Rp)",
+      adjustmentTypeDeposit: "Add to Savings (+)",
+      adjustmentTypeWithdraw: "Deduct from Savings (-)",
+      adjustmentNoteLabel: "Note (optional)",
+      adjustmentSuccess: "Savings balance updated successfully.",
     },
   },
 };

@@ -81,6 +81,7 @@ export async function addExpense(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/compare");
   revalidatePath("/archive");
+  revalidatePath("/savings");
 }
 
 export async function logNoSpendDay(customDate?: string, locale: "id" | "en" = "id") {
@@ -116,6 +117,7 @@ export async function logNoSpendDay(customDate?: string, locale: "id" | "en" = "
   revalidatePath("/");
   revalidatePath("/compare");
   revalidatePath("/archive");
+  revalidatePath("/savings");
 }
 
 export async function updateExpense(formData: FormData) {
@@ -172,6 +174,7 @@ export async function updateExpense(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/compare");
   revalidatePath("/archive");
+  revalidatePath("/savings");
 }
 
 export async function deleteExpense(id: string) {
@@ -200,6 +203,7 @@ export async function deleteExpense(id: string) {
   revalidatePath("/");
   revalidatePath("/compare");
   revalidatePath("/archive");
+  revalidatePath("/savings");
 }
 
 export async function setWeeklyBudget(formData: FormData) {
@@ -232,6 +236,7 @@ export async function setWeeklyBudget(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/compare");
+  revalidatePath("/savings");
 }
 
 export async function setMonthlyBudget(formData: FormData) {
@@ -314,4 +319,347 @@ export async function toggleExpenseExemption(id: string, isExempt: boolean) {
   revalidatePath("/");
   revalidatePath("/compare");
   revalidatePath("/archive");
+  revalidatePath("/savings");
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  allocatedAmount: number;
+  emoji?: string;
+  createdAt: string;
+}
+
+export interface WeekPatch {
+  amount: number;
+  patchedAt: string;
+}
+
+export async function createSavingsGoal(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const name = (formData.get("name") as string)?.trim();
+  const targetAmount = Number(formData.get("target_amount"));
+  const emoji = (formData.get("emoji") as string)?.trim() || "🎯";
+
+  if (!name) {
+    throw new Error("Goal name is required");
+  }
+  if (isNaN(targetAmount) || targetAmount <= 0) {
+    throw new Error("Invalid target amount");
+  }
+
+  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
+    ? user.user_metadata.savings_goals
+    : [];
+
+  const newGoal: SavingsGoal = {
+    id: crypto.randomUUID(),
+    name,
+    targetAmount,
+    allocatedAmount: 0,
+    emoji,
+    createdAt: new Date().toISOString(),
+  };
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: {
+      savings_goals: [...existingGoals, newGoal],
+    },
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/savings");
+}
+
+export async function updateSavingsGoal(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const id = formData.get("id") as string;
+  const name = (formData.get("name") as string)?.trim();
+  const targetAmount = Number(formData.get("target_amount"));
+  const emoji = (formData.get("emoji") as string)?.trim() || "🎯";
+
+  if (!id || !name || isNaN(targetAmount) || targetAmount <= 0) {
+    throw new Error("Invalid goal details");
+  }
+
+  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
+    ? user.user_metadata.savings_goals
+    : [];
+
+  const updatedGoals = existingGoals.map((g) =>
+    g.id === id ? { ...g, name, targetAmount, emoji } : g
+  );
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: {
+      savings_goals: updatedGoals,
+    },
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/savings");
+}
+
+export async function deleteSavingsGoal(goalId: string) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
+    ? user.user_metadata.savings_goals
+    : [];
+
+  const updatedGoals = existingGoals.filter((g) => g.id !== goalId);
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: {
+      savings_goals: updatedGoals,
+    },
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/savings");
+}
+
+export async function allocateSavingsToGoal(goalId: string, amount: number) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  if (isNaN(amount) || amount <= 0) {
+    throw new Error("Invalid allocation amount");
+  }
+
+  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
+    ? user.user_metadata.savings_goals
+    : [];
+
+  const updatedGoals = existingGoals.map((g) => {
+    if (g.id === goalId) {
+      return {
+        ...g,
+        allocatedAmount: Number(g.allocatedAmount || 0) + amount,
+      };
+    }
+    return g;
+  });
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: {
+      savings_goals: updatedGoals,
+    },
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/savings");
+}
+
+export async function withdrawSavingsFromGoal(goalId: string, amount: number) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  if (isNaN(amount) || amount <= 0) {
+    throw new Error("Invalid withdrawal amount");
+  }
+
+  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
+    ? user.user_metadata.savings_goals
+    : [];
+
+  const updatedGoals = existingGoals.map((g) => {
+    if (g.id === goalId) {
+      const current = Number(g.allocatedAmount || 0);
+      return {
+        ...g,
+        allocatedAmount: Math.max(0, current - amount),
+      };
+    }
+    return g;
+  });
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: {
+      savings_goals: updatedGoals,
+    },
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/savings");
+}
+
+export async function patchWeekWithSavings(weekId: string, amount: number) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  if (!weekId || isNaN(amount) || amount <= 0) {
+    throw new Error("Invalid patch amount or week");
+  }
+
+  const existingPatches: Record<string, WeekPatch> =
+    user.user_metadata?.savings_patches && typeof user.user_metadata.savings_patches === "object"
+      ? user.user_metadata.savings_patches
+      : {};
+
+  const updatedPatches = {
+    ...existingPatches,
+    [weekId]: {
+      amount,
+      patchedAt: new Date().toISOString(),
+    },
+  };
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: {
+      savings_patches: updatedPatches,
+    },
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/savings");
+  revalidatePath("/archive");
+}
+
+export async function unpatchWeek(weekId: string) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const existingPatches: Record<string, WeekPatch> =
+    user.user_metadata?.savings_patches && typeof user.user_metadata.savings_patches === "object"
+      ? { ...user.user_metadata.savings_patches }
+      : {};
+
+  delete existingPatches[weekId];
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: {
+      savings_patches: existingPatches,
+    },
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/savings");
+  revalidatePath("/archive");
+}
+
+export async function recordManualSavingsAdjustment(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const type = formData.get("type") as "deposit" | "withdraw";
+  const amount = Number(formData.get("amount"));
+
+  if (isNaN(amount) || amount <= 0) {
+    throw new Error("Invalid adjustment amount");
+  }
+
+  const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
+  const updatedManual = type === "deposit" ? currentManual + amount : currentManual - amount;
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: {
+      savings_manual_deposit: updatedManual,
+    },
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/savings");
 }

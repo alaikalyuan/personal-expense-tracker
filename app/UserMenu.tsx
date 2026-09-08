@@ -9,6 +9,7 @@ import {
   Archive,
   Wallet,
   ArrowLeftRight,
+  PiggyBank,
   LogOut,
   Languages,
   Sun,
@@ -51,6 +52,7 @@ export default function UserMenu() {
   const isArchive = pathname.startsWith("/archive");
   const isTracker = pathname === "/";
   const isCompare = pathname.startsWith("/compare");
+  const isSavings = pathname.startsWith("/savings");
 
   return (
     <div className="relative" ref={menuRef}>
@@ -79,6 +81,17 @@ export default function UserMenu() {
               >
                 <Wallet className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                 <span>{t.nav.tracker}</span>
+              </Link>
+            )}
+
+            {!isSavings && (
+              <Link
+                href="/savings"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
+              >
+                <PiggyBank className="w-3.5 h-3.5 text-teal-500 dark:text-teal-400" />
+                <span>{t.nav.savings}</span>
               </Link>
             )}
 
