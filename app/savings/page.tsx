@@ -13,7 +13,6 @@ import { calculateExemptTotals } from "@/utils/exemptions";
 import SavingsClient, {
   CompletedWeekData,
   SavingsGoalItem,
-  WeekPatchItem,
 } from "./SavingsClient";
 import { ExpenseItem } from "@/app/ExpenseList";
 
@@ -40,14 +39,11 @@ export default async function SavingsPage() {
     ? user.user_metadata.savings_goals
     : [];
 
-  // User week patches from metadata
-  const rawPatches: Record<string, WeekPatchItem> =
-    user.user_metadata?.savings_patches && typeof user.user_metadata.savings_patches === "object"
-      ? user.user_metadata.savings_patches
-      : {};
+  // Core Savings balance (Tabungan Pokok) from metadata
+  const coreSavings = Number(user.user_metadata?.savings_manual_deposit || 0);
 
-  // User manual savings deposit/adjustment from metadata
-  const manualDeposit = Number(user.user_metadata?.savings_manual_deposit || 0);
+  // Cumulative surplus already swept/transferred from metadata
+  const sweptSurplus = Number(user.user_metadata?.savings_swept_surplus || 0);
 
   // Current week boundary (Monday 00:00)
   const now = getNowInTimezone();
@@ -100,11 +96,6 @@ export default async function SavingsPage() {
       const surplus = isSurplus ? weeklyBudget - regularSpend : 0;
       const rawDeficit = !isSurplus ? regularSpend - weeklyBudget : 0;
 
-      const patchInfo = rawPatches[weekId];
-      const patchedAmount = patchInfo ? Number(patchInfo.amount || 0) : 0;
-      const isPatched = patchedAmount >= rawDeficit;
-      const remainingDeficit = Math.max(0, rawDeficit - patchedAmount);
-
       const label = `${formatDateServer(startDate, "d MMM", locale)} – ${formatDateServer(
         endDate,
         "d MMM yyyy",
@@ -122,9 +113,6 @@ export default async function SavingsPage() {
         isSurplus,
         surplus,
         deficit: rawDeficit,
-        patchedAmount,
-        isPatched,
-        remainingDeficit,
         expensesCount: expenses.length,
       };
     })
@@ -135,50 +123,35 @@ export default async function SavingsPage() {
   const ongoingSpend = ongoingExempt.regularTotal;
   const ongoingProjectedSurplus = Math.max(0, weeklyBudget - ongoingSpend);
 
-  // Financial aggregates
-  const unspentSurplusTotal = completedWeeks.reduce(
-    (sum, w) => sum + (w.isSurplus ? w.surplus : 0),
-    0
-  );
-
-  // Calculate total amount spent on active patches
-  const totalPatched = completedWeeks.reduce((sum, w) => {
-    if (!w.isSurplus && w.patchedAmount > 0) {
-      return sum + Math.min(w.patchedAmount, w.deficit);
-    }
-    return sum;
-  }, 0);
-
-  // Total allocated to goals
+  // Financial aggregates: Pillar 1 (Core Savings / Vault)
   const totalAllocatedToGoals = rawGoals.reduce(
     (sum, g) => sum + Number(g.allocatedAmount || 0),
     0
   );
+  const availableCoreSavings = Math.max(0, coreSavings - totalAllocatedToGoals);
 
-  // Net accumulated savings = (all surpluses + manual adjustments) - patched amounts
-  const totalAccumulatedSavings = Math.max(
-    0,
-    unspentSurplusTotal + manualDeposit - totalPatched
+  // Financial aggregates: Pillar 2 (Weekly Budget Surpluses / Rollover Buffer)
+  const unspentSurplusTotal = completedWeeks.reduce(
+    (sum, w) => sum + (w.isSurplus ? w.surplus : 0),
+    0
   );
-
-  // Available free savings = totalAccumulatedSavings - allocated to goals
-  const availableSavings = Math.max(0, totalAccumulatedSavings - totalAllocatedToGoals);
+  const availableSurplus = Math.max(0, unspentSurplusTotal - sweptSurplus);
 
   return (
     <SavingsClient
       weeklyBudget={weeklyBudget}
       completedWeeks={completedWeeks}
       goals={rawGoals}
-      patches={rawPatches}
-      manualDeposit={manualDeposit}
-      unspentSurplusTotal={unspentSurplusTotal}
-      totalPatched={totalPatched}
+      coreSavings={coreSavings}
+      availableCoreSavings={availableCoreSavings}
       totalAllocatedToGoals={totalAllocatedToGoals}
-      totalAccumulatedSavings={totalAccumulatedSavings}
-      availableSavings={availableSavings}
+      unspentSurplusTotal={unspentSurplusTotal}
+      sweptSurplus={sweptSurplus}
+      availableSurplus={availableSurplus}
       ongoingSpend={ongoingSpend}
       ongoingProjectedSurplus={ongoingProjectedSurplus}
       isGuest={isGuest}
     />
   );
 }
+

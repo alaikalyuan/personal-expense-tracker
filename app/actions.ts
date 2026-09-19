@@ -844,3 +844,60 @@ export async function recordManualSavingsAdjustment(formData: FormData) {
 
   revalidatePath("/savings");
 }
+
+export async function sweepSurplusToSavings(amount: number, targetGoalId?: string) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  if (isNaN(amount) || amount <= 0) {
+    throw new Error("Invalid sweep amount");
+  }
+
+  const currentSwept = Number(user.user_metadata?.savings_swept_surplus || 0);
+  const updatedSwept = currentSwept + amount;
+
+  const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
+  const updatedManual = currentManual + amount;
+
+  const updateData: Record<string, unknown> = {
+    savings_swept_surplus: updatedSwept,
+    savings_manual_deposit: updatedManual,
+  };
+
+  if (targetGoalId) {
+    const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
+      ? user.user_metadata.savings_goals
+      : [];
+
+    const updatedGoals = existingGoals.map((g) => {
+      if (g.id === targetGoalId) {
+        return {
+          ...g,
+          allocatedAmount: Number(g.allocatedAmount || 0) + amount,
+        };
+      }
+      return g;
+    });
+
+    updateData.savings_goals = updatedGoals;
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: updateData,
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/savings");
+}

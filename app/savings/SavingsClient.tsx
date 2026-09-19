@@ -5,7 +5,6 @@ import {
   PiggyBank,
   Target,
   Sparkles,
-  CheckCircle2,
   Clock,
   Plus,
   Pencil,
@@ -14,8 +13,9 @@ import {
   ChevronDown,
   RefreshCw,
   SlidersHorizontal,
-  ShieldCheck,
   HeartHandshake,
+  Coins,
+  ArrowUpRight,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import UserMenu from "@/app/UserMenu";
@@ -26,8 +26,7 @@ import {
   deleteSavingsGoal,
   allocateSavingsToGoal,
   withdrawSavingsFromGoal,
-  patchWeekWithSavings,
-  unpatchWeek,
+  sweepSurplusToSavings,
   recordManualSavingsAdjustment,
 } from "@/app/actions";
 
@@ -42,9 +41,6 @@ export interface CompletedWeekData {
   isSurplus: boolean;
   surplus: number;
   deficit: number;
-  patchedAmount: number;
-  isPatched: boolean;
-  remainingDeficit: number;
   expensesCount: number;
 }
 
@@ -57,22 +53,16 @@ export interface SavingsGoalItem {
   createdAt: string;
 }
 
-export interface WeekPatchItem {
-  amount: number;
-  patchedAt: string;
-}
-
 interface SavingsClientProps {
   weeklyBudget: number;
   completedWeeks: CompletedWeekData[];
   goals: SavingsGoalItem[];
-  patches: Record<string, WeekPatchItem>;
-  manualDeposit: number;
-  unspentSurplusTotal: number;
-  totalPatched: number;
+  coreSavings: number;
+  availableCoreSavings: number;
   totalAllocatedToGoals: number;
-  totalAccumulatedSavings: number;
-  availableSavings: number;
+  unspentSurplusTotal: number;
+  sweptSurplus: number;
+  availableSurplus: number;
   ongoingSpend: number;
   ongoingProjectedSurplus: number;
   isGuest?: boolean;
@@ -84,12 +74,12 @@ export default function SavingsClient({
   weeklyBudget,
   completedWeeks,
   goals,
-  manualDeposit,
-  unspentSurplusTotal,
-  totalPatched,
+  coreSavings,
+  availableCoreSavings,
   totalAllocatedToGoals,
-  totalAccumulatedSavings,
-  availableSavings,
+  unspentSurplusTotal,
+  sweptSurplus,
+  availableSurplus,
   ongoingSpend,
   ongoingProjectedSurplus,
   isGuest = false,
@@ -108,12 +98,14 @@ export default function SavingsClient({
 
   const [allocatingGoal, setAllocatingGoal] = useState<SavingsGoalItem | null>(null);
   const [allocationAmount, setAllocationAmount] = useState("");
+  const [allocationSource, setAllocationSource] = useState<"core" | "surplus">("core");
 
   const [withdrawingGoal, setWithdrawingGoal] = useState<SavingsGoalItem | null>(null);
   const [withdrawingAmount, setWithdrawingAmount] = useState("");
 
-  const [patchingWeek, setPatchingWeek] = useState<CompletedWeekData | null>(null);
-  const [patchAmount, setPatchAmount] = useState("");
+  const [isSweepModalOpen, setIsSweepModalOpen] = useState(false);
+  const [sweepAmount, setSweepAmount] = useState("");
+  const [sweepTargetGoalId, setSweepTargetGoalId] = useState("");
 
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [adjustmentType, setAdjustmentType] = useState<"deposit" | "withdraw">("deposit");
@@ -122,9 +114,7 @@ export default function SavingsClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
 
-  // Deficit weeks that had extra expenses
-  const badWeeks = completedWeeks.filter((w) => !w.isSurplus);
-  // Surplus weeks that contributed to savings
+  // Surplus weeks that contributed to unspent budget
   const surplusWeeks = completedWeeks.filter((w) => w.isSurplus && w.surplus > 0);
 
   // Shuffle quote
@@ -196,7 +186,7 @@ export default function SavingsClient({
     }
   };
 
-  // Allocation Handler
+  // Allocation Handler (from Core Savings or Sisa Anggaran)
   const handleAllocate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!allocatingGoal || !allocationAmount) return;
@@ -205,11 +195,13 @@ export default function SavingsClient({
 
     try {
       setIsSubmitting(true);
-      await allocateSavingsToGoal(allocatingGoal.id, amountNum);
-      if (
-        allocatingGoal.allocatedAmount + amountNum >=
-        allocatingGoal.targetAmount
-      ) {
+      if (allocationSource === "surplus") {
+        await sweepSurplusToSavings(amountNum, allocatingGoal.id);
+      } else {
+        await allocateSavingsToGoal(allocatingGoal.id, amountNum);
+      }
+
+      if (allocatingGoal.allocatedAmount + amountNum >= allocatingGoal.targetAmount) {
         triggerConfetti();
       }
       setAllocatingGoal(null);
@@ -236,39 +228,33 @@ export default function SavingsClient({
     }
   };
 
-  // Patch Week Handler
-  const openPatchModal = (week: CompletedWeekData) => {
-    setPatchingWeek(week);
-    const suggested = Math.min(week.remainingDeficit, availableSavings);
-    setPatchAmount(String(suggested > 0 ? suggested : week.remainingDeficit));
-  };
-
-  const handleApplyPatch = async (e: React.FormEvent) => {
+  // Sweep Surplus Handler (Transfer to Core Savings or Goal)
+  const handleSweep = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!patchingWeek || !patchAmount) return;
-    const amountNum = Number(patchAmount);
-    if (isNaN(amountNum) || amountNum <= 0) return;
+    if (!sweepAmount) return;
+    const amountNum = Number(sweepAmount);
+    if (isNaN(amountNum) || amountNum <= 0 || amountNum > availableSurplus) return;
 
     try {
       setIsSubmitting(true);
-      await patchWeekWithSavings(patchingWeek.weekId, amountNum);
-      setPatchingWeek(null);
-      setPatchAmount("");
+      await sweepSurplusToSavings(amountNum, sweepTargetGoalId || undefined);
+
+      if (sweepTargetGoalId) {
+        const targetGoal = goals.find((g) => g.id === sweepTargetGoalId);
+        if (targetGoal && targetGoal.allocatedAmount + amountNum >= targetGoal.targetAmount) {
+          triggerConfetti();
+        }
+      }
+
+      setIsSweepModalOpen(false);
+      setSweepAmount("");
+      setSweepTargetGoalId("");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleUnpatch = async (weekId: string) => {
-    try {
-      setIsSubmitting(true);
-      await unpatchWeek(weekId);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Manual Adjustment Handler
+  // Manual Core Savings Adjustment Handler
   const handleManualAdjustment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adjustmentAmount) return;
@@ -305,88 +291,126 @@ export default function SavingsClient({
         <UserMenu isGuest={isGuest} />
       </div>
 
-      {/* Hero Financial Health Overview */}
-      <div className="rounded-3xl border border-zinc-200/90 bg-white p-5 shadow-xs dark:border-zinc-800/90 dark:bg-linear-to-b dark:from-zinc-900 dark:to-zinc-950 dark:shadow-md">
-        <div className="flex items-start justify-between">
-          <div>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400 flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-teal-500 inline-block" />
-              {t.savings.availableSavings}
-            </span>
-            <div className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-                Rp {availableSavings.toLocaleString("id-ID")}
+      {/* Two Pillars Financial Health Overview */}
+      <div className="flex flex-col gap-3">
+        {/* Pillar 1: Tabungan Pokok (Core Vault) */}
+        <div className="rounded-3xl border border-teal-200/90 bg-linear-to-b from-teal-50/70 via-white to-white p-5 shadow-xs dark:border-teal-900/60 dark:bg-linear-to-b dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-950 dark:shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400 flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-teal-500 inline-block" />
+                {t.savings.coreSavingsTitle}
+              </span>
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <span className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
+                  Rp {coreSavings.toLocaleString("id-ID")}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                {t.savings.coreSavingsSubtitle}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsAdjustmentModalOpen(true)}
+              aria-label={t.savings.manualAdjustmentButton}
+              title={t.savings.manualAdjustmentButton}
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-teal-200/80 bg-white text-teal-700 hover:bg-teal-50 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:text-white transition-colors cursor-pointer shadow-2xs"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Core Breakdown Metrics Grid */}
+          <div className="mt-4 grid grid-cols-2 gap-2.5 pt-3.5 border-t border-teal-100/80 dark:border-zinc-800/80">
+            <div className="rounded-2xl border border-teal-100/70 bg-white/80 p-3 dark:border-zinc-800/50 dark:bg-zinc-900/40">
+              <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                {t.savings.availableForGoals}
+              </span>
+              <p className="mt-0.5 text-sm font-bold text-teal-700 dark:text-teal-300">
+                Rp {availableCoreSavings.toLocaleString("id-ID")}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3 dark:border-zinc-800/50 dark:bg-zinc-900/40">
+              <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                {t.savings.allocatedToGoals}
+              </span>
+              <p className="mt-0.5 text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                Rp {totalAllocatedToGoals.toLocaleString("id-ID")}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Pillar 2: Sisa Anggaran Mingguan (Budget Surplus Buffer) */}
+        <div className="rounded-3xl border border-amber-200/80 bg-linear-to-b from-amber-50/40 via-white to-white p-5 shadow-xs dark:border-amber-900/40 dark:bg-linear-to-b dark:from-amber-950/20 dark:via-zinc-900 dark:to-zinc-950 dark:shadow-md">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <Coins className="w-3.5 h-3.5 text-amber-500" />
+                {t.savings.budgetSurplusTitle}
+              </span>
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <span className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
+                  +Rp {availableSurplus.toLocaleString("id-ID")}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                {t.savings.budgetSurplusSubtitle}
+              </p>
+            </div>
+
+            {availableSurplus > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSweepAmount(String(availableSurplus));
+                  setSweepTargetGoalId(goals[0]?.id || "");
+                  setIsSweepModalOpen(true);
+                }}
+                className="flex items-center gap-1 text-[11px] font-semibold text-white bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded-xl transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
+              >
+                <ArrowUpRight className="w-3.5 h-3.5" />
+                <span>{t.savings.sweepSurplusButton}</span>
+              </button>
+            )}
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2.5 pt-3.5 border-t border-amber-100/70 dark:border-zinc-800/80">
+            <div className="rounded-2xl border border-amber-100/60 bg-white/80 p-2.5 dark:border-zinc-800/50 dark:bg-zinc-900/40">
+              <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                {t.savings.totalSurplusEarned}
+              </span>
+              <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                +Rp {unspentSurplusTotal.toLocaleString("id-ID")}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-100 bg-zinc-50/70 p-2.5 dark:border-zinc-800/50 dark:bg-zinc-900/40">
+              <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                {t.savings.sweptSurplusTotal}
+              </span>
+              <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                Rp {sweptSurplus.toLocaleString("id-ID")}
+              </p>
+            </div>
+          </div>
+
+          {/* Ongoing Week Estimator */}
+          {ongoingSpend < weeklyBudget && ongoingProjectedSurplus > 0 && (
+            <div className="mt-3 flex items-center justify-between rounded-xl bg-amber-100/50 dark:bg-amber-950/30 px-3 py-2 text-[11px] border border-amber-200/60 dark:border-amber-900/40">
+              <span className="flex items-center gap-1.5 text-amber-800 dark:text-amber-300 font-medium">
+                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>{t.savings.ongoingWeekLabel}</span>
+              </span>
+              <span className="font-semibold text-amber-900 dark:text-amber-200">
+                ~Rp {ongoingProjectedSurplus.toLocaleString("id-ID")}
               </span>
             </div>
-            <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              {t.savings.availableDescription}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsAdjustmentModalOpen(true)}
-            aria-label={t.savings.manualAdjustmentButton}
-            title={t.savings.manualAdjustmentButton}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-          </button>
+          )}
         </div>
-
-        {/* Secondary Metrics Grid */}
-        <div className="mt-5 grid grid-cols-2 gap-2.5 pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
-          <div className="rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3 dark:border-zinc-800/50 dark:bg-zinc-900/40">
-            <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
-              {t.savings.totalSaved}
-            </span>
-            <p className="mt-0.5 text-sm font-bold text-zinc-800 dark:text-zinc-200">
-              Rp {totalAccumulatedSavings.toLocaleString("id-ID")}
-            </p>
-            <p className="text-[9px] text-zinc-500 mt-0.5">
-              {t.savings.unspentSurplusTotal}: Rp{" "}
-              {unspentSurplusTotal.toLocaleString("id-ID")}
-            </p>
-            {manualDeposit !== 0 && (
-              <p className="text-[9px] text-zinc-500 mt-0.5">
-                {t.savings.manualAdjustmentButton}: {manualDeposit > 0 ? "+" : ""}Rp{" "}
-                {manualDeposit.toLocaleString("id-ID")}
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3 dark:border-zinc-800/50 dark:bg-zinc-900/40">
-            <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
-              {t.savings.allocatedToGoals}
-            </span>
-            <p className="mt-0.5 text-sm font-bold text-zinc-800 dark:text-zinc-200">
-              Rp {totalAllocatedToGoals.toLocaleString("id-ID")}
-            </p>
-            {totalPatched > 0 ? (
-              <p className="text-[9px] text-teal-600 dark:text-teal-400 mt-0.5">
-                {t.savings.totalPatched}: Rp{" "}
-                {totalPatched.toLocaleString("id-ID")}
-              </p>
-            ) : (
-              <p className="text-[9px] text-zinc-500 mt-0.5">
-                {goals.length} {goals.length === 1 ? "goal" : "goals"}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Ongoing Week Estimator */}
-        {ongoingSpend < weeklyBudget && ongoingProjectedSurplus > 0 && (
-          <div className="mt-3.5 flex items-center justify-between rounded-xl bg-teal-50/80 dark:bg-teal-950/20 px-3 py-2 text-[11px] border border-teal-100 dark:border-teal-900/30">
-            <span className="flex items-center gap-1.5 text-teal-800 dark:text-teal-300 font-medium">
-              <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
-              <span>{t.savings.ongoingWeekLabel}</span>
-            </span>
-            <span className="font-semibold text-teal-900 dark:text-teal-200">
-              ~Rp {ongoingProjectedSurplus.toLocaleString("id-ID")}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Supportive Mindset Banner (Never flashing red; encouraging and calm) */}
@@ -403,7 +427,7 @@ export default function SavingsClient({
               <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300 italic leading-relaxed">
                 &ldquo;{t.savings.quotes[quoteIndex]}&rdquo;
               </p>
-              {totalAccumulatedSavings === 0 && (
+              {coreSavings === 0 && (
                 <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
                   {t.savings.zeroSavingsEncouragement}
                 </p>
@@ -475,6 +499,7 @@ export default function SavingsClient({
               const rawPercent = target > 0 ? Math.round((allocated / target) * 100) : 0;
               const isReached = allocated >= target;
               const barWidth = Math.min(rawPercent, 100);
+              const canAllocate = availableCoreSavings > 0 || availableSurplus > 0;
 
               return (
                 <div
@@ -570,15 +595,18 @@ export default function SavingsClient({
 
                     <button
                       type="button"
-                      disabled={availableSavings <= 0}
+                      disabled={!canAllocate}
                       onClick={() => {
                         setAllocatingGoal(goal);
+                        const defaultSource = availableCoreSavings > 0 ? "core" : "surplus";
+                        setAllocationSource(defaultSource);
+                        const maxPool = defaultSource === "core" ? availableCoreSavings : availableSurplus;
                         const maxNeeded = Math.max(0, target - allocated);
-                        const suggested = Math.min(maxNeeded, availableSavings);
-                        setAllocationAmount(String(suggested > 0 ? suggested : availableSavings));
+                        const suggested = Math.min(maxNeeded, maxPool);
+                        setAllocationAmount(String(suggested > 0 ? suggested : maxPool));
                       }}
                       className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
-                        availableSavings > 0
+                        canAllocate
                           ? "bg-teal-600 text-white hover:bg-teal-700 shadow-2xs active:scale-95"
                           : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600 cursor-not-allowed"
                       }`}
@@ -586,109 +614,6 @@ export default function SavingsClient({
                       <Plus className="w-3 h-3" />
                       <span>{t.savings.allocateButton}</span>
                     </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Patch Bad Weeks / High-Spend Weeks Section */}
-      <div className="flex flex-col gap-3">
-        <div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-            {t.savings.patchSectionTitle}
-          </h2>
-          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-            {t.savings.patchSectionSubtitle}
-          </p>
-        </div>
-
-        {badWeeks.length === 0 ? (
-          <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 text-center shadow-xs dark:border-zinc-800 dark:bg-zinc-900/40">
-            <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1.5" />
-            <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-              {t.savings.noBadWeeksTitle}
-            </p>
-            <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-              {t.savings.noBadWeeksDescription}
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            {badWeeks.map((week) => {
-              return (
-                <div
-                  key={week.weekId}
-                  className="rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/60"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                        {week.label}
-                      </span>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        {t.dashboard.spentThisWeek}: Rp{" "}
-                        {week.regularSpend.toLocaleString("id-ID")} / Rp{" "}
-                        {week.budget.toLocaleString("id-ID")}
-                      </p>
-                    </div>
-
-                    {/* Deficit framed calmly in amber/neutral, NOT flashing red */}
-                    <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-md">
-                      +{week.deficit.toLocaleString("id-ID")}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between pt-2.5 border-t border-zinc-100 dark:border-zinc-800/60">
-                    {week.isPatched ? (
-                      <span className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                        <span>
-                          {t.savings.badWeekPatchedBadge} (Rp{" "}
-                          {week.patchedAmount.toLocaleString("id-ID")})
-                        </span>
-                      </span>
-                    ) : week.patchedAmount > 0 ? (
-                      <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                        Sebagian ditambal: Rp {week.patchedAmount.toLocaleString("id-ID")} (Sisa Rp {week.remainingDeficit.toLocaleString("id-ID")})
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                        {t.savings.badWeekOverBy} Rp{" "}
-                        {week.deficit.toLocaleString("id-ID")}
-                      </span>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                      {week.patchedAmount > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => handleUnpatch(week.weekId)}
-                          disabled={isSubmitting}
-                          className="text-[10px] text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                        >
-                          {t.savings.unpatchButton}
-                        </button>
-                      )}
-
-                      {!week.isPatched && (
-                        <button
-                          type="button"
-                          disabled={availableSavings <= 0 || isSubmitting}
-                          onClick={() => openPatchModal(week)}
-                          className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                            availableSavings > 0
-                              ? "bg-amber-500 text-white hover:bg-amber-600 shadow-2xs active:scale-95 dark:bg-amber-500"
-                              : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600 cursor-not-allowed"
-                          }`}
-                        >
-                          {t.savings.patchWithSavingsButton}
-                        </button>
-                      )}
-                    </div>
                   </div>
                 </div>
               );
@@ -867,22 +792,64 @@ export default function SavingsClient({
             </div>
 
             <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              {t.savings.allocateModalSubtitle}
+              {t.savings.allocateModalSubtitle} ({allocatingGoal.name})
             </p>
 
-            <form onSubmit={handleAllocate} className="mt-4 flex flex-col gap-3">
+            <form onSubmit={handleAllocate} className="mt-4 flex flex-col gap-3.5">
+              {/* Funding Source Selector (if surplus is available) */}
+              {availableSurplus > 0 && availableCoreSavings > 0 && (
+                <div>
+                  <label className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block mb-1">
+                    Sumber Dana
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-800/70 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAllocationSource("core");
+                        const maxNeeded = Math.max(0, allocatingGoal.targetAmount - allocatingGoal.allocatedAmount);
+                        setAllocationAmount(String(Math.min(maxNeeded, availableCoreSavings)));
+                      }}
+                      className={`py-1.5 px-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                        allocationSource === "core"
+                          ? "bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-2xs"
+                          : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400"
+                      }`}
+                    >
+                      Tabungan Pokok
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAllocationSource("surplus");
+                        const maxNeeded = Math.max(0, allocatingGoal.targetAmount - allocatingGoal.allocatedAmount);
+                        setAllocationAmount(String(Math.min(maxNeeded, availableSurplus)));
+                      }}
+                      className={`py-1.5 px-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                        allocationSource === "surplus"
+                          ? "bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-300 shadow-2xs"
+                          : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400"
+                      }`}
+                    >
+                      Sisa Anggaran
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <div className="flex justify-between text-[11px] text-zinc-500 mb-1">
                   <span>{t.savings.allocationAmountLabel}</span>
                   <span>
-                    {t.savings.maxAvailable}: Rp {availableSavings.toLocaleString("id-ID")}
+                    {t.savings.maxAvailable}: Rp{" "}
+                    {(allocationSource === "core" ? availableCoreSavings : availableSurplus).toLocaleString("id-ID")}
                   </span>
                 </div>
                 <input
                   type="number"
                   required
                   min="1"
-                  max={availableSavings}
+                  max={allocationSource === "core" ? availableCoreSavings : availableSurplus}
                   value={allocationAmount}
                   onChange={(e) => setAllocationAmount(e.target.value)}
                   className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
@@ -893,14 +860,21 @@ export default function SavingsClient({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setAllocationAmount(String(Math.round(availableSavings * 0.5)))}
+                  onClick={() => {
+                    const maxPool = allocationSource === "core" ? availableCoreSavings : availableSurplus;
+                    setAllocationAmount(String(Math.round(maxPool * 0.5)));
+                  }}
                   className="flex-1 py-1 text-[11px] font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
                 >
                   {t.savings.quickHalf}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setAllocationAmount(String(availableSavings))}
+                  onClick={() => {
+                    const maxPool = allocationSource === "core" ? availableCoreSavings : availableSurplus;
+                    const maxNeeded = Math.max(0, allocatingGoal.targetAmount - allocatingGoal.allocatedAmount);
+                    setAllocationAmount(String(Math.min(maxNeeded, maxPool)));
+                  }}
                   className="flex-1 py-1 text-[11px] font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
                 >
                   {t.savings.quickAll}
@@ -990,18 +964,18 @@ export default function SavingsClient({
         </div>
       )}
 
-      {/* Modal: Patch Week with Savings */}
-      {patchingWeek && (
+      {/* Modal: Alirkan Sisa Anggaran (Sweep Surplus) */}
+      {isSweepModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-sm rounded-3xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-scale-in">
+          <div className="w-full max-w-sm rounded-3xl border border-amber-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
               <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-amber-500" />
-                <span>{t.savings.patchModalTitle}</span>
+                <Coins className="w-4 h-4 text-amber-500" />
+                <span>{t.savings.sweepModalTitle}</span>
               </h3>
               <button
                 type="button"
-                onClick={() => setPatchingWeek(null)}
+                onClick={() => setIsSweepModalOpen(false)}
                 className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -1009,48 +983,116 @@ export default function SavingsClient({
             </div>
 
             <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              {t.savings.patchModalSubtitle} ({patchingWeek.label})
+              {t.savings.sweepModalSubtitle}
             </p>
 
-            <form onSubmit={handleApplyPatch} className="mt-4 flex flex-col gap-3">
+            <form onSubmit={handleSweep} className="mt-4 flex flex-col gap-3.5">
               <div>
                 <div className="flex justify-between text-[11px] text-zinc-500 mb-1">
-                  <span>{t.savings.patchAmountLabel}</span>
+                  <span>Nominal yang Dialirkan (Rp)</span>
                   <span>
-                    {t.savings.maxAvailable}: Rp {availableSavings.toLocaleString("id-ID")}
+                    {t.savings.maxAvailable}: Rp {availableSurplus.toLocaleString("id-ID")}
                   </span>
                 </div>
                 <input
                   type="number"
                   required
                   min="1"
-                  max={availableSavings}
-                  value={patchAmount}
-                  onChange={(e) => setPatchAmount(e.target.value)}
+                  max={availableSurplus}
+                  value={sweepAmount}
+                  onChange={(e) => setSweepAmount(e.target.value)}
                   className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 outline-none focus:border-amber-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
                 />
               </div>
 
-              {availableSavings < patchingWeek.remainingDeficit && (
-                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  {t.savings.insufficientSavingsNotice}
-                </p>
-              )}
-
-              <div className="mt-3 flex items-center justify-end gap-2">
+              {/* Presets */}
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setPatchingWeek(null)}
+                  onClick={() => setSweepAmount(String(Math.round(availableSurplus * 0.5)))}
+                  className="flex-1 py-1 text-[11px] font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
+                >
+                  50% (Rp {Math.round(availableSurplus * 0.5).toLocaleString("id-ID")})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSweepAmount(String(availableSurplus))}
+                  className="flex-1 py-1 text-[11px] font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
+                >
+                  Semua (Rp {availableSurplus.toLocaleString("id-ID")})
+                </button>
+              </div>
+
+              {/* Destination Selection */}
+              <div>
+                <label className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 block">
+                  {t.savings.sweepDestinationLabel}
+                </label>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors">
+                    <input
+                      type="radio"
+                      name="sweepDestination"
+                      checked={sweepTargetGoalId === ""}
+                      onChange={() => setSweepTargetGoalId("")}
+                      className="text-amber-500 focus:ring-amber-500"
+                    />
+                    <div className="text-xs">
+                      <span className="font-bold text-zinc-800 dark:text-zinc-200 block">
+                        🏦 {t.savings.sweepToCoreSavings}
+                      </span>
+                      <span className="text-[10px] text-zinc-500">
+                        Disatukan ke saldo tabungan pokok yang bebas dialokasikan kapan saja
+                      </span>
+                    </div>
+                  </label>
+
+                  {goals.length > 0 && (
+                    <label className="flex items-start gap-2 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors">
+                      <input
+                        type="radio"
+                        name="sweepDestination"
+                        checked={sweepTargetGoalId !== ""}
+                        onChange={() => setSweepTargetGoalId(goals[0]?.id || "")}
+                        className="mt-0.5 text-amber-500 focus:ring-amber-500"
+                      />
+                      <div className="flex-1 text-xs">
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200 block mb-1">
+                          🎯 {t.savings.sweepToGoal}
+                        </span>
+                        {sweepTargetGoalId !== "" && (
+                          <select
+                            value={sweepTargetGoalId}
+                            onChange={(e) => setSweepTargetGoalId(e.target.value)}
+                            className="w-full mt-1 rounded-lg border border-zinc-200 bg-white p-1.5 text-xs text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                          >
+                            {goals.map((g) => (
+                              <option key={g.id} value={g.id}>
+                                {g.emoji} {g.name} (Terkumpul Rp {g.allocatedAmount.toLocaleString("id-ID")} / Rp {g.targetAmount.toLocaleString("id-ID")})
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSweepModalOpen(false)}
                   className="px-3 py-1.5 rounded-xl border border-zinc-200 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
                   {t.common.cancel}
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || Number(patchAmount) <= 0}
+                  disabled={isSubmitting || Number(sweepAmount) <= 0 || Number(sweepAmount) > availableSurplus}
                   className="px-4 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
                 >
-                  {isSubmitting ? t.common.saving : t.savings.confirmPatch}
+                  {isSubmitting ? t.common.saving : t.savings.confirmSweep}
                 </button>
               </div>
             </form>
@@ -1058,7 +1100,7 @@ export default function SavingsClient({
         </div>
       )}
 
-      {/* Modal: Manual Adjustment */}
+      {/* Modal: Manual Core Savings Adjustment */}
       {isAdjustmentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
           <div className="w-full max-w-sm rounded-3xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-scale-in">

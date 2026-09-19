@@ -346,14 +346,33 @@ export interface Dictionary {
   savings: {
     title: string;
     subtitle: string;
-    totalSaved: string;
-    availableSavings: string;
+    // Core Vault
+    coreSavingsTitle: string;
+    coreSavingsSubtitle: string;
+    totalCoreSavings: string;
+    availableForGoals: string;
     allocatedToGoals: string;
-    totalPatched: string;
-    unspentSurplusTotal: string;
-    availableDescription: string;
+    manageCoreSavings: string;
+    // Budget Surplus
+    budgetSurplusTitle: string;
+    budgetSurplusSubtitle: string;
+    availableSurplus: string;
+    totalSurplusEarned: string;
+    sweptSurplusTotal: string;
+    sweepSurplusButton: string;
+    sweepModalTitle: string;
+    sweepModalSubtitle: string;
+    sweepDestinationLabel: string;
+    sweepToCoreSavings: string;
+    sweepToGoal: string;
+    sweepSelectGoalPlaceholder: string;
+    confirmSweep: string;
+    sweepSuccess: string;
+    noSurplusAvailable: string;
+    // Ongoing Week
     ongoingWeekLabel: string;
     ongoingWeekNotice: string;
+    // Goals
     goalsTitle: string;
     goalsSubtitle: string;
     noGoalTitle: string;
@@ -383,26 +402,14 @@ export interface Dictionary {
     goalReached: string;
     goalProgress: string;
     deleteGoalConfirm: string;
-    patchSectionTitle: string;
-    patchSectionSubtitle: string;
-    noBadWeeksTitle: string;
-    noBadWeeksDescription: string;
-    badWeekOverBy: string;
-    badWeekPatchedBadge: string;
-    badWeekUnpatchedBadge: string;
-    patchWithSavingsButton: string;
-    patchModalTitle: string;
-    patchModalSubtitle: string;
-    patchAmountLabel: string;
-    confirmPatch: string;
-    unpatchButton: string;
-    insufficientSavingsNotice: string;
+    // History
     historyTitle: string;
     historySubtitle: string;
     surplusWeekContribution: string;
     noSurplusWeeks: string;
     noSurplusWeeksDesc: string;
     weekPacingLabel: string;
+    // Mindful & Manual
     supportiveTitle: string;
     nextQuote: string;
     quotes: string[];
@@ -766,15 +773,34 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     savings: {
       title: "Tabungan",
-      subtitle: "Sisa anggaran mingguan & resolusi finansial",
-      totalSaved: "Total Tabungan",
-      availableSavings: "Dana Tersedia",
-      allocatedToGoals: "Dialokasikan ke Target",
-      totalPatched: "Dipakai Tambal Minggu",
-      unspentSurplusTotal: "Akumulasi Sisa Anggaran",
-      availableDescription: "Bebas dialokasikan ke target atau dipakai menutup minggu berlebih.",
+      subtitle: "Tabungan pokok & sisa anggaran untuk target finansial",
+      // Core Vault
+      coreSavingsTitle: "Tabungan Pokok",
+      coreSavingsSubtitle: "Saldo riil di rekening bank & simpanan utama",
+      totalCoreSavings: "Total Tabungan Pokok",
+      availableForGoals: "Bebas Dialokasikan",
+      allocatedToGoals: "Terkunci di Target",
+      manageCoreSavings: "Kelola Saldo",
+      // Budget Surplus
+      budgetSurplusTitle: "Sisa Anggaran Mingguan",
+      budgetSurplusSubtitle: "Hasil disiplin belanja mingguan yang berhasil dihemat",
+      availableSurplus: "Sisa Belum Dialirkan",
+      totalSurplusEarned: "Total Penghematan Anggaran",
+      sweptSurplusTotal: "Sudah Dialirkan ke Target/Tabungan",
+      sweepSurplusButton: "Alirkan Sisa Anggaran",
+      sweepModalTitle: "Alirkan Sisa Anggaran",
+      sweepModalSubtitle: "Pindahkan sisa belanja yang dihemat ke tabungan pokok atau langsung ke target pilihanmu",
+      sweepDestinationLabel: "Tujuan Aliran Dana",
+      sweepToCoreSavings: "Tambahkan ke Tabungan Pokok",
+      sweepToGoal: "Alokasikan Langsung ke Target",
+      sweepSelectGoalPlaceholder: "Pilih target impian...",
+      confirmSweep: "Alirkan Sekarang",
+      sweepSuccess: "Sisa anggaran berhasil dialirkan!",
+      noSurplusAvailable: "Belum ada sisa anggaran yang dapat dialirkan saat ini.",
+      // Ongoing Week
       ongoingWeekLabel: "Minggu Berjalan (Estimasi)",
       ongoingWeekNotice: "Sisa anggaran minggu ini akan difinalisasi saat minggu berakhir.",
+      // Goals
       goalsTitle: "Target Tabungan",
       goalsSubtitle: "Rencanakan tujuan finansial atau simpan sebagai dana siaga",
       noGoalTitle: "Belum Ada Target Tabungan",
@@ -804,26 +830,14 @@ export const dictionaries: Record<Locale, Dictionary> = {
       goalReached: "Target Tercapai! 🎉",
       goalProgress: "terkumpul",
       deleteGoalConfirm: "Hapus target ini? Dana yang telah dialokasikan akan otomatis kembali ke saldo tersedia.",
-      patchSectionTitle: "Tambal Pengeluaran Berlebih",
-      patchSectionSubtitle: "Gunakan saldo tabungan untuk menutup minggu yang melebihi batas anggaran",
-      noBadWeeksTitle: "Semua Minggu Terkendali",
-      noBadWeeksDescription: "Seluruh minggu yang tercatat berada dalam batas anggaran. Ritme pengeluaranmu terjaga dengan baik!",
-      badWeekOverBy: "Melebihi anggaran sebesar",
-      badWeekPatchedBadge: "Ditambal dari tabungan",
-      badWeekUnpatchedBadge: "Belum ditambal",
-      patchWithSavingsButton: "Tambal dengan Tabungan",
-      patchModalTitle: "Tambal Minggu Ini",
-      patchModalSubtitle: "Gunakan saldo tabungan untuk menyeimbangkan pengeluaran minggu ini",
-      patchAmountLabel: "Nominal Penambalan (Rp)",
-      confirmPatch: "Tambal Sekarang",
-      unpatchButton: "Kembalikan ke Tabungan",
-      insufficientSavingsNotice: "Saldo tabungan belum mencukupi untuk menutup minggu ini. Surplus dari minggu berikutnya akan membantu menyeimbangkannya.",
+      // History
       historyTitle: "Riwayat Sisa Anggaran",
       historySubtitle: "Daftar minggu yang berhasil menyisihkan anggaran ke tabungan",
       surplusWeekContribution: "disisihkan ke tabungan",
       noSurplusWeeks: "Belum Ada Sisa Anggaran Terkumpul",
       noSurplusWeeksDesc: "Ketika pengeluaran dalam satu minggu di bawah batas mingguan, sisanya otomatis terkumpul di sini.",
       weekPacingLabel: "Terpakai",
+      // Mindful Quotes & Manual adjustments
       supportiveTitle: "Pesan Pengingat",
       nextQuote: "Ganti Pesan",
       quotes: [
@@ -836,12 +850,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
       ],
       zeroSavingsEncouragement: "Belum ada tabungan terkumpul saat ini. Tetap rileks dan lanjutkan pencatatan harianmu!",
       allGoodPacingEncouragement: "Terus pertahankan ritme pengeluaran yang nyaman dan terencana.",
-      manualAdjustmentButton: "Penyesuaian Manual",
-      manualAdjustmentTitle: "Catat Tabungan Manual",
-      manualAdjustmentSubtitle: "Tambahkan saldo ekstra dari bonus, THR, atau penyesuaian khusus",
+      manualAdjustmentButton: "Kelola Saldo Pokok",
+      manualAdjustmentTitle: "Kelola Saldo Tabungan Pokok",
+      manualAdjustmentSubtitle: "Catat saldo awal rekening, tabungan riil, atau penyesuaian dana",
       adjustmentAmountLabel: "Nominal (Rp)",
-      adjustmentTypeDeposit: "Tambah ke Tabungan (+)",
-      adjustmentTypeWithdraw: "Kurangi Tabungan (-)",
+      adjustmentTypeDeposit: "Setor ke Tabungan (+)",
+      adjustmentTypeWithdraw: "Tarik dari Tabungan (-)",
       adjustmentNoteLabel: "Keterangan (opsional)",
       adjustmentSuccess: "Saldo tabungan berhasil disesuaikan.",
     },
@@ -1192,15 +1206,34 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     savings: {
       title: "Savings",
-      subtitle: "Unspent weekly budget & mindful financial buffers",
-      totalSaved: "Total Savings",
-      availableSavings: "Available Funds",
-      allocatedToGoals: "Allocated to Goals",
-      totalPatched: "Used to Patch Weeks",
-      unspentSurplusTotal: "Accumulated Unspent Budget",
-      availableDescription: "Free to allocate to goals or use to cover extra expenses.",
+      subtitle: "Core savings & budget surplus for meaningful milestones",
+      // Core Vault
+      coreSavingsTitle: "Core Savings",
+      coreSavingsSubtitle: "Real bank deposits & primary financial reserve",
+      totalCoreSavings: "Total Core Savings",
+      availableForGoals: "Free to Allocate",
+      allocatedToGoals: "Locked in Goals",
+      manageCoreSavings: "Manage Balance",
+      // Budget Surplus
+      budgetSurplusTitle: "Weekly Budget Surplus",
+      budgetSurplusSubtitle: "Disciplined spending leftovers saved from past weeks",
+      availableSurplus: "Available to Transfer",
+      totalSurplusEarned: "Total Saved from Budget",
+      sweptSurplusTotal: "Transferred to Goals/Savings",
+      sweepSurplusButton: "Transfer Surplus",
+      sweepModalTitle: "Transfer Budget Surplus",
+      sweepModalSubtitle: "Move your disciplined spending leftovers into core savings or directly into a goal",
+      sweepDestinationLabel: "Destination",
+      sweepToCoreSavings: "Deposit into Core Savings",
+      sweepToGoal: "Allocate Directly to a Goal",
+      sweepSelectGoalPlaceholder: "Choose destination goal...",
+      confirmSweep: "Transfer Now",
+      sweepSuccess: "Surplus successfully transferred!",
+      noSurplusAvailable: "No unspent budget surplus available right now.",
+      // Ongoing Week
       ongoingWeekLabel: "Current Week (Estimated)",
       ongoingWeekNotice: "Unspent budget from this week will be finalized once the week closes.",
+      // Goals
       goalsTitle: "Savings Goals",
       goalsSubtitle: "Plan for meaningful milestones or maintain a general rainy day buffer",
       noGoalTitle: "No Savings Goal Set Yet",
@@ -1230,26 +1263,14 @@ export const dictionaries: Record<Locale, Dictionary> = {
       goalReached: "Goal Reached! 🎉",
       goalProgress: "saved",
       deleteGoalConfirm: "Delete this goal? Any allocated funds will automatically return to your available savings pool.",
-      patchSectionTitle: "Patch Extra Expenses",
-      patchSectionSubtitle: "Use your accumulated savings to balance out weeks that went over budget",
-      noBadWeeksTitle: "All Weeks Balanced",
-      noBadWeeksDescription: "Every past recorded week stayed within budget. Your spending pacing is steady and calm!",
-      badWeekOverBy: "Exceeded budget by",
-      badWeekPatchedBadge: "Covered by savings",
-      badWeekUnpatchedBadge: "Unpatched",
-      patchWithSavingsButton: "Patch with Savings",
-      patchModalTitle: "Patch This Week",
-      patchModalSubtitle: "Use your savings to absorb the extra expenses from this week",
-      patchAmountLabel: "Patch Amount (Rp)",
-      confirmPatch: "Apply Patch",
-      unpatchButton: "Return to Savings",
-      insufficientSavingsNotice: "Savings balance is not yet high enough to patch this week. Future weekly surpluses will help build your buffer.",
+      // History
       historyTitle: "Unspent Budget Rollover",
       historySubtitle: "Completed weeks that successfully contributed unspent budget to savings",
       surplusWeekContribution: "rolled into savings",
       noSurplusWeeks: "No Unspent Surpluses Yet",
       noSurplusWeeksDesc: "When a week wraps up with spending below your weekly budget, the leftover amount rolls over here.",
       weekPacingLabel: "Used",
+      // Mindful Quotes & Manual adjustments
       supportiveTitle: "Mindful Reminder",
       nextQuote: "New Thought",
       quotes: [
@@ -1262,12 +1283,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
       ],
       zeroSavingsEncouragement: "No savings accumulated yet. Keep calm and take it one day at a time!",
       allGoodPacingEncouragement: "Keep up your steady, mindful pacing.",
-      manualAdjustmentButton: "Manual Adjustment",
-      manualAdjustmentTitle: "Record Manual Savings",
-      manualAdjustmentSubtitle: "Add extra funds from bonuses, gifts, or adjust your balance",
+      manualAdjustmentButton: "Manage Balance",
+      manualAdjustmentTitle: "Manage Core Savings Balance",
+      manualAdjustmentSubtitle: "Record base bank deposits, initial balances, or adjustments",
       adjustmentAmountLabel: "Amount (Rp)",
-      adjustmentTypeDeposit: "Add to Savings (+)",
-      adjustmentTypeWithdraw: "Deduct from Savings (-)",
+      adjustmentTypeDeposit: "Deposit into Savings (+)",
+      adjustmentTypeWithdraw: "Withdraw from Savings (-)",
       adjustmentNoteLabel: "Note (optional)",
       adjustmentSuccess: "Savings balance updated successfully.",
     },
