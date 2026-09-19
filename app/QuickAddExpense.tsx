@@ -109,7 +109,7 @@ const CATEGORY_STYLES: Record<
 };
 
 function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: string }) {
-  const { t, getCategoryLabel } = useTranslation();
+  const { t, getCategoryLabel, formatDate } = useTranslation();
 
   // Mode: "standard" vs "quick_type" (lazy initialization from localStorage)
   const [inputMode, setInputMode] = useState<"standard" | "quick_type">(() => getStoredInputMode());
@@ -856,7 +856,7 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                           ? t.common.today
                           : parsedExpense.spentAt === yesterdayStr
                           ? t.common.yesterday
-                          : parsedExpense.spentAt}
+                          : formatDate(parsedExpense.spentAt, "EEEE, d MMM")}
                       </span>
                     </div>
                   </div>
@@ -869,7 +869,7 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                 <p className="text-xs text-zinc-400 dark:text-zinc-500 italic py-1">
                   {quickInput.trim()
                     ? t.expenses.quickTypeParseError
-                    : "e.g. 'Makan siang 25k', 'Kopi 18rb kemarin', 'Bensin 20000'"}
+                    : "e.g. 'Makan siang 25k Rabu', 'Coffee 18k Wednesday', 'Bensin 20000'"}
                 </p>
               )}
             </div>

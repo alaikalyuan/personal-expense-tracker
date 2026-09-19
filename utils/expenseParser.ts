@@ -1,6 +1,6 @@
 import { CategoryKey } from "./i18n/dictionaries";
 import { QuickChip } from "./quickChips";
-import { subDays, format, parseISO } from "date-fns";
+import { addDays, subDays, addWeeks, subWeeks, startOfWeek, format, parseISO } from "date-fns";
 
 export interface ParsedExpense {
   isValid: boolean;
@@ -11,13 +11,62 @@ export interface ParsedExpense {
   matchedAmountText?: string;
 }
 
+const DAY_NAME_TO_INDEX: Record<string, number> = {
+  // Indonesian
+  senin: 1,
+  selasa: 2,
+  rabu: 3,
+  kamis: 4,
+  jumat: 5,
+  "jum'at": 5,
+  sabtu: 6,
+  minggu: 7,
+  ahad: 7,
+
+  // English
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+  sunday: 7,
+
+  // English abbreviations
+  mon: 1,
+  tue: 2,
+  tues: 2,
+  wed: 3,
+  thu: 4,
+  thur: 4,
+  thurs: 4,
+  fri: 5,
+  sat: 6,
+  sun: 7,
+};
+
+const DAY_NAMES_PATTERN =
+  "senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu|ahad|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun";
+
+const prefixDayRegex = new RegExp(
+  `\\b(?:(?:pada|di|pas|on)\\s+)?(?:hari\\s+)?(last\\s+week|last|this\\s+week|this|next\\s+week|next|kemarin)\\s+(${DAY_NAMES_PATTERN})\\b`,
+  "i"
+);
+
+const suffixDayRegex = new RegExp(
+  `\\b(?:(?:pada|di|pas|on)\\s+)?(?:hari\\s+)?(${DAY_NAMES_PATTERN})(?:\\s+(minggu\\s+lalu|minggu\\s+depan|minggu\\s+ini|last\\s+week|next\\s+week|this\\s+week|kemarin|lalu|depan|ini|last|next|this))?\\b`,
+  "i"
+);
+
 const CATEGORY_KEYWORDS: Record<CategoryKey, string[]> = {
   "Food & Dining": [
     "makan", "minum", "kopi", "coffee", "snack", "sarapan", "lunch", "dinner",
     "ayam", "nasi", "mie", "bakso", "cafe", "food", "warung", "resto",
     "burger", "pizza", "tea", "teh", "roti", "jus", "boba", "jajan",
     "martabak", "sate", "pecel", "soto", "padang", "goceng", "cemilan",
-    "siang", "malam", "pagi", "dinner", "breakfast", "meal", "drink"
+    "siang", "malam", "pagi", "dinner", "breakfast", "meal", "drink",
+    "kantin", "canteen", "restaurant", "snacks", "beverage", "kafe", "warteg"
+
   ],
   Transportation: [
     "bensin", "pertalite", "pertamax", "gojek", "gocar", "goride", "grab",
@@ -62,7 +111,89 @@ export function parseQuickExpenseInput(
   let text = trimmed;
   let spentAt = todayStr;
 
-  // 1. Detect Date Keywords ("kemarin", "yesterday", "hari ini", "today")
+  // 1. Detect Multi-Word Relative Dates ("kemarin lusa", "day before yesterday", "lusa", "day after tomorrow")
+  const dayBeforeYesterdayRegex = /\b(?:kemarin\s+lusa|day\s+before\s+yesterday)\b/i;
+  if (dayBeforeYesterdayRegex.test(text)) {
+    try {
+      spentAt = format(subDays(parseISO(todayStr), 2), "yyyy-MM-dd");
+    } catch {
+      // fallback
+    }
+    text = text.replace(dayBeforeYesterdayRegex, " ");
+  }
+
+  const dayAfterTomorrowRegex = /\b(?:day\s+after\s+tomorrow|lusa)\b/i;
+  if (dayAfterTomorrowRegex.test(text)) {
+    try {
+      spentAt = format(addDays(parseISO(todayStr), 2), "yyyy-MM-dd");
+    } catch {
+      // fallback
+    }
+    text = text.replace(dayAfterTomorrowRegex, " ");
+  }
+
+  // 2. Detect Day of the Week (e.g. "Wednesday", "Rabu", "hari rabu", "on wednesday", "rabu kemarin", "last wednesday")
+  const dayMatch = text.match(prefixDayRegex);
+  let dayKey = "";
+  let modifier = "";
+  let matchedFull = "";
+
+  if (dayMatch) {
+    modifier = dayMatch[1];
+    dayKey = dayMatch[2];
+    matchedFull = dayMatch[0];
+  } else {
+    const sMatch = text.match(suffixDayRegex);
+    if (sMatch) {
+      const matchPos = text.search(suffixDayRegex);
+      const preceding = text.slice(0, matchPos);
+      const isPerWeek = /(?:per|tiap|setiap|every)\s+$/i.test(preceding);
+      if (!isPerWeek) {
+        dayKey = sMatch[1];
+        modifier = sMatch[2] || "";
+        matchedFull = sMatch[0];
+      }
+    }
+  }
+
+  if (dayKey) {
+    const dayIndex = DAY_NAME_TO_INDEX[dayKey.toLowerCase()];
+    if (dayIndex) {
+      try {
+        const todayDate = parseISO(todayStr);
+        const weekStart = startOfWeek(todayDate, { weekStartsOn: 1 });
+        let targetDate = addDays(weekStart, dayIndex - 1);
+
+        const cleanMod = modifier.toLowerCase().trim();
+        if (
+          cleanMod === "lalu" ||
+          cleanMod === "last" ||
+          cleanMod === "minggu lalu" ||
+          cleanMod === "last week"
+        ) {
+          targetDate = subWeeks(targetDate, 1);
+        } else if (
+          cleanMod === "depan" ||
+          cleanMod === "next" ||
+          cleanMod === "minggu depan" ||
+          cleanMod === "next week"
+        ) {
+          targetDate = addWeeks(targetDate, 1);
+        } else if (cleanMod === "kemarin") {
+          if (targetDate > todayDate) {
+            targetDate = subWeeks(targetDate, 1);
+          }
+        }
+
+        spentAt = format(targetDate, "yyyy-MM-dd");
+        text = text.replace(matchedFull, " ");
+      } catch {
+        // fallback
+      }
+    }
+  }
+
+  // 3. Detect Standalone Relative Dates ("kemarin", "yesterday", "besok", "tomorrow", "hari ini", "today")
   const yesterdayRegex = /\b(?:kemarin|yesterday)\b/i;
   if (yesterdayRegex.test(text)) {
     try {
@@ -74,7 +205,18 @@ export function parseQuickExpenseInput(
     text = text.replace(yesterdayRegex, " ");
   }
 
-  const todayRegex = /\b(?:hari ini|today)\b/i;
+  const tomorrowRegex = /\b(?:besok|tomorrow)\b/i;
+  if (tomorrowRegex.test(text)) {
+    try {
+      const tomorrowDate = addDays(parseISO(todayStr), 1);
+      spentAt = format(tomorrowDate, "yyyy-MM-dd");
+    } catch {
+      // fallback
+    }
+    text = text.replace(tomorrowRegex, " ");
+  }
+
+  const todayRegex = /\b(?:hari\s+ini|today)\b/i;
   if (todayRegex.test(text)) {
     spentAt = todayStr;
     text = text.replace(todayRegex, " ");
