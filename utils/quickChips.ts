@@ -90,14 +90,14 @@ export function resetQuickChips(): QuickChip[] {
 }
 
 export function getStoredInputMode(): "standard" | "quick_type" {
-  if (typeof window === "undefined") return "standard";
+  if (typeof window === "undefined") return "quick_type";
   try {
     const mode = localStorage.getItem(INPUT_MODE_STORAGE_KEY);
     if (mode === "quick_type" || mode === "standard") return mode;
   } catch {
     // ignore
   }
-  return "standard";
+  return "quick_type";
 }
 
 export function saveInputMode(mode: "standard" | "quick_type"): void {

@@ -1,6 +1,6 @@
 import { CategoryKey } from "./i18n/dictionaries";
 import { QuickChip } from "./quickChips";
-import { addDays, subDays, addWeeks, subWeeks, startOfWeek, format, parseISO } from "date-fns";
+import { addDays, subDays, addWeeks, subWeeks, startOfWeek, format, parseISO, getDate, getMonth, setDate, setMonth } from "date-fns";
 
 export interface ParsedExpense {
   isValid: boolean;
@@ -8,6 +8,7 @@ export interface ParsedExpense {
   amount: number | null;
   category: CategoryKey;
   spentAt: string;
+  isExempt?: boolean;
   matchedAmountText?: string;
 }
 
@@ -58,38 +59,63 @@ const suffixDayRegex = new RegExp(
   "i"
 );
 
-const CATEGORY_KEYWORDS: Record<CategoryKey, string[]> = {
-  "Food & Dining": [
-    "makan", "minum", "kopi", "coffee", "snack", "sarapan", "lunch", "dinner",
-    "ayam", "nasi", "mie", "bakso", "cafe", "food", "warung", "resto",
-    "burger", "pizza", "tea", "teh", "roti", "jus", "boba", "jajan",
-    "martabak", "sate", "pecel", "soto", "padang", "goceng", "cemilan",
-    "siang", "malam", "pagi", "dinner", "breakfast", "meal", "drink",
-    "kantin", "canteen", "restaurant", "snacks", "beverage", "kafe", "warteg"
+// High-specificity multi-word phrases checked before single words
+const MULTI_WORD_CATEGORY_KEYWORDS: { pattern: RegExp; category: CategoryKey }[] = [
+  { pattern: /\b(?:makan\s+(?:siang|malam|pagi)|sarapan\s+pagi)\b/i, category: "Food & Dining" },
+  { pattern: /\b(?:nasi\s+(?:padang|goreng|uduk|kuning|liwet|campur|bakar)|ayam\s+(?:geprek|bakar|goreng|penyet|crispy)|mie\s+(?:ayam|goreng|rebus|kuah)|bakso\s+(?:urat|telur|aci)|roti\s+bakar|es\s+teh|air\s+mineral|jus\s+buah|kopi\s+kenangan|janji\s+jiwa)\b/i, category: "Food & Dining" },
+  { pattern: /\b(?:tiket\s+(?:kereta|pesawat|bus|kapal)|commuter\s+line|trans\s*jakarta|ojek\s+online|cuci\s+(?:motor|mobil)|tambal\s+ban|ganti\s+oli)\b/i, category: "Transportation" },
+  { pattern: /\b(?:air\s+pdam|tagihan\s+listrik|token\s+listrik|pulsa\s+hp|paket\s+data|wifi\s+rumah|cuci\s+baju|gas\s+(?:elpiji|lpg))\b/i, category: "Utilities" },
+  { pattern: /\b(?:alat\s+tulis|uang\s+(?:kuliah|semester|spp)|buku\s+tulis|buku\s+pelajaran)\b/i, category: "Academics" },
+  { pattern: /\b(?:cinema\s+xxi|top\s*up\s*(?:game|diamond|mlbb|steam)|voucher\s+game)\b/i, category: "Entertainment" },
+];
 
+// Single word keywords with strict word boundaries
+const CATEGORY_KEYWORDS: Record<Exclude<CategoryKey, "Others">, string[]> = {
+  "Food & Dining": [
+    "makan", "minum", "kopi", "coffee", "snack", "snacks", "sarapan", "lunch", "dinner",
+    "breakfast", "meal", "drink", "beverage", "ayam", "nasi", "mie", "bakso", "cafe",
+    "kafe", "food", "warung", "warteg", "warmindo", "kantin", "canteen", "resto",
+    "restaurant", "burger", "pizza", "tea", "teh", "roti", "jus", "juice", "boba",
+    "jajan", "martabak", "sate", "pecel", "soto", "padang", "geprek", "sushi", "cemilan",
+    "gofood", "grabfood", "shopeefood", "indomaret", "alfamart", "buah", "sayur",
+    "donat", "seblak", "gorengan", "batagor", "siomay", "dimsum", "telur", "indomie",
+    "popmie", "sarimi"
   ],
   Transportation: [
-    "bensin", "pertalite", "pertamax", "gojek", "gocar", "goride", "grab",
-    "grabcar", "grabbike", "maxim", "ojol", "angkot", "parkir", "tol",
-    "kereta", "mrt", "bus", "transjakarta", "taksi", "taxi", "transport",
-    "krl", "commuter", "fuel", "gas", "parking", "train"
+    "bensin", "pertalite", "pertamax", "solar", "shell", "fuel", "gasoline", "gojek",
+    "goride", "gocar", "grab", "grabbike", "grabcar", "maxim", "indrive", "ojol",
+    "angkot", "parkir", "parking", "tol", "toll", "e-toll", "etoll", "kereta", "train",
+    "mrt", "lrt", "krl", "commuter", "bus", "busway", "taksi", "taxi", "transport",
+    "transportasi", "jaklingko", "bagasi", "flight", "pesawat"
   ],
   Utilities: [
-    "listrik", "air", "pdam", "wifi", "kuota", "pulsa", "internet",
-    "laundry", "kos", "kontrakan", "sabun", "shampoo", "galon", "gas",
-    "token", "pln", "bpjs", "bill", "electricity", "water", "phone"
+    "listrik", "pln", "token", "pdam", "wifi", "internet", "indihome", "biznet",
+    "kuota", "pulsa", "laundry", "loundry", "kos", "kost", "kontrakan", "sabun",
+    "shampoo", "galon", "aqua", "gas", "elpiji", "lpg", "bpjs", "bill", "tagihan",
+    "electricity"
   ],
   Academics: [
-    "buku", "print", "fotokopi", "kursus", "kuliah", "spp", "alat tulis",
-    "atk", "seminar", "skripsi", "tugas", "modul", "kampus", "ukm",
-    "book", "study", "tuition", "photocopy", "stationery"
+    "buku", "print", "ngeprint", "fotokopi", "fotocopy", "photocopy", "kursus",
+    "kuliah", "spp", "ukt", "atk", "stationery", "seminar", "skripsi", "tugas",
+    "modul", "kampus", "ukm", "book", "books", "study", "tuition", "pen", "pensil",
+    "ujian"
   ],
   Entertainment: [
-    "nonton", "bioskop", "cinema", "game", "steam", "spotify", "netflix",
-    "jalan", "liburan", "karaoke", "billiard", "top up", "diamond",
-    "mlbb", "pubg", "valorant", "genshin", "movie", "concert", "holiday"
+    "nonton", "bioskop", "cinema", "xxi", "cgv", "cinepolis", "movie", "film",
+    "game", "games", "gaming", "steam", "playstation", "nintendo", "spotify",
+    "netflix", "youtube", "jalan", "liburan", "holiday", "karaoke", "billiard",
+    "biliar", "rekreasi", "diamond", "mlbb", "pubg", "valorant", "genshin", "roblox",
+    "concert", "konser"
   ],
-  Others: [],
+};
+
+// Compiled regexes for word-boundary matching
+const CATEGORY_REGEXES: Record<Exclude<CategoryKey, "Others">, RegExp> = {
+  "Food & Dining": new RegExp(`\\b(?:${CATEGORY_KEYWORDS["Food & Dining"].join("|")})\\b`, "i"),
+  Transportation: new RegExp(`\\b(?:${CATEGORY_KEYWORDS.Transportation.join("|")})\\b`, "i"),
+  Utilities: new RegExp(`\\b(?:${CATEGORY_KEYWORDS.Utilities.join("|")})\\b`, "i"),
+  Academics: new RegExp(`\\b(?:${CATEGORY_KEYWORDS.Academics.join("|")})\\b`, "i"),
+  Entertainment: new RegExp(`\\b(?:${CATEGORY_KEYWORDS.Entertainment.join("|")})\\b`, "i"),
 };
 
 export function parseQuickExpenseInput(
@@ -105,13 +131,35 @@ export function parseQuickExpenseInput(
       amount: null,
       category: "Others",
       spentAt: todayStr,
+      isExempt: false,
     };
   }
 
   let text = trimmed;
   let spentAt = todayStr;
+  let isExempt = false;
 
-  // 1. Detect Multi-Word Relative Dates ("kemarin lusa", "day before yesterday", "lusa", "day after tomorrow")
+  // 1. Detect and Extract Hashtags / One-off Splurge markers
+  const exemptRegex = /(?:^|\s)#(?:one-off|oneoff|splurge|exempt)\b/i;
+  if (exemptRegex.test(text)) {
+    isExempt = true;
+    text = text.replace(exemptRegex, " ");
+  }
+
+  // 1b. Detect Quantity prefix multiplier (e.g. "2x kopi 15k" or "3 * bakso 20k")
+  let quantityMultiplier: number | null = null;
+  const qtyPrefixRegex = /(?:^|\s)(\d{1,2})\s*(?:x|\*)\s+/i;
+  const qtyMatch = text.match(qtyPrefixRegex);
+  if (qtyMatch) {
+    const q = parseInt(qtyMatch[1], 10);
+    if (!isNaN(q) && q > 0) {
+      quantityMultiplier = q;
+      text = text.replace(qtyPrefixRegex, " ");
+    }
+  }
+
+  // 2. Detect Dates
+  // 2a. Multi-word relative dates ("kemarin lusa", "day before yesterday", "lusa", "day after tomorrow")
   const dayBeforeYesterdayRegex = /\b(?:kemarin\s+lusa|day\s+before\s+yesterday)\b/i;
   if (dayBeforeYesterdayRegex.test(text)) {
     try {
@@ -132,7 +180,54 @@ export function parseQuickExpenseInput(
     text = text.replace(dayAfterTomorrowRegex, " ");
   }
 
-  // 2. Detect Day of the Week (e.g. "Wednesday", "Rabu", "hari rabu", "on wednesday", "rabu kemarin", "last wednesday")
+  // 2b. Relative days offsets ("2 hari lalu", "3 days ago")
+  const relativeDaysAgoRegex = /\b(\d{1,2})\s*(?:hari\s+lalu|days?\s+ago)\b/i;
+  const relMatch = text.match(relativeDaysAgoRegex);
+  if (relMatch) {
+    const days = parseInt(relMatch[1], 10);
+    if (!isNaN(days) && days > 0 && days <= 365) {
+      try {
+        spentAt = format(subDays(parseISO(todayStr), days), "yyyy-MM-dd");
+        text = text.replace(relativeDaysAgoRegex, " ");
+      } catch {
+        // fallback
+      }
+    }
+  }
+
+  // 2c. Colloquial night/yesterday ("semalam", "tadi malam")
+  const lastNightRegex = /\b(?:semalam|tadi\s+malam)\b/i;
+  if (lastNightRegex.test(text)) {
+    try {
+      spentAt = format(subDays(parseISO(todayStr), 1), "yyyy-MM-dd");
+    } catch {
+      // fallback
+    }
+    text = text.replace(lastNightRegex, " ");
+  }
+
+  // 2d. Explicit day of month ("tgl 15", "tanggal 20")
+  const tglRegex = /\b(?:tgl|tanggal)\s*(\d{1,2})\b/i;
+  const tglMatch = text.match(tglRegex);
+  if (tglMatch) {
+    const dayNum = parseInt(tglMatch[1], 10);
+    if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
+      try {
+        const todayDate = parseISO(todayStr);
+        let target = setDate(todayDate, dayNum);
+        // If dayNum is in the future compared to today, it likely means previous month
+        if (dayNum > getDate(todayDate)) {
+          target = setMonth(target, getMonth(todayDate) - 1);
+        }
+        spentAt = format(target, "yyyy-MM-dd");
+        text = text.replace(tglRegex, " ");
+      } catch {
+        // fallback
+      }
+    }
+  }
+
+  // 2e. Day of the Week (e.g. "Wednesday", "Rabu", "hari rabu", "on wednesday", "rabu kemarin", "last wednesday")
   const dayMatch = text.match(prefixDayRegex);
   let dayKey = "";
   let modifier = "";
@@ -193,7 +288,7 @@ export function parseQuickExpenseInput(
     }
   }
 
-  // 3. Detect Standalone Relative Dates ("kemarin", "yesterday", "besok", "tomorrow", "hari ini", "today")
+  // 2f. Standalone Relative Dates ("kemarin", "yesterday", "besok", "tomorrow", "hari ini", "today", "tadi pagi", "tadi siang", "tadi")
   const yesterdayRegex = /\b(?:kemarin|yesterday)\b/i;
   if (yesterdayRegex.test(text)) {
     try {
@@ -216,26 +311,76 @@ export function parseQuickExpenseInput(
     text = text.replace(tomorrowRegex, " ");
   }
 
-  const todayRegex = /\b(?:hari\s+ini|today)\b/i;
+  const todayRegex = /\b(?:hari\s+ini|today|tadi\s+(?:pagi|siang|sore)|tadi)\b/i;
   if (todayRegex.test(text)) {
     spentAt = todayStr;
     text = text.replace(todayRegex, " ");
   }
 
-  // 2. Extract Amount
+  // 3. Extract Amount & Handle Multipliers
   let amount: number | null = null;
   let matchedAmountText: string | undefined;
 
-  // Pattern A: Suffix multiplier (e.g. 25k, 25.5k, 20rb, 50ribu, 100k)
-  const suffixRegex = /\b(\d+(?:[.,]\d+)?)\s*(k|rb|ribu)\b/i;
-  const suffixMatch = text.match(suffixRegex);
+  // Helper to parse unit string (e.g. "15k" -> 15000, "20.000" -> 20000)
+  const parseUnitAmount = (raw: string): number | null => {
+    const clean = raw.trim().toLowerCase();
+    // Millions
+    const mMatch = clean.match(/^(\d+(?:[.,]\d+)?)\s*(?:jt|juta|mio|m)$/);
+    if (mMatch) {
+      const v = parseFloat(mMatch[1].replace(",", "."));
+      return isNaN(v) ? null : Math.round(v * 1000000);
+    }
+    // Thousands suffix
+    const kMatch = clean.match(/^(\d+(?:[.,]\d+)?)\s*(?:k|rb|ribu)$/);
+    if (kMatch) {
+      const v = parseFloat(kMatch[1].replace(",", "."));
+      return isNaN(v) ? null : Math.round(v * 1000);
+    }
+    // Formatted thousands dot/comma or currency
+    const numClean = clean.replace(/^(?:rp|idr)\.?\s*/i, "").replace(/[.,]/g, "");
+    const val = parseInt(numClean, 10);
+    return isNaN(val) ? null : val;
+  };
 
-  if (suffixMatch) {
-    const rawVal = parseFloat(suffixMatch[1].replace(",", "."));
-    if (!isNaN(rawVal)) {
-      amount = Math.round(rawVal * 1000);
-      matchedAmountText = suffixMatch[0];
-      text = text.replace(suffixRegex, " ");
+  // Pattern A0: Explicit Multipliers (e.g. "2x 15k", "kopi 18k x 2", "2 * 20.000", "3 porsi 25k")
+  const prefixMultiplierRegex = /\b(\d+)\s*(?:x|\*|porsi|pcs|cup|gelas|bungkus|paket)\s+(\d+(?:[.,]\d+)?\s*(?:k|rb|ribu|jt|juta|mio|m)?|\d{1,3}(?:[.,]\d{3})+)\b/i;
+  const prefixMulMatch = text.match(prefixMultiplierRegex);
+  if (prefixMulMatch) {
+    const qty = parseInt(prefixMulMatch[1], 10);
+    const unitPrice = parseUnitAmount(prefixMulMatch[2]);
+    if (!isNaN(qty) && qty > 0 && unitPrice !== null && unitPrice > 0) {
+      amount = qty * unitPrice;
+      matchedAmountText = prefixMulMatch[0];
+      text = text.replace(prefixMultiplierRegex, " ");
+    }
+  }
+
+  if (amount === null) {
+    const suffixMultiplierRegex = /\b(\d+(?:[.,]\d+)?\s*(?:k|rb|ribu|jt|juta|mio|m)?|\d{1,3}(?:[.,]\d{3})+)\s*(?:x|\*)\s*(\d+)\b/i;
+    const suffixMulMatch = text.match(suffixMultiplierRegex);
+    if (suffixMulMatch) {
+      const unitPrice = parseUnitAmount(suffixMulMatch[1]);
+      const qty = parseInt(suffixMulMatch[2], 10);
+      if (!isNaN(qty) && qty > 0 && unitPrice !== null && unitPrice > 0) {
+        amount = qty * unitPrice;
+        matchedAmountText = suffixMulMatch[0];
+        text = text.replace(suffixMultiplierRegex, " ");
+      }
+    }
+  }
+
+  // Pattern A: Suffix multiplier (e.g. 25k, 25.5k, 20rb, 50ribu, 100k)
+  if (amount === null) {
+    const suffixRegex = /\b(\d+(?:[.,]\d+)?)\s*(k|rb|ribu)\b/i;
+    const suffixMatch = text.match(suffixRegex);
+
+    if (suffixMatch) {
+      const rawVal = parseFloat(suffixMatch[1].replace(",", "."));
+      if (!isNaN(rawVal)) {
+        amount = Math.round(rawVal * 1000);
+        matchedAmountText = suffixMatch[0];
+        text = text.replace(suffixRegex, " ");
+      }
     }
   }
 
@@ -253,12 +398,12 @@ export function parseQuickExpenseInput(
     }
   }
 
-  // Pattern C: Currency prefix (e.g. Rp 25.000, Rp25000, IDR 50.000)
+  // Pattern C: Currency prefix (e.g. Rp 25.000, Rp25000, IDR 50.000, Rp 35,000)
   if (amount === null) {
-    const rpRegex = /\b(?:rp|idr)\.?\s*(\d{1,3}(?:\.\d{3})+|\d+)\b/i;
+    const rpRegex = /\b(?:rp|idr)\.?\s*(\d{1,3}(?:[.,]\d{3})+|\d+)\b/i;
     const rpMatch = text.match(rpRegex);
     if (rpMatch) {
-      const cleanNum = rpMatch[1].replace(/\./g, "");
+      const cleanNum = rpMatch[1].replace(/[.,]/g, "");
       const val = parseInt(cleanNum, 10);
       if (!isNaN(val)) {
         amount = val;
@@ -268,64 +413,93 @@ export function parseQuickExpenseInput(
     }
   }
 
-  // Pattern D: Formatted number with dots (e.g. 25.000, 150.000)
+  // Pattern D: Formatted number with dots or commas (e.g. 25.000, 150.000, 25,000)
   if (amount === null) {
-    const dottedRegex = /\b(\d{1,3}(?:\.\d{3})+)\b/;
-    const dottedMatch = text.match(dottedRegex);
-    if (dottedMatch) {
-      const cleanNum = dottedMatch[1].replace(/\./g, "");
+    const formattedRegex = /\b(\d{1,3}(?:[.,]\d{3})+)\b/;
+    const formattedMatch = text.match(formattedRegex);
+    if (formattedMatch) {
+      const cleanNum = formattedMatch[1].replace(/[.,]/g, "");
       const val = parseInt(cleanNum, 10);
       if (!isNaN(val)) {
         amount = val;
-        matchedAmountText = dottedMatch[0];
-        text = text.replace(dottedRegex, " ");
+        matchedAmountText = formattedMatch[0];
+        text = text.replace(formattedRegex, " ");
       }
     }
   }
 
-  // Pattern E: Standalone plain numbers (e.g. 25000, 5000)
+  // Pattern E: Disambiguated plain numbers (e.g. "2 roti 15000" or "indomie 25000")
   if (amount === null) {
-    const plainNumRegex = /\b(\d+)\b/;
-    const plainMatch = text.match(plainNumRegex);
-    if (plainMatch) {
-      const val = parseInt(plainMatch[1], 10);
-      if (!isNaN(val)) {
-        amount = val;
-        matchedAmountText = plainMatch[0];
-        text = text.replace(plainNumRegex, " ");
+    const plainMatches = [...text.matchAll(/\b(\d+)\b/g)];
+    if (plainMatches.length > 0) {
+      // Find candidate amounts: prioritize numbers >= 100
+      let chosenMatch = plainMatches.find((m) => parseInt(m[1], 10) >= 100);
+      if (!chosenMatch) {
+        // Fallback to the rightmost number
+        chosenMatch = plainMatches[plainMatches.length - 1];
+      }
+
+      if (chosenMatch) {
+        const val = parseInt(chosenMatch[1], 10);
+        if (!isNaN(val)) {
+          amount = val;
+          matchedAmountText = chosenMatch[0];
+          // Replace only this chosen occurrence
+          const idx = chosenMatch.index ?? 0;
+          text = text.slice(0, idx) + " " + text.slice(idx + chosenMatch[0].length);
+        }
       }
     }
+  }
+
+  // Apply quantity prefix multiplier if detected
+  if (quantityMultiplier !== null && amount !== null) {
+    amount = amount * quantityMultiplier;
   }
 
   // Clean up remaining text to form the name
   let name = text
     .replace(/\b(?:rp|idr)\b/gi, "")
+    .replace(/[#@][\w-]+/g, "") // Clean remaining hashtags/mentions
     .replace(/\s+/g, " ")
     .trim();
 
-  // Capitalize first letter of name for clean presentation
+  // Capitalize first alphabetic character of name for clean presentation
   if (name.length > 0) {
-    name = name.charAt(0).toUpperCase() + name.slice(1);
+    name = name.replace(/[a-zA-Z]/, (c) => c.toUpperCase());
   }
 
-  // 3. Detect Category
+  // 4. Detect Category
   let category: CategoryKey = "Others";
   const lowerName = name.toLowerCase();
 
-  // 3a. Check custom chips first
+  // 4a. Check custom chips first (exact/substring name match)
   for (const chip of customChips) {
-    if (lowerName.includes(chip.name.toLowerCase()) || chip.name.toLowerCase().includes(lowerName)) {
+    const chipLower = chip.name.toLowerCase();
+    if (
+      lowerName.includes(chipLower) ||
+      chipLower.includes(lowerName) ||
+      new RegExp(`\\b${chipLower}\\b`, "i").test(lowerName)
+    ) {
       category = chip.category;
       break;
     }
   }
 
-  // 3b. If still Others, check keyword dictionaries
+  // 4b. Check high-specificity multi-word phrases first
   if (category === "Others") {
-    for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS) as [CategoryKey, string[]][]) {
-      if (cat === "Others") continue;
-      const found = keywords.some((kw) => lowerName.includes(kw));
-      if (found) {
+    for (const item of MULTI_WORD_CATEGORY_KEYWORDS) {
+      if (item.pattern.test(lowerName)) {
+        category = item.category;
+        break;
+      }
+    }
+  }
+
+  // 4c. Check word-boundary regexes
+  if (category === "Others") {
+    for (const [cat, regex] of Object.entries(CATEGORY_REGEXES) as [Exclude<CategoryKey, "Others">, RegExp][]) {
+      if (regex.test(lowerName)) {
         category = cat;
         break;
       }
@@ -340,6 +514,7 @@ export function parseQuickExpenseInput(
     amount,
     category,
     spentAt,
+    isExempt,
     matchedAmountText,
   };
 }

@@ -141,6 +141,13 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
   const [quickInput, setQuickInput] = useState<string>("");
   const [batchFeedback, setBatchFeedback] = useState<string | null>(null);
 
+  // Quick Mode Interactive Overrides
+  const [overrideCategory, setOverrideCategory] = useState<CategoryKey | null>(null);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [overrideDate, setOverrideDate] = useState<string | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [overrideExempt, setOverrideExempt] = useState<boolean | null>(null);
+
   // Chip Manager state
   const [isManagingChips, setIsManagingChips] = useState(false);
   const [chipToEdit, setChipToEdit] = useState<QuickChip | null>(null);
@@ -167,23 +174,94 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
     }
   }, [today]);
 
-  // Handle mode switch with persistence
+  // Live parsed expense for Quick Type mode
+  const parsedExpense = useMemo(() => {
+    return parseQuickExpenseInput(quickInput, today, chips);
+  }, [quickInput, today, chips]);
+
+  // Effective values for Quick Type mode (respecting manual 1-tap overrides)
+  const effectiveCategory = overrideCategory ?? parsedExpense.category;
+  const effectiveSpentAt = overrideDate ?? parsedExpense.spentAt;
+  const effectiveIsExempt = overrideExempt !== null ? overrideExempt : Boolean(parsedExpense.isExempt);
+
+  // Proactive anomaly/splurge detection in Quick Mode
+  const isQuickAnomaly = useMemo(() => {
+    if (dismissedAnomalySuggestion || effectiveIsExempt) return false;
+    if (!parsedExpense.isValid || !parsedExpense.amount) return false;
+    return detectOneOffAnomaly(parsedExpense.name, parsedExpense.amount);
+  }, [parsedExpense.name, parsedExpense.amount, effectiveIsExempt, dismissedAnomalySuggestion]);
+
+  // Handle mode switch with bidirectional state synchronization
   const handleModeChange = (mode: "standard" | "quick_type") => {
+    if (mode === "standard") {
+      // Sync parsed / overridden values into standard form
+      if (parsedExpense.isValid) {
+        setName(parsedExpense.name);
+        if (parsedExpense.amount && parsedExpense.amount > 0) {
+          setAmount(parsedExpense.amount);
+        }
+        setCategory(effectiveCategory);
+        if (effectiveSpentAt === today) {
+          setDateMode("today");
+        } else if (effectiveSpentAt === yesterdayStr) {
+          setDateMode("yesterday");
+        } else {
+          setDateMode("custom");
+          setCustomDate(effectiveSpentAt);
+        }
+        setIsExempt(effectiveIsExempt);
+      }
+    } else {
+      // Sync standard form inputs into quick input bar if bar is empty
+      if (!quickInput.trim() && (name.trim() || amount > 0)) {
+        let prefill = name.trim();
+        if (amount > 0) {
+          const amtStr = amount >= 1000 && amount % 1000 === 0 ? `${amount / 1000}k` : `${amount}`;
+          prefill = prefill ? `${prefill} ${amtStr}` : amtStr;
+        }
+        if (dateMode === "yesterday") {
+          prefill += " semalam";
+        } else if (dateMode === "custom" && customDate !== today) {
+          prefill += ` ${customDate}`;
+        }
+        if (isExempt) {
+          prefill += " #one-off";
+        }
+        setQuickInput(prefill.trim());
+        setOverrideCategory(category);
+        setOverrideExempt(isExempt);
+      }
+    }
     setInputMode(mode);
     saveInputMode(mode);
     setError(null);
   };
 
-  // Handle batch keep toggle
+  const handleQuickInputChange = (val: string) => {
+    setQuickInput(val);
+    if (!val.trim()) {
+      setOverrideCategory(null);
+      setOverrideDate(null);
+      setOverrideExempt(null);
+      setShowCategoryPicker(false);
+      setShowDatePicker(false);
+      setDismissedAnomalySuggestion(false);
+    }
+  };
+
+  const handleQuickChipInQuickMode = (chip: QuickChip) => {
+    const amt = chip.defaultAmount && chip.defaultAmount > 0
+      ? (chip.defaultAmount >= 1000 && chip.defaultAmount % 1000 === 0 ? `${chip.defaultAmount / 1000}k` : `${chip.defaultAmount}`)
+      : "";
+    setQuickInput(amt ? `${chip.name} ${amt}` : `${chip.name} `);
+    setOverrideCategory(chip.category);
+    quickInputRef.current?.focus();
+  };
+
   const handleKeepBatchToggle = (checked: boolean) => {
     setKeepBatch(checked);
     saveKeepBatch(checked);
   };
-
-  // Live parsed expense for Quick Type mode
-  const parsedExpense = useMemo(() => {
-    return parseQuickExpenseInput(quickInput, today, chips);
-  }, [quickInput, today, chips]);
 
   // Auto focus input on mount or mode switch
   useEffect(() => {
@@ -289,13 +367,10 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
       const formData = new FormData();
       formData.set("name", parsedExpense.name);
       formData.set("amount", String(parsedExpense.amount));
-      formData.set("category", parsedExpense.category);
-      formData.set("spent_at", parsedExpense.spentAt);
+      formData.set("category", effectiveCategory);
+      formData.set("spent_at", effectiveSpentAt);
 
-      const hasQuickTag =
-        quickInput.toLowerCase().includes("#one-off") ||
-        quickInput.toLowerCase().includes("#splurge");
-      const finalNote = attachExemptTag("", hasQuickTag);
+      const finalNote = attachExemptTag("", effectiveIsExempt);
       if (finalNote) {
         formData.set("note", finalNote);
       }
@@ -306,6 +381,12 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
         const feedback = `${parsedExpense.name} (Rp ${parsedExpense.amount.toLocaleString("id-ID")})`;
         setBatchFeedback(feedback);
         setQuickInput("");
+        setOverrideCategory(null);
+        setOverrideDate(null);
+        setOverrideExempt(null);
+        setShowCategoryPicker(false);
+        setShowDatePicker(false);
+        setDismissedAnomalySuggestion(false);
         quickInputRef.current?.focus();
 
         setTimeout(() => {
@@ -409,18 +490,6 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
           <div className="flex items-center rounded-xl bg-zinc-100 dark:bg-zinc-800/80 p-1 text-xs">
             <button
               type="button"
-              onClick={() => handleModeChange("standard")}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold transition-all cursor-pointer ${
-                inputMode === "standard"
-                  ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
-                  : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-              }`}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>{t.expenses.standardTab}</span>
-            </button>
-            <button
-              type="button"
               onClick={() => handleModeChange("quick_type")}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold transition-all cursor-pointer ${
                 inputMode === "quick_type"
@@ -430,6 +499,18 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
             >
               <Zap className="w-3.5 h-3.5 text-amber-500" />
               <span>{t.expenses.quickTypeTab}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleModeChange("standard")}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold transition-all cursor-pointer ${
+                inputMode === "standard"
+                  ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
+                  : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>{t.expenses.standardTab}</span>
             </button>
           </div>
 
@@ -794,6 +875,45 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
         {/* MODE 2: ⚡ QUICK TYPE / SMART SINGLE BAR */}
         {inputMode === "quick_type" && (
           <form onSubmit={handleQuickSubmit} className="flex flex-col gap-4 pt-3.5">
+            {/* Quick-Fill Chips Shelf in Quick Mode */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
+                  {t.expenses.quickShortcuts}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsManagingChips(true);
+                    handleOpenAddChip();
+                  }}
+                  className="flex items-center gap-1 text-[11px] font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 py-0.5 px-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                >
+                  <Settings2 className="w-3 h-3" />
+                  <span>{t.expenses.manageChips}</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar -mx-1 px-1">
+                {chips.map((chip) => (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    onClick={() => handleQuickChipInQuickMode(chip)}
+                    className="flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200/90 bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-all shrink-0 cursor-pointer active:scale-95"
+                  >
+                    {chip.emoji && <span className="text-sm">{chip.emoji}</span>}
+                    <span>{chip.name}</span>
+                    {chip.defaultAmount && (
+                      <span className="text-[10px] opacity-75 font-normal">
+                        {(chip.defaultAmount / 1000).toFixed(0)}k
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Command Input Bar */}
             <div className="flex flex-col gap-1.5">
               <div className="relative flex items-center rounded-2xl border-2 border-zinc-200 bg-zinc-50/70 p-3.5 focus-within:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:focus-within:border-zinc-200 transition-all">
@@ -802,7 +922,7 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                   ref={quickInputRef}
                   type="text"
                   value={quickInput}
-                  onChange={(e) => setQuickInput(e.target.value)}
+                  onChange={(e) => handleQuickInputChange(e.target.value)}
                   placeholder={t.expenses.quickBarPlaceholder}
                   className="w-full bg-transparent text-sm sm:text-base font-semibold outline-none placeholder:text-zinc-400 text-zinc-900 dark:placeholder:text-zinc-600 dark:text-zinc-100"
                 />
@@ -810,7 +930,7 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                   <button
                     type="button"
                     onClick={() => {
-                      setQuickInput("");
+                      handleQuickInputChange("");
                       quickInputRef.current?.focus();
                     }}
                     className="p-1 rounded-full text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
@@ -824,55 +944,205 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
               </p>
             </div>
 
-            {/* Live Parsing Preview Card */}
-            <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-950/60 p-3.5 flex flex-col gap-2">
+            {/* Live Parsing Preview Card with 1-Tap Overrides */}
+            <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-950/60 p-3.5 flex flex-col gap-2.5 transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 dark:text-zinc-500">
                   {t.expenses.detectedPreview}
                 </span>
                 {parsedExpense.isValid && (
-                  <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                    <Check className="w-3.5 h-3.5" /> Ready
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {effectiveIsExempt && (
+                      <button
+                        type="button"
+                        onClick={() => setOverrideExempt(false)}
+                        className="flex items-center gap-1 rounded-md bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800/80 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors cursor-pointer"
+                        title="Remove One-off tag"
+                      >
+                        <Tag className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                        <span>One-Off</span>
+                        <X className="w-2.5 h-2.5 opacity-60 hover:opacity-100" />
+                      </button>
+                    )}
+                    <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      <Check className="w-3.5 h-3.5" /> Ready
+                    </span>
+                  </div>
                 )}
               </div>
 
               {parsedExpense.isValid ? (
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                <div className="flex flex-col gap-2 pt-0.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">
                       {parsedExpense.name}
                     </span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span
-                        className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-                          CATEGORY_STYLES[parsedExpense.category].badgeBg
-                        } ${CATEGORY_STYLES[parsedExpense.category].badgeText}`}
-                      >
-                        {getCategoryLabel(parsedExpense.category)}
-                      </span>
-                      <span className="text-[10px] text-zinc-400">
-                        {parsedExpense.spentAt === today
-                          ? t.common.today
-                          : parsedExpense.spentAt === yesterdayStr
-                          ? t.common.yesterday
-                          : formatDate(parsedExpense.spentAt, "EEEE, d MMM")}
-                      </span>
-                    </div>
+                    <span className="text-lg font-extrabold text-zinc-900 dark:text-white shrink-0">
+                      Rp {parsedExpense.amount?.toLocaleString("id-ID")}
+                    </span>
                   </div>
 
-                  <span className="text-base font-extrabold text-zinc-900 dark:text-white">
-                    Rp {parsedExpense.amount?.toLocaleString("id-ID")}
-                  </span>
+                  {/* 1-Tap Interactive Badges */}
+                  <div className="flex items-center flex-wrap gap-2 pt-1">
+                    {/* Category Badge - Clickable */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCategoryPicker((prev) => !prev);
+                        setShowDatePicker(false);
+                      }}
+                      className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer border ${
+                        CATEGORY_STYLES[effectiveCategory].badgeBg
+                      } ${CATEGORY_STYLES[effectiveCategory].badgeText} ${
+                        showCategoryPicker ? "ring-2 ring-zinc-400 dark:ring-zinc-600" : ""
+                      }`}
+                      title={t.expenses.categoryLabel}
+                    >
+                      {(() => {
+                        const CatIcon = CATEGORY_ICONS[effectiveCategory] || Package;
+                        return <CatIcon className="w-3 h-3 shrink-0" />;
+                      })()}
+                      <span>{getCategoryLabel(effectiveCategory)}</span>
+                      <span className="text-[9px] opacity-70 ml-0.5">▾</span>
+                    </button>
+
+                    {/* Date Badge - Clickable */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDatePicker((prev) => !prev);
+                        setShowCategoryPicker(false);
+                      }}
+                      className={`flex items-center gap-1 rounded-lg border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all cursor-pointer ${
+                        showDatePicker ? "ring-2 ring-zinc-400 dark:ring-zinc-600" : ""
+                      }`}
+                      title={t.expenses.whenLabel}
+                    >
+                      <Calendar className="w-3 h-3 text-zinc-400" />
+                      <span>
+                        {effectiveSpentAt === today
+                          ? t.common.today
+                          : effectiveSpentAt === yesterdayStr
+                          ? t.common.yesterday
+                          : formatDate(effectiveSpentAt, "EEEE, d MMM")}
+                      </span>
+                      <span className="text-[9px] opacity-70 ml-0.5">▾</span>
+                    </button>
+                  </div>
+
+                  {/* Inline Category Picker Drawer */}
+                  {showCategoryPicker && (
+                    <div className="mt-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-2.5 grid grid-cols-3 gap-1.5 animate-fade-in shadow-xs">
+                      {CATEGORY_KEYS.map((catKey) => {
+                        const Icon = CATEGORY_ICONS[catKey] || Package;
+                        const isSel = effectiveCategory === catKey;
+                        const style = CATEGORY_STYLES[catKey];
+                        return (
+                          <button
+                            key={catKey}
+                            type="button"
+                            onClick={() => {
+                              setOverrideCategory(catKey);
+                              setShowCategoryPicker(false);
+                            }}
+                            className={`flex items-center gap-1.5 rounded-lg p-2 text-xs font-medium transition-all text-left cursor-pointer ${
+                              isSel
+                                ? `${style.activeBg}`
+                                : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                            }`}
+                          >
+                            <Icon className={`w-3.5 h-3.5 shrink-0 ${isSel ? "text-white" : style.activeText}`} />
+                            <span className="truncate text-[11px]">{getCategoryLabel(catKey)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Inline Date Picker Drawer */}
+                  {showDatePicker && (
+                    <div className="mt-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-2.5 flex flex-col gap-2 animate-fade-in shadow-xs">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOverrideDate(today);
+                            setShowDatePicker(false);
+                          }}
+                          className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                            effectiveSpentAt === today
+                              ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                          }`}
+                        >
+                          {t.common.today}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOverrideDate(yesterdayStr);
+                            setShowDatePicker(false);
+                          }}
+                          className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                            effectiveSpentAt === yesterdayStr
+                              ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                          }`}
+                        >
+                          {t.common.yesterday}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                        <span className="text-[11px] text-zinc-400">{t.expenses.customDate}:</span>
+                        <input
+                          type="date"
+                          value={effectiveSpentAt}
+                          onChange={(e) => {
+                            setOverrideDate(e.target.value);
+                            setShowDatePicker(false);
+                          }}
+                          className="flex-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-2 py-1 text-xs outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p className="text-xs text-zinc-400 dark:text-zinc-500 italic py-1">
                   {quickInput.trim()
                     ? t.expenses.quickTypeParseError
-                    : "e.g. 'Makan siang 25k Rabu', 'Coffee 18k Wednesday', 'Bensin 20000'"}
+                    : "e.g. 'Makan siang 25k', '2x Kopi 18k semalam', 'Bensin 30k'"}
                 </p>
               )}
             </div>
+
+            {/* Smart Splurge Anomaly Suggestion Banner in Quick Mode */}
+            {isQuickAnomaly && (
+              <div className="flex items-start justify-between gap-2.5 rounded-xl border border-amber-200/90 bg-amber-50/80 p-2.5 text-xs text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200 animate-fade-in">
+                <div className="flex items-start gap-2 min-w-0">
+                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="leading-snug text-[11px]">
+                    {t.expenses.oneOffDetectBanner}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setOverrideExempt(true)}
+                    className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-amber-600 active:scale-95 transition-all cursor-pointer"
+                  >
+                    {t.expenses.oneOffMarkButton}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDismissedAnomalySuggestion(true)}
+                    className="p-1 text-amber-600 hover:text-amber-900 dark:text-amber-400 rounded-md cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Keep Open for Batch Consecutive Logging Toggle */}
             <div className="flex items-center justify-between rounded-xl border border-zinc-200/70 dark:border-zinc-800/80 p-3 bg-white dark:bg-zinc-900/60 select-none">
