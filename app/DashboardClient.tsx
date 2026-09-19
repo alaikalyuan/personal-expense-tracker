@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   addDays,
   format,
@@ -16,6 +16,7 @@ import {
 import UserMenu from "./UserMenu";
 import TrackingStreak from "./TrackingStreak";
 import { StreakData } from "@/utils/streak";
+import { ShieldAlert, Sparkles } from "lucide-react";
 import InstallPrompt from "./InstallPrompt";
 import CadenceToggle from "./CadenceToggle";
 import ProjectedBurnCard from "./ProjectedBurnCard";
@@ -24,6 +25,8 @@ import BreakdownCard, { DaySpend, WeekSpend, CategorySpend } from "./BreakdownCa
 import ExpenseList, { ExpenseItem } from "./ExpenseList";
 import { useTranslation } from "@/utils/i18n/context";
 import { calculateExemptTotals, isExpenseExempt } from "@/utils/exemptions";
+import WelcomeGuestModal from "./WelcomeGuestModal";
+import UpgradeAccountModal from "./UpgradeAccountModal";
 
 interface DashboardClientProps {
   initialCadence: "week" | "month";
@@ -33,6 +36,10 @@ interface DashboardClientProps {
   monthlyBudget: number;
   streakData: StreakData;
   nowIso: string;
+  isGuest?: boolean;
+  initialMergedCount?: number;
+  initialAuthMode?: "login" | "signup";
+  initialAuthError?: string;
 }
 
 export default function DashboardClient({
@@ -43,9 +50,51 @@ export default function DashboardClient({
   monthlyBudget,
   streakData,
   nowIso,
+  isGuest = false,
+  initialMergedCount = 0,
+  initialAuthMode,
+  initialAuthError,
 }: DashboardClientProps) {
   const [cadence, setCadence] = useState<"week" | "month">(initialCadence);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(Boolean(initialAuthMode));
+  const [authModalMode, setAuthModalMode] = useState<"signup" | "login">(initialAuthMode || "signup");
+  const [authModalError, setAuthModalError] = useState<string | null>(initialAuthError || null);
+  const [mergedToastCount, setMergedToastCount] = useState<number>(initialMergedCount);
   const { t, formatDate, getCategoryLabel } = useTranslation();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      let urlChanged = false;
+      if (url.searchParams.has("auth")) {
+        url.searchParams.delete("auth");
+        urlChanged = true;
+      }
+      if (url.searchParams.has("error")) {
+        url.searchParams.delete("error");
+        urlChanged = true;
+      }
+      if (urlChanged) {
+        window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mergedToastCount > 0) {
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("merged")) {
+          url.searchParams.delete("merged");
+          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+        }
+      }
+      const timer = setTimeout(() => {
+        setMergedToastCount(0);
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [mergedToastCount]);
 
   const isMonth = cadence === "month";
   const now = useMemo(() => new Date(nowIso), [nowIso]);
@@ -216,11 +265,34 @@ export default function DashboardClient({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <TrackingStreak
-            streakData={streakData}
-            isOverBudget={isOverBudget}
+          {isGuest ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAuthModalMode("signup");
+                setAuthModalError(null);
+                setIsUpgradeModalOpen(true);
+              }}
+              aria-label={t.guest.bannerAction}
+              className="group flex h-8 items-center gap-1.5 rounded-xl border border-amber-300/80 bg-amber-50/90 px-2.5 text-xs font-semibold text-amber-900 shadow-2xs hover:border-amber-400 hover:bg-amber-100 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70 active:scale-95 transition-all cursor-pointer"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span className="tracking-tight">{t.guest.guestButton}</span>
+            </button>
+          ) : (
+            <TrackingStreak
+              streakData={streakData}
+              isOverBudget={isOverBudget}
+            />
+          )}
+          <UserMenu
+            isGuest={isGuest}
+            onOpenUpgrade={(mode = "signup") => {
+              setAuthModalMode(mode);
+              setAuthModalError(null);
+              setIsUpgradeModalOpen(true);
+            }}
           />
-          <UserMenu />
         </div>
       </div>
 
@@ -348,6 +420,36 @@ export default function DashboardClient({
         startDateStr={activeStartStr}
         endDateStr={activeEndStr}
       />
+
+      {/* Guest Onboarding & Upgrade Modals */}
+      {isGuest && (
+        <WelcomeGuestModal
+          onOpenUpgrade={(mode = "signup") => {
+            setAuthModalMode(mode);
+            setAuthModalError(null);
+            setIsUpgradeModalOpen(true);
+          }}
+        />
+      )}
+      <UpgradeAccountModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => {
+          setIsUpgradeModalOpen(false);
+          setAuthModalError(null);
+        }}
+        initialMode={authModalMode}
+        initialError={authModalError}
+      />
+
+      {/* Merged guest expenses toast */}
+      {mergedToastCount > 0 && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-zinc-900 px-4 py-2.5 text-xs font-semibold text-white shadow-2xl dark:bg-zinc-100 dark:text-zinc-950 animate-modal-in flex items-center gap-2 border border-zinc-700/50 dark:border-zinc-300">
+          <Sparkles className="w-4 h-4 text-amber-400 dark:text-amber-500 shrink-0" />
+          <span>
+            {t.guest.mergedToast.replace("{count}", String(mergedToastCount))}
+          </span>
+        </div>
+      )}
 
       {/* Bottom spacer for clearance above floating navbar and gradient */}
       <div className="h-8 shrink-0" aria-hidden="true" />

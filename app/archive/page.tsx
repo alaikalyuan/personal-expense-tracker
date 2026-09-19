@@ -28,8 +28,10 @@ export default async function ArchivePage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/auth/guest?next=/archive");
   }
+
+  const isGuest = Boolean(user.is_anonymous);
 
   // Current week boundary (Monday 00:00)
   const now = getNowInTimezone();
@@ -141,7 +143,7 @@ export default async function ArchivePage() {
           </div>
         </div>
 
-        <UserMenu />
+        <UserMenu isGuest={isGuest} />
       </div>
 
       {/* Historical Overview Banner */}

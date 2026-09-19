@@ -45,8 +45,10 @@ export default async function ComparePage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/auth/guest?next=/compare");
   }
+
+  const isGuest = Boolean(user.is_anonymous);
 
   const now = getNowInTimezone();
 
@@ -219,7 +221,7 @@ export default async function ComparePage() {
             {formatDateServer(lastWeekStart, "MMM d", locale)} – {formatDateServer(lastWeekEnd, "MMM d", locale)}
           </p>
         </div>
-        <UserMenu />
+        <UserMenu isGuest={isGuest} />
       </div>
 
       {/* Week-over-Week Spend Hero Card */}

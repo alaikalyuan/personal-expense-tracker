@@ -27,8 +27,10 @@ export default async function SavingsPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/auth/guest?next=/savings");
   }
+
+  const isGuest = Boolean(user.is_anonymous);
 
   // Active weekly budget (default: 500,000 IDR)
   const weeklyBudget = Number(user.user_metadata?.weekly_budget || 500000);
@@ -176,6 +178,7 @@ export default async function SavingsPage() {
       availableSavings={availableSavings}
       ongoingSpend={ongoingSpend}
       ongoingProjectedSurplus={ongoingProjectedSurplus}
+      isGuest={isGuest}
     />
   );
 }

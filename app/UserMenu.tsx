@@ -14,11 +14,18 @@ import {
   Languages,
   Sun,
   Moon,
+  ShieldAlert,
+  Sparkles,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { useTheme } from "@/utils/theme/context";
 
-export default function UserMenu() {
+interface UserMenuProps {
+  isGuest?: boolean;
+  onOpenUpgrade?: (mode?: "signup" | "login") => void;
+}
+
+export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -191,16 +198,34 @@ export default function UserMenu() {
 
             <div className="my-1 border-t border-zinc-200/80 dark:border-zinc-800/80" />
 
-            {/* Logout Action */}
-            <form action={logout}>
+            {/* Guest Auth Action */}
+            {isGuest ? (
               <button
-                type="submit"
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-300 transition-colors cursor-pointer"
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  if (onOpenUpgrade) {
+                    onOpenUpgrade("signup");
+                  } else {
+                    window.location.href = "/?auth=signup";
+                  }
+                }}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
               >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>{t.nav.signOut}</span>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{t.guest.createAccountOrSignIn}</span>
               </button>
-            </form>
+            ) : (
+              <form action={logout}>
+                <button
+                  type="submit"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-300 transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>{t.nav.signOut}</span>
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

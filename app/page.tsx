@@ -18,10 +18,18 @@ import { calculateStreak } from "@/utils/streak";
 import { getDictionaryServer } from "@/utils/i18n/server";
 
 export default async function DashboardPage(props: {
-  searchParams?: Promise<{ period?: string }>;
+  searchParams?: Promise<{
+    period?: string;
+    merged?: string;
+    auth?: "login" | "signup";
+    error?: string;
+  }>;
 }) {
   const cookieStore = await cookies();
   const searchParams = await props.searchParams;
+  const initialMergedCount = searchParams?.merged ? parseInt(searchParams.merged, 10) : 0;
+  const initialAuthMode = searchParams?.auth;
+  const initialAuthError = searchParams?.error;
   const cookieCadence = cookieStore.get("dashboard_cadence")?.value;
   const initialCadence: "week" | "month" =
     searchParams?.period === "month" || (!searchParams?.period && cookieCadence === "month")
@@ -36,8 +44,10 @@ export default async function DashboardPage(props: {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/auth/guest");
   }
+
+  const isGuest = Boolean(user.is_anonymous);
 
   const now = getNowInTimezone();
 
@@ -115,6 +125,10 @@ export default async function DashboardPage(props: {
       monthlyBudget={monthlyBudget}
       streakData={streakData}
       nowIso={format(now, "yyyy-MM-dd'T'HH:mm:ss")}
+      isGuest={isGuest}
+      initialMergedCount={initialMergedCount}
+      initialAuthMode={initialAuthMode}
+      initialAuthError={initialAuthError}
     />
   );
 }

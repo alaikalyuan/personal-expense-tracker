@@ -13,9 +13,56 @@ export async function login(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  // 1. Capture any expenses created in current guest session before logging in
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+
+  let guestExpenses: Array<{
+    category: string;
+    name: string;
+    note: string | null;
+    amount: number;
+    spent_at: string;
+  }> = [];
+
+  const isGuest = currentUser?.is_anonymous ?? false;
+  const guestId = currentUser?.id;
+
+  if (isGuest && guestId) {
+    const { data } = await supabase
+      .from("expenses")
+      .select("category, name, note, amount, spent_at")
+      .eq("user_id", guestId);
+    if (data && data.length > 0) {
+      guestExpenses = data;
+    }
+  }
+
+  // 2. Sign in to existing account
+  const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
 
+  // 3. If signed in successfully and we have guest expenses to merge, batch insert them
+  const newUserId = authData?.user?.id;
+  let mergedCount = 0;
+  if (guestExpenses.length > 0 && newUserId && newUserId !== guestId) {
+    const rowsToInsert = guestExpenses.map((expense) => ({
+      ...expense,
+      user_id: newUserId,
+    }));
+    const { error: insertError } = await supabase.from("expenses").insert(rowsToInsert);
+    if (!insertError) {
+      mergedCount = guestExpenses.length;
+    } else {
+      console.error("Failed to merge guest expenses on login:", insertError);
+    }
+  }
+
+  revalidatePath("/", "layout");
+  if (mergedCount > 0) {
+    redirect(`/?merged=${mergedCount}`);
+  }
   redirect("/");
 }
 
@@ -25,9 +72,54 @@ export async function signup(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  const { error } = await supabase.auth.signUp({ email, password });
+  // 1. Capture any expenses created in current guest session before signing up
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+
+  let guestExpenses: Array<{
+    category: string;
+    name: string;
+    note: string | null;
+    amount: number;
+    spent_at: string;
+  }> = [];
+
+  const isGuest = currentUser?.is_anonymous ?? false;
+  const guestId = currentUser?.id;
+
+  if (isGuest && guestId) {
+    const { data } = await supabase
+      .from("expenses")
+      .select("category, name, note, amount, spent_at")
+      .eq("user_id", guestId);
+    if (data && data.length > 0) {
+      guestExpenses = data;
+    }
+  }
+
+  const { data: authData, error } = await supabase.auth.signUp({ email, password });
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
 
+  const newUserId = authData?.user?.id;
+  let mergedCount = 0;
+  if (guestExpenses.length > 0 && newUserId && newUserId !== guestId) {
+    const rowsToInsert = guestExpenses.map((expense) => ({
+      ...expense,
+      user_id: newUserId,
+    }));
+    const { error: insertError } = await supabase.from("expenses").insert(rowsToInsert);
+    if (!insertError) {
+      mergedCount = guestExpenses.length;
+    } else {
+      console.error("Failed to merge guest expenses on signup:", insertError);
+    }
+  }
+
+  revalidatePath("/", "layout");
+  if (mergedCount > 0) {
+    redirect(`/?merged=${mergedCount}`);
+  }
   redirect("/");
 }
 
@@ -36,6 +128,95 @@ export async function logout() {
   const supabase = await createClient(cookieStore);
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+export async function continueAsGuest() {
+  redirect("/auth/guest");
+}
+
+export async function upgradeGuestAccount(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+  const email = (formData.get("email") as string)?.trim();
+  const password = formData.get("password") as string;
+
+  if (!email || !password) {
+    return { error: "Email and password are required" };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    email,
+    password,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+export async function modalLogin(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+  const email = (formData.get("email") as string)?.trim();
+  const password = formData.get("password") as string;
+
+  if (!email || !password) {
+    return { error: "Email and password are required" };
+  }
+
+  // 1. Capture any expenses created in current guest session before logging in
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+
+  let guestExpenses: Array<{
+    category: string;
+    name: string;
+    note: string | null;
+    amount: number;
+    spent_at: string;
+  }> = [];
+
+  const isGuest = currentUser?.is_anonymous ?? false;
+  const guestId = currentUser?.id;
+
+  if (isGuest && guestId) {
+    const { data } = await supabase
+      .from("expenses")
+      .select("category, name, note, amount, spent_at")
+      .eq("user_id", guestId);
+    if (data && data.length > 0) {
+      guestExpenses = data;
+    }
+  }
+
+  // 2. Sign in to existing account
+  const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    return { error: error.message };
+  }
+
+  // 3. If signed in successfully and we have guest expenses to merge, batch insert them
+  const newUserId = authData?.user?.id;
+  let mergedCount = 0;
+  if (guestExpenses.length > 0 && newUserId && newUserId !== guestId) {
+    const rowsToInsert = guestExpenses.map((expense) => ({
+      ...expense,
+      user_id: newUserId,
+    }));
+    const { error: insertError } = await supabase.from("expenses").insert(rowsToInsert);
+    if (!insertError) {
+      mergedCount = guestExpenses.length;
+    } else {
+      console.error("Failed to merge guest expenses on modal login:", insertError);
+    }
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true, mergedCount };
 }
 
 export async function addExpense(formData: FormData) {

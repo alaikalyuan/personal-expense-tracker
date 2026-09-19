@@ -75,6 +75,7 @@ interface SavingsClientProps {
   availableSavings: number;
   ongoingSpend: number;
   ongoingProjectedSurplus: number;
+  isGuest?: boolean;
 }
 
 const EMOJI_PRESETS = ["🎯", "🏖️", "🛡️", "💻", "📚", "🚗", "🏠", "🎁"];
@@ -91,6 +92,7 @@ export default function SavingsClient({
   availableSavings,
   ongoingSpend,
   ongoingProjectedSurplus,
+  isGuest = false,
 }: SavingsClientProps) {
   const { t } = useTranslation();
 
@@ -300,7 +302,7 @@ export default function SavingsClient({
           </p>
         </div>
 
-        <UserMenu />
+        <UserMenu isGuest={isGuest} />
       </div>
 
       {/* Hero Financial Health Overview */}

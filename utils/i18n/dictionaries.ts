@@ -291,6 +291,51 @@ export interface Dictionary {
     signUp: string;
     or: string;
     googleSignIn: string;
+    continueAsGuest: string;
+  };
+  guest: {
+    welcomeTitle: string;
+    welcomeSubtitle: string;
+    features: {
+      instantTitle: string;
+      instantDesc: string;
+      budgetTitle: string;
+      budgetDesc: string;
+      insightsTitle: string;
+      insightsDesc: string;
+    };
+    riskCardTitle: string;
+    riskCardDesc: string;
+    riskPoints: [string, string, string];
+    continueBtn: string;
+    signInOrRegisterBtn: string;
+    alreadyHaveAccount: string;
+    logInHere: string;
+    bannerText: string;
+    bannerAction: string;
+    guestBadge: string;
+    guestButton: string;
+    upgradeModalTitle: string;
+    upgradeModalSubtitle: string;
+    upgradeEmailLabel: string;
+    upgradePasswordLabel: string;
+    upgradeSubmitBtn: string;
+    upgradeSubmittingBtn: string;
+    upgradeOrGoogle: string;
+    upgradeGoogleBtn: string;
+    upgradeSuccessMessage: string;
+    upgradeDismissBtn: string;
+    createAccountOrSignIn: string;
+    mergedToast: string;
+    tabSignUp: string;
+    tabLogIn: string;
+    loginTitle: string;
+    loginSubtitle: string;
+    loginSubmitBtn: string;
+    loginSubmittingBtn: string;
+    switchToLogIn: string;
+    switchToSignUp: string;
+    loginSuccessMessage: string;
   };
   install: {
     title: string;
@@ -663,6 +708,55 @@ export const dictionaries: Record<Locale, Dictionary> = {
       signUp: "Daftar",
       or: "atau",
       googleSignIn: "Lanjutkan dengan Google",
+      continueAsGuest: "Lanjutkan sebagai Tamu (Tanpa Akun)",
+    },
+    guest: {
+      welcomeTitle: "Selamat Datang di SakuTrack!",
+      welcomeSubtitle: "Pelacak pengeluaran pribadi yang simpel, cepat, dan tanpa ribet.",
+      features: {
+        instantTitle: "Catat Secepat Kilat",
+        instantDesc: "Input pengeluaran dalam hitungan detik dengan chip cepat dan format teks natural.",
+        budgetTitle: "Anggaran Fleksibel",
+        budgetDesc: "Pantau ritme mingguan atau bulanan lengkap dengan sisa kuota harian otomatis.",
+        insightsTitle: "Wawasan Finansial Cerdas",
+        insightsDesc: "Bangun konsistensi tracking streak, deteksi anomali belanja, dan kelola tabungan.",
+      },
+      riskCardTitle: "Mode Tamu & Akses Gratis",
+      riskCardDesc: "Anda dapat menggunakan SakuTrack 100% gratis tanpa membuat akun. Namun, data Anda saat ini hanya tersimpan di peramban (browser) perangkat ini.",
+      riskPoints: [
+        "Jika Anda membersihkan riwayat (cache/history) browser, data pengeluaran akan terhapus.",
+        "Mode Samaran (Incognito/Private) akan menghapus data begitu tab atau jendela ditutup.",
+        "Data tidak akan tersinkronisasi ke perangkat lain (HP/Laptop) tanpa akun.",
+      ],
+      continueBtn: "Lanjutkan",
+      signInOrRegisterBtn: "Masuk atau Daftar",
+      alreadyHaveAccount: "Sudah punya akun sebelumnya?",
+      logInHere: "Masuk di sini",
+      bannerText: "Mode Tamu: Data hanya tersimpan di browser ini.",
+      bannerAction: "Sinkronkan / Buat Akun",
+      guestBadge: "Tamu",
+      guestButton: "Mode Tamu",
+      upgradeModalTitle: "Amankan Data Pengeluaran Anda",
+      upgradeModalSubtitle: "Hubungkan ke akun permanen untuk sinkronisasi antar-perangkat dan mencegah data terhapus.",
+      upgradeEmailLabel: "Email",
+      upgradePasswordLabel: "Kata Sandi",
+      upgradeSubmitBtn: "Simpan Akun",
+      upgradeSubmittingBtn: "Menyimpan...",
+      upgradeOrGoogle: "atau hubungkan dengan Google",
+      upgradeGoogleBtn: "Hubungkan dengan Google",
+      upgradeSuccessMessage: "Akun berhasil dihubungkan! Pengeluaran Anda kini aman tersimpan di cloud.",
+      upgradeDismissBtn: "Tutup",
+      createAccountOrSignIn: "Buat Akun / Masuk",
+      mergedToast: "{count} pengeluaran dari mode tamu berhasil digabungkan ke akun Anda!",
+      tabSignUp: "Buat Akun",
+      tabLogIn: "Masuk",
+      loginTitle: "Selamat Datang Kembali",
+      loginSubtitle: "Masuk ke akun Anda untuk sinkronisasi cloud dan penggabungan data tamu.",
+      loginSubmitBtn: "Masuk",
+      loginSubmittingBtn: "Sedang masuk...",
+      switchToLogIn: "Sudah punya akun? Masuk",
+      switchToSignUp: "Belum punya akun? Buat akun",
+      loginSuccessMessage: "Selamat datang kembali! Berhasil masuk ke akun Anda.",
     },
     install: {
       title: "Pasang Aplikasi Pengeluaran",
@@ -1040,6 +1134,55 @@ export const dictionaries: Record<Locale, Dictionary> = {
       signUp: "Sign Up",
       or: "or",
       googleSignIn: "Continue with Google",
+      continueAsGuest: "Continue as Guest (No Account)",
+    },
+    guest: {
+      welcomeTitle: "Welcome to SakuTrack!",
+      welcomeSubtitle: "Simple, honest, lightning-fast personal expense tracking.",
+      features: {
+        instantTitle: "Instant Logging",
+        instantDesc: "Track expenses in seconds with quick chips and natural phrasing.",
+        budgetTitle: "Flexible Budgets",
+        budgetDesc: "Switch between weekly and monthly pacing with real-time daily allowances.",
+        insightsTitle: "Smart Insights",
+        insightsDesc: "Build tracking streaks, catch spending anomalies, and grow your savings.",
+      },
+      riskCardTitle: "Guest Mode & Free Usage",
+      riskCardDesc: "You can use SakuTrack 100% free without creating an account. However, your records are saved only in this browser on this device.",
+      riskPoints: [
+        "Clearing your browser cache or site data will permanently delete your records.",
+        "Incognito / private windows will wipe data as soon as they are closed.",
+        "Expenses will not sync to your other phones or computers without an account.",
+      ],
+      continueBtn: "Continue",
+      signInOrRegisterBtn: "Sign In or Register",
+      alreadyHaveAccount: "Already have an account?",
+      logInHere: "Log in here",
+      bannerText: "Guest Mode: Data is saved only to this browser.",
+      bannerAction: "Sync / Create Account",
+      guestBadge: "Guest",
+      guestButton: "Guest Mode",
+      upgradeModalTitle: "Secure Your Expense Records",
+      upgradeModalSubtitle: "Link to a permanent account to sync across devices and prevent accidental data loss.",
+      upgradeEmailLabel: "Email",
+      upgradePasswordLabel: "Password",
+      upgradeSubmitBtn: "Save Account",
+      upgradeSubmittingBtn: "Saving...",
+      upgradeOrGoogle: "or link with Google",
+      upgradeGoogleBtn: "Link with Google",
+      upgradeSuccessMessage: "Account linked successfully! Your expenses are now securely backed up to the cloud.",
+      upgradeDismissBtn: "Close",
+      createAccountOrSignIn: "Create Account / Sign In",
+      mergedToast: "Successfully merged {count} guest expenses into your account!",
+      tabSignUp: "Create Account",
+      tabLogIn: "Log In",
+      loginTitle: "Welcome Back",
+      loginSubtitle: "Sign in to sync your cloud data and merge any guest expenses.",
+      loginSubmitBtn: "Log In",
+      loginSubmittingBtn: "Logging in...",
+      switchToLogIn: "Already have an account? Log In",
+      switchToSignUp: "Need an account? Create one",
+      loginSuccessMessage: "Welcome back! Logged in successfully.",
     },
     install: {
       title: "Install Expense Tracker",

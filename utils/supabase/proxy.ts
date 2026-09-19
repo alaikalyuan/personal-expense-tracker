@@ -18,10 +18,15 @@ export async function updateSession(request: NextRequest) {
     .some((cookie) => cookie.name.includes("-auth-token"));
 
   // 1. Fast path for unauthenticated users on protected routes:
-  // If no auth cookie exists, redirect to /login immediately without network delay
+  // Redirect to /auth/guest to automatically establish guest mode
+  const fullDestination = request.nextUrl.pathname + request.nextUrl.search;
   if (!hasAuthCookie && !isPublicRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/auth/guest";
+    url.search = "";
+    if (fullDestination !== "/") {
+      url.searchParams.set("next", fullDestination);
+    }
     return NextResponse.redirect(url);
   }
 
@@ -72,11 +77,17 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/auth/guest";
+    url.search = "";
+    if (fullDestination !== "/") {
+      url.searchParams.set("next", fullDestination);
+    }
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthRoute) {
+  // Only redirect permanent (non-guest) users away from /login
+  const isAnonymous = user?.is_anonymous ?? false;
+  if (user && !isAnonymous && isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
