@@ -47,15 +47,13 @@ export default async function SplitBillPage(props: {
   const isHost = Boolean(user && user.id === bill.creator_id);
 
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 pt-4 sm:pt-8 px-4 sm:px-6">
-      <div className="max-w-xl mx-auto">
-        <SplitBillViewer
-          bill={bill as SplitBillRecord}
-          participants={(participants || []) as SplitParticipantRecord[]}
-          items={(items || []) as SplitItemRecord[]}
-          isHost={isHost}
-        />
-      </div>
+    <main className="max-w-md mx-auto p-4 pb-28 font-sans">
+      <SplitBillViewer
+        bill={bill as SplitBillRecord}
+        participants={(participants || []) as SplitParticipantRecord[]}
+        items={(items || []) as SplitItemRecord[]}
+        isHost={isHost}
+      />
     </main>
   );
 }

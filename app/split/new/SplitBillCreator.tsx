@@ -1167,7 +1167,7 @@ export default function SplitBillCreator({
       </section>
 
       {/* Floating Bottom Actions Bar with bottom margin */}
-      <div className="fixed bottom-4 sm:bottom-6 inset-x-0 z-40 px-3 sm:px-4 max-w-2xl mx-auto pointer-events-none pb-[env(safe-area-inset-bottom)]">
+      <div className="fixed bottom-4 sm:bottom-6 inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none pb-[env(safe-area-inset-bottom)]">
         <div className="pointer-events-auto rounded-2xl sm:rounded-3xl border border-zinc-200/90 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-4 py-3 shadow-xl sm:shadow-2xl shadow-zinc-950/15 dark:shadow-black/70 flex items-center justify-between gap-3">
           <div>
             <span className="text-[10px] text-zinc-400 block">Total Tagihan</span>

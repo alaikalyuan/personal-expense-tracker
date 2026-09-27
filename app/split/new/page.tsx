@@ -24,13 +24,11 @@ export default async function NewSplitBillPage() {
     "Saya";
 
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-36 pt-4 sm:pt-8 px-4 sm:px-6">
-      <div className="max-w-2xl mx-auto">
-        <SplitBillCreator
-          creatorName={creatorName}
-          defaultPayment={defaultPayment}
-        />
-      </div>
+    <main className="max-w-md mx-auto p-4 pb-36 font-sans">
+      <SplitBillCreator
+        creatorName={creatorName}
+        defaultPayment={defaultPayment}
+      />
     </main>
   );
 }

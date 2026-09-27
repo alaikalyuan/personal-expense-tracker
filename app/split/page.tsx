@@ -62,10 +62,8 @@ export default async function SplitHistoryPage() {
   const bills = (rawBills || []) as unknown as HistoryBillRecord[];
 
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-28 pt-4 sm:pt-8 px-4 sm:px-6">
-      <div className="max-w-2xl mx-auto">
-        <SplitBillHistoryClient initialBills={bills} />
-      </div>
+    <main className="max-w-md mx-auto p-4 pb-28 font-sans">
+      <SplitBillHistoryClient initialBills={bills} />
     </main>
   );
 }
