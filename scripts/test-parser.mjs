@@ -91,6 +91,85 @@ const tests = [
     input: "bioskop 50k",
     expected: { name: "Bioskop", amount: 50000, category: "Entertainment" },
   },
+  // 18. Day of week on Monday: writing on Monday and typing saturday should NOT place date in the future
+  {
+    input: "kopi 18k saturday",
+    today: "2026-09-28", // Monday
+    expected: { name: "Kopi", amount: 18000, category: "Food & Dining", spentAt: "2026-09-26" },
+  },
+  {
+    input: "kopi 18k sabtu",
+    today: "2026-09-28", // Monday
+    expected: { name: "Kopi", amount: 18000, category: "Food & Dining", spentAt: "2026-09-26" },
+  },
+  {
+    input: "bensin 30k hari sabtu",
+    today: "2026-09-28", // Monday
+    expected: { name: "Bensin", amount: 30000, category: "Transportation", spentAt: "2026-09-26" },
+  },
+  {
+    input: "kopi 18k monday",
+    today: "2026-09-28", // Monday
+    expected: { name: "Kopi", amount: 18000, category: "Food & Dining", spentAt: "2026-09-28" },
+  },
+  {
+    input: "makan 25k senin",
+    today: "2026-09-28", // Monday
+    expected: { name: "Makan", amount: 25000, category: "Food & Dining", spentAt: "2026-09-28" },
+  },
+  {
+    input: "makan 25k minggu",
+    today: "2026-09-28", // Monday
+    expected: { name: "Makan", amount: 25000, category: "Food & Dining", spentAt: "2026-09-27" },
+  },
+  {
+    input: "kopi 18k jumat",
+    today: "2026-09-28", // Monday
+    expected: { name: "Kopi", amount: 18000, category: "Food & Dining", spentAt: "2026-09-25" },
+  },
+  {
+    input: "makan 30k sabtu kemarin",
+    today: "2026-09-28", // Monday
+    expected: { name: "Makan", amount: 30000, category: "Food & Dining", spentAt: "2026-09-26" },
+  },
+  // 19. Day of week on Friday: past day in current week vs future day
+  {
+    input: "makan 20k senin",
+    today: "2026-10-02", // Friday
+    expected: { name: "Makan", amount: 20000, category: "Food & Dining", spentAt: "2026-09-28" },
+  },
+  {
+    input: "kopi 15k sabtu",
+    today: "2026-10-02", // Friday
+    expected: { name: "Kopi", amount: 15000, category: "Food & Dining", spentAt: "2026-09-26" },
+  },
+  // 20. Day of week on Sunday: saturday should be yesterday
+  {
+    input: "nasi 25k sabtu",
+    today: "2026-10-04", // Sunday
+    expected: { name: "Nasi", amount: 25000, category: "Food & Dining", spentAt: "2026-10-03" },
+  },
+  // 21. Explicit modifiers (next week / last week / yesterday)
+  {
+    input: "kopi 18k sabtu lalu",
+    today: "2026-09-28", // Monday
+    expected: { name: "Kopi", amount: 18000, category: "Food & Dining", spentAt: "2026-09-26" },
+  },
+  {
+    input: "kopi 18k senin lalu",
+    today: "2026-09-28", // Monday
+    expected: { name: "Kopi", amount: 18000, category: "Food & Dining", spentAt: "2026-09-21" },
+  },
+  {
+    input: "kopi 18k sabtu depan",
+    today: "2026-09-28", // Monday
+    expected: { name: "Kopi", amount: 18000, category: "Food & Dining", spentAt: "2026-10-10" },
+  },
+  {
+    input: "lunch 30k on wednesday",
+    today: "2026-09-28", // Monday
+    expected: { name: "Lunch", amount: 30000, category: "Food & Dining", spentAt: "2026-09-23" },
+  },
 ];
 
 let passed = 0;
@@ -98,7 +177,7 @@ let failed = 0;
 
 for (const t of tests) {
   try {
-    const res = parseQuickExpenseInput(t.input, TODAY);
+    const res = parseQuickExpenseInput(t.input, t.today || TODAY);
     if (t.expected.name !== undefined) {
       assert.equal(res.name, t.expected.name, `Name mismatch for "${t.input}": got "${res.name}", expected "${t.expected.name}"`);
     }

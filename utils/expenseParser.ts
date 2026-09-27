@@ -1,5 +1,5 @@
-import { CategoryKey } from "./i18n/dictionaries";
-import { QuickChip } from "./quickChips";
+import type { CategoryKey } from "./i18n/dictionaries";
+import type { QuickChip } from "./quickChips";
 import { addDays, subDays, addWeeks, subWeeks, startOfWeek, format, parseISO, getDate, getMonth, setDate, setMonth } from "date-fns";
 
 export interface ParsedExpense {
@@ -275,6 +275,13 @@ export function parseQuickExpenseInput(
         ) {
           targetDate = addWeeks(targetDate, 1);
         } else if (cleanMod === "kemarin") {
+          if (targetDate >= todayDate) {
+            targetDate = subWeeks(targetDate, 1);
+          }
+        } else {
+          // If no modifier, or "ini" / "this" / "minggu ini" / "this week":
+          // If the day has not passed yet this week (i.e. is in the future),
+          // it refers to the day from the previous week.
           if (targetDate > todayDate) {
             targetDate = subWeeks(targetDate, 1);
           }
