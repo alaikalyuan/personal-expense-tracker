@@ -7,6 +7,7 @@ export async function updateSession(request: NextRequest) {
   const isPublicRoute =
     pathname.startsWith("/login") ||
     pathname.startsWith("/auth") ||
+    (pathname.startsWith("/split/") && pathname !== "/split/new") ||
     pathname === "/manifest.webmanifest" ||
     pathname.startsWith("/icons");
 

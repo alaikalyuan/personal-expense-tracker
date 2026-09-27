@@ -1,0 +1,445 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import {
+  Receipt,
+  Plus,
+  ArrowLeft,
+  Trash2,
+  ExternalLink,
+  Search,
+  AlertTriangle,
+} from "lucide-react";
+import {
+  calculateSplitBreakdown,
+  invalidateSplitCache,
+} from "@/utils/splitCalculator";
+import { deleteSplitBill } from "@/app/split/actions";
+
+export interface HistoryBillRecord {
+  id: string;
+  creator_id: string;
+  title: string;
+  split_mode: "itemized" | "equal";
+  tax_percentage: number;
+  service_percentage: number;
+  discount_amount: number;
+  extra_fee: number;
+  rounding_step: number;
+  payment_info: {
+    method?: string;
+    account_number?: string;
+    account_name?: string;
+  };
+  category: string;
+  logged_expense_id?: string | null;
+  status: "active" | "settled";
+  created_at: string;
+  updated_at?: string;
+  split_participants: Array<{
+    id: string;
+    bill_id?: string;
+    name: string;
+    is_creator: boolean;
+    is_paid: boolean;
+    paid_at?: string | null;
+  }>;
+  split_items: Array<{
+    id: string;
+    bill_id?: string;
+    name: string;
+    price: number;
+    quantity: number;
+    assigned_participant_ids: string[];
+  }>;
+}
+
+interface SplitBillHistoryClientProps {
+  initialBills: HistoryBillRecord[];
+}
+
+export default function SplitBillHistoryClient({
+  initialBills,
+}: SplitBillHistoryClientProps) {
+  const [bills, setBills] = useState<HistoryBillRecord[]>(initialBills);
+  const [filterTab, setFilterTab] = useState<"all" | "active" | "settled">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [deletingBillId, setDeletingBillId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Compute stats and totals for each bill
+  const billsWithStats = useMemo(() => {
+    return bills.map((b) => {
+      const parts = b.split_participants || [];
+      const items = b.split_items || [];
+      const calc = calculateSplitBreakdown(
+        {
+          split_mode: b.split_mode,
+          tax_percentage: b.tax_percentage,
+          service_percentage: b.service_percentage,
+          discount_amount: b.discount_amount,
+          extra_fee: b.extra_fee,
+          rounding_step: b.rounding_step,
+        },
+        items,
+        parts.map((p) => ({ ...p, bill_id: b.id }))
+      );
+
+      const paidCount = parts.filter((p) => p.is_paid).length;
+      const totalCount = Math.max(1, parts.length);
+      const isSettled = parts.length > 0 && paidCount === parts.length;
+      const unpaidParticipants = parts.filter((p) => !p.is_paid);
+      const creatorShare = calc.participants.find((p) => p.isCreator)?.totalOwed || 0;
+
+      return {
+        ...b,
+        grandTotal: calc.grandTotal,
+        creatorShare,
+        paidCount,
+        totalCount,
+        isSettled,
+        unpaidParticipants,
+      };
+    });
+  }, [bills]);
+
+  // Overall metrics
+  const totalBillsCount = bills.length;
+  const settledCount = billsWithStats.filter((b) => b.isSettled).length;
+  const activeCount = totalBillsCount - settledCount;
+
+  // Filtered bills
+  const filteredBills = useMemo(() => {
+    return billsWithStats.filter((b) => {
+      // Tab filter
+      if (filterTab === "active" && b.isSettled) return false;
+      if (filterTab === "settled" && !b.isSettled) return false;
+
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesTitle = b.title.toLowerCase().includes(query);
+        const matchesCategory = b.category.toLowerCase().includes(query);
+        const matchesParticipant = b.split_participants?.some((p) =>
+          p.name.toLowerCase().includes(query)
+        );
+        return matchesTitle || matchesCategory || matchesParticipant;
+      }
+      return true;
+    });
+  }, [billsWithStats, filterTab, searchQuery]);
+
+  const billToDelete = useMemo(() => {
+    return bills.find((b) => b.id === deletingBillId) || null;
+  }, [bills, deletingBillId]);
+
+  const handleDelete = async () => {
+    if (!deletingBillId) return;
+    setIsDeleting(true);
+
+    try {
+      await deleteSplitBill(deletingBillId);
+      // Invalidate localStorage cache
+      invalidateSplitCache(deletingBillId);
+      // Update local state
+      setBills((prev) => prev.filter((b) => b.id !== deletingBillId));
+      setDeletingBillId(null);
+    } catch (err) {
+      console.error("Error deleting split bill:", err);
+      alert("Gagal menghapus split bill.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const formatRupiah = (amt: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(amt);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Navigation */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Kembali ke Beranda</span>
+        </Link>
+
+        <Link
+          href="/split/new"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Split Baru</span>
+        </Link>
+      </div>
+
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
+          Riwayat Split Bill
+        </h1>
+        <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          Pantau status tagihan yang Anda buat, siapa yang sudah bayar, dan kelola arsip patungan Anda.
+        </p>
+      </div>
+
+      {/* Metrics Banner */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="p-3.5 sm:p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
+          <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">
+            Total Tagihan
+          </span>
+          <span className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 mt-0.5 block">
+            {totalBillsCount}
+          </span>
+        </div>
+
+        <div className="p-3.5 sm:p-4 rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/20 shadow-2xs">
+          <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider block">
+            Belum Lunas
+          </span>
+          <span className="text-lg sm:text-xl font-black text-amber-900 dark:text-amber-200 mt-0.5 block">
+            {activeCount}
+          </span>
+        </div>
+
+        <div className="p-3.5 sm:p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/20 shadow-2xs">
+          <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">
+            Sudah Lunas
+          </span>
+          <span className="text-lg sm:text-xl font-black text-emerald-900 dark:text-emerald-200 mt-0.5 block">
+            {settledCount}
+          </span>
+        </div>
+      </div>
+
+      {/* Controls: Search & Tabs */}
+      <div className="space-y-3">
+        {/* Search Input */}
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari nama tagihan, kategori, atau teman..."
+            className="w-full pl-9 pr-3.5 py-2.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
+          />
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-2xl">
+          {[
+            { id: "all", label: `Semua (${totalBillsCount})` },
+            { id: "active", label: `Belum Lunas (${activeCount})` },
+            { id: "settled", label: `Lunas (${settledCount})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setFilterTab(tab.id as typeof filterTab)}
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer text-center ${
+                filterTab === tab.id
+                  ? "bg-white text-zinc-900 dark:bg-zinc-700 dark:text-white shadow-xs"
+                  : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Bills List */}
+      <div className="space-y-3">
+        {filteredBills.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center space-y-3 bg-white/50 dark:bg-zinc-900/50">
+            <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto text-zinc-400">
+              <Receipt className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Tidak ada Split Bill ditemukan
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                {searchQuery
+                  ? "Coba ubah kata kunci pencarian Anda."
+                  : "Anda belum memiliki tagihan split pada kategori ini."}
+              </p>
+            </div>
+            {!searchQuery && (
+              <Link
+                href="/split/new"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-semibold cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Buat Split Bill Baru</span>
+              </Link>
+            )}
+          </div>
+        ) : (
+          filteredBills.map((b) => (
+            <div
+              key={b.id}
+              className="rounded-3xl border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-all space-y-3"
+            >
+              {/* Card Top Row: Title, Date, Category, Status */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                      {b.title}
+                    </h3>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                      {b.category}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    {new Date(b.created_at).toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })} · {b.split_participants?.length || 0} orang
+                  </p>
+                </div>
+
+                {/* Status Badge */}
+                <span
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border shrink-0 ${
+                    b.isSettled
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                      : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
+                  }`}
+                >
+                  {b.isSettled ? "Lunas" : `${b.paidCount}/${b.totalCount} Bayar`}
+                </span>
+              </div>
+
+              {/* Card Mid Row: Amounts */}
+              <div className="flex items-baseline justify-between pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
+                <div>
+                  <span className="text-[10px] text-zinc-400 block font-medium">
+                    Total Tagihan
+                  </span>
+                  <span className="text-base font-black text-zinc-900 dark:text-zinc-50">
+                    {formatRupiah(b.grandTotal)}
+                  </span>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] text-zinc-400 block font-medium">
+                    Porsi Anda (Host)
+                  </span>
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatRupiah(b.creatorShare)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar & Unpaid Friend List */}
+              <div className="space-y-1.5">
+                <div className="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all"
+                    style={{
+                      width: `${(b.paidCount / b.totalCount) * 100}%`,
+                    }}
+                  />
+                </div>
+
+                {!b.isSettled && b.unpaidParticipants.length > 0 && (
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    Menunggu:{" "}
+                    <span className="font-semibold text-amber-700 dark:text-amber-400">
+                      {b.unpaidParticipants.map((p) => p.name).join(", ")}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              {/* Card Footer Actions */}
+              <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
+                {/* Delete button */}
+                <button
+                  type="button"
+                  onClick={() => setDeletingBillId(b.id)}
+                  aria-label="Hapus tagihan"
+                  className="p-2 rounded-xl text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+
+                {/* View Breakdown & Share */}
+                <Link
+                  href={`/split/${b.id}`}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold transition-all cursor-pointer"
+                >
+                  <span>Buka & Bagikan</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {deletingBillId && billToDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 backdrop-blur-xs animate-fade-in"
+        >
+          <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  Hapus Split Bill?
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Tagihan <b>&quot;{billToDelete.title}&quot;</b> dan seluruh rincian teman akan dihapus secara permanen.
+                  {billToDelete.logged_expense_id && (
+                    <span className="block mt-1 text-rose-600 dark:text-rose-400 font-medium">
+                      Catatan pengeluaran terkait di pelacak pribadi juga akan ikut dihapus.
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingBillId(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

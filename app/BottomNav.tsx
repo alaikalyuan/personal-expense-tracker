@@ -14,8 +14,8 @@ export default function BottomNav() {
   const today = getTodayString();
   const { t } = useTranslation();
 
-  // Do not show bottom nav on login page
-  if (pathname === "/login") {
+  // Do not show bottom nav on login page or split bill pages
+  if (pathname === "/login" || pathname.startsWith("/split")) {
     return null;
   }
 

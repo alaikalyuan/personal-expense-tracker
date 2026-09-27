@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { logout } from "@/app/actions";
 import {
   MoreVertical,
@@ -14,8 +14,8 @@ import {
   Languages,
   Sun,
   Moon,
-  ShieldAlert,
   Sparkles,
+  Receipt,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { useTheme } from "@/utils/theme/context";
@@ -26,6 +26,7 @@ interface UserMenuProps {
 }
 
 export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -121,6 +122,39 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuPro
               >
                 <ArrowLeftRight className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
                 <span>{t.nav.compare}</span>
+              </Link>
+            )}
+
+            {/* Split Bill Link */}
+            {isGuest ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  if (onOpenUpgrade) {
+                    onOpenUpgrade("login");
+                  } else {
+                    router.push("/login?next=/split");
+                  }
+                }}
+                className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer w-full text-left"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Receipt className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
+                  <span>Split Bill</span>
+                </div>
+                <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-md">
+                  Login
+                </span>
+              </button>
+            ) : (
+              <Link
+                href="/split"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
+              >
+                <Receipt className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
+                <span>Split Bill</span>
               </Link>
             )}
 
