@@ -16,6 +16,7 @@ import {
   HeartHandshake,
   Coins,
   ArrowUpRight,
+  History,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import UserMenu from "@/app/UserMenu";
@@ -28,7 +29,9 @@ import {
   withdrawSavingsFromGoal,
   sweepSurplusToSavings,
   recordManualSavingsAdjustment,
+  SavingsHistoryItem,
 } from "@/app/actions";
+import SavingsBalanceHistory from "./SavingsBalanceHistory";
 
 export interface CompletedWeekData {
   weekId: string;
@@ -66,6 +69,7 @@ interface SavingsClientProps {
   ongoingSpend: number;
   ongoingProjectedSurplus: number;
   isGuest?: boolean;
+  savingsHistory?: SavingsHistoryItem[];
 }
 
 const EMOJI_PRESETS = ["🎯", "🏖️", "🛡️", "💻", "📚", "🚗", "🏠", "🎁"];
@@ -83,6 +87,7 @@ export default function SavingsClient({
   ongoingSpend,
   ongoingProjectedSurplus,
   isGuest = false,
+  savingsHistory = [],
 }: SavingsClientProps) {
   const { t } = useTranslation();
 
@@ -110,6 +115,7 @@ export default function SavingsClient({
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [adjustmentType, setAdjustmentType] = useState<"deposit" | "withdraw">("deposit");
   const [adjustmentAmount, setAdjustmentAmount] = useState("");
+  const [adjustmentNote, setAdjustmentNote] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
@@ -266,9 +272,13 @@ export default function SavingsClient({
       const formData = new FormData();
       formData.set("type", adjustmentType);
       formData.set("amount", String(amountNum));
+      if (adjustmentNote.trim()) {
+        formData.set("note", adjustmentNote.trim());
+      }
       await recordManualSavingsAdjustment(formData);
       setIsAdjustmentModalOpen(false);
       setAdjustmentAmount("");
+      setAdjustmentNote("");
     } finally {
       setIsSubmitting(false);
     }
@@ -311,15 +321,36 @@ export default function SavingsClient({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsAdjustmentModalOpen(true)}
-              aria-label={t.savings.manualAdjustmentButton}
-              title={t.savings.manualAdjustmentButton}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-teal-200/80 bg-white text-teal-700 hover:bg-teal-50 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:text-white transition-colors cursor-pointer shadow-2xs"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const section = document.getElementById("savings-history-section");
+                  if (section) {
+                    section.scrollIntoView({ behavior: "smooth" });
+                  }
+                }}
+                aria-label={t.savings.viewHistoryButton}
+                title={t.savings.viewHistoryButton}
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-teal-200/80 bg-white text-teal-700 hover:bg-teal-50 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:text-white transition-colors cursor-pointer shadow-2xs"
+              >
+                <History className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAdjustmentAmount("");
+                  setAdjustmentNote("");
+                  setIsAdjustmentModalOpen(true);
+                }}
+                aria-label={t.savings.manualAdjustmentButton}
+                title={t.savings.manualAdjustmentButton}
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-teal-200/80 bg-white text-teal-700 hover:bg-teal-50 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:text-white transition-colors cursor-pointer shadow-2xs"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Core Breakdown Metrics Grid */}
@@ -621,6 +652,17 @@ export default function SavingsClient({
           </div>
         )}
       </div>
+
+      {/* Savings Balance History (Riwayat Mutasi Saldo) */}
+      <SavingsBalanceHistory
+        history={savingsHistory}
+        coreSavings={coreSavings}
+        onOpenAdjustmentModal={() => {
+          setAdjustmentAmount("");
+          setAdjustmentNote("");
+          setIsAdjustmentModalOpen(true);
+        }}
+      />
 
       {/* Unspent Weekly Rollover History Accordion */}
       <div className="rounded-2xl border border-zinc-200/80 bg-white overflow-hidden shadow-xs dark:border-zinc-800 dark:bg-zinc-900/50">
@@ -1160,6 +1202,23 @@ export default function SavingsClient({
                   onChange={(e) => setAdjustmentAmount(e.target.value)}
                   placeholder="cth. 250000"
                   className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1 block">
+                  {t.savings.adjustmentNoteLabel}
+                </label>
+                <input
+                  type="text"
+                  value={adjustmentNote}
+                  onChange={(e) => setAdjustmentNote(e.target.value)}
+                  placeholder={
+                    adjustmentType === "deposit"
+                      ? "cth. Gaji bulanan, Setoran awal, Bonus"
+                      : "cth. Keperluan mendadak, Beli obat, Tarik tunai"
+                  }
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
                 />
               </div>
 

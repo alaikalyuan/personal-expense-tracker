@@ -15,6 +15,7 @@ import SavingsClient, {
   SavingsGoalItem,
 } from "./SavingsClient";
 import { ExpenseItem } from "@/app/ExpenseList";
+import { SavingsHistoryItem } from "@/app/actions";
 
 export default async function SavingsPage() {
   const cookieStore = await cookies();
@@ -44,6 +45,25 @@ export default async function SavingsPage() {
 
   // Cumulative surplus already swept/transferred from metadata
   const sweptSurplus = Number(user.user_metadata?.savings_swept_surplus || 0);
+
+  // Savings balance history from metadata
+  const rawHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
+    ? user.user_metadata.savings_history
+    : [];
+
+  let savingsHistory = rawHistory;
+  if (savingsHistory.length === 0 && coreSavings > 0) {
+    savingsHistory = [
+      {
+        id: "initial-balance",
+        type: "manual_deposit",
+        amount: coreSavings,
+        balanceAfter: coreSavings,
+        note: locale === "id" ? "Saldo awal tercatat" : "Initial savings balance",
+        createdAt: user.created_at || new Date().toISOString(),
+      },
+    ];
+  }
 
   // Current week boundary (Monday 00:00)
   const now = getNowInTimezone();
@@ -151,6 +171,7 @@ export default async function SavingsPage() {
       ongoingSpend={ongoingSpend}
       ongoingProjectedSurplus={ongoingProjectedSurplus}
       isGuest={isGuest}
+      savingsHistory={savingsHistory}
     />
   );
 }

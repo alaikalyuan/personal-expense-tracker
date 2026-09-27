@@ -423,6 +423,38 @@ export interface Dictionary {
     adjustmentTypeWithdraw: string;
     adjustmentNoteLabel: string;
     adjustmentSuccess: string;
+    // Balance History
+    balanceHistoryTitle: string;
+    balanceHistorySubtitle: string;
+    balanceHistoryBadge: string;
+    filterAll: string;
+    filterInflow: string;
+    filterOutflow: string;
+    filterGoals: string;
+    searchHistoryPlaceholder: string;
+    runningBalance: string;
+    totalInflow: string;
+    totalOutflow: string;
+    currentBalance: string;
+    netSavings: string;
+    noHistoryTitle: string;
+    noHistoryDesc: string;
+    noMatchingHistory: string;
+    addFirstEntry: string;
+    deleteHistoryConfirm: string;
+    deleteHistoryButton: string;
+    viewHistoryButton: string;
+    typeDeposit: string;
+    typeWithdraw: string;
+    typeSurplus: string;
+    typeSurplusGoal: string;
+    typeGoalAllocate: string;
+    typeGoalWithdraw: string;
+    balanceTrendTitle: string;
+    balanceTrendSubtitle: string;
+    initialBalanceLabel: string;
+    goalMovement: string;
+    closeHistory: string;
   };
 }
 
@@ -858,6 +890,38 @@ export const dictionaries: Record<Locale, Dictionary> = {
       adjustmentTypeWithdraw: "Tarik dari Tabungan (-)",
       adjustmentNoteLabel: "Keterangan (opsional)",
       adjustmentSuccess: "Saldo tabungan berhasil disesuaikan.",
+      // Balance History
+      balanceHistoryTitle: "Riwayat Mutasi Saldo",
+      balanceHistorySubtitle: "Catatan setoran, penarikan, aliran sisa anggaran, dan alokasi target",
+      balanceHistoryBadge: "Mutasi Saldo",
+      filterAll: "Semua",
+      filterInflow: "Masuk (+)",
+      filterOutflow: "Keluar (-)",
+      filterGoals: "Target",
+      searchHistoryPlaceholder: "Cari riwayat mutasi saldo...",
+      runningBalance: "Saldo",
+      totalInflow: "Total Masuk",
+      totalOutflow: "Total Keluar",
+      currentBalance: "Saldo Saat Ini",
+      netSavings: "Saldo Tabungan",
+      noHistoryTitle: "Belum Ada Catatan Mutasi",
+      noHistoryDesc: "Setiap setoran, penarikan, aliran sisa anggaran, atau pergerakan target tabungan akan otomatis tercatat rapi di sini.",
+      noMatchingHistory: "Tidak ada riwayat mutasi yang cocok dengan pencarian.",
+      addFirstEntry: "Catat Setoran / Mutasi",
+      deleteHistoryConfirm: "Apakah kamu yakin ingin menghapus catatan mutasi ini? Saldo tabungan akan disesuaikan kembali.",
+      deleteHistoryButton: "Hapus",
+      viewHistoryButton: "Riwayat Mutasi Saldo",
+      typeDeposit: "Setoran",
+      typeWithdraw: "Penarikan",
+      typeSurplus: "Sisa Anggaran",
+      typeSurplusGoal: "Aliran ke Target",
+      typeGoalAllocate: "Alokasi Target",
+      typeGoalWithdraw: "Tarik Target",
+      balanceTrendTitle: "Perjalanan Saldo Tabungan",
+      balanceTrendSubtitle: "Grafik pertumbuhan saldo tabungan dari waktu ke waktu",
+      initialBalanceLabel: "Saldo Awal Tercatat",
+      goalMovement: "Pergerakan Target",
+      closeHistory: "Tutup Riwayat",
     },
   },
   en: {
@@ -1291,6 +1355,38 @@ export const dictionaries: Record<Locale, Dictionary> = {
       adjustmentTypeWithdraw: "Withdraw from Savings (-)",
       adjustmentNoteLabel: "Note (optional)",
       adjustmentSuccess: "Savings balance updated successfully.",
+      // Balance History
+      balanceHistoryTitle: "Savings Balance History",
+      balanceHistorySubtitle: "Track deposits, withdrawals, surplus rollovers, and goal allocations",
+      balanceHistoryBadge: "Balance History",
+      filterAll: "All",
+      filterInflow: "Inflow (+)",
+      filterOutflow: "Outflow (-)",
+      filterGoals: "Goals",
+      searchHistoryPlaceholder: "Search balance history...",
+      runningBalance: "Balance",
+      totalInflow: "Total Inflow",
+      totalOutflow: "Total Outflow",
+      currentBalance: "Current Balance",
+      netSavings: "Savings Balance",
+      noHistoryTitle: "No Balance History Yet",
+      noHistoryDesc: "Every deposit, withdrawal, surplus transferred, or goal movement will automatically be logged here.",
+      noMatchingHistory: "No transactions match your search.",
+      addFirstEntry: "Record First Deposit / Entry",
+      deleteHistoryConfirm: "Are you sure you want to delete this transaction record? The savings balance will be reverted.",
+      deleteHistoryButton: "Delete",
+      viewHistoryButton: "Balance History",
+      typeDeposit: "Deposit",
+      typeWithdraw: "Withdrawal",
+      typeSurplus: "Surplus Rollover",
+      typeSurplusGoal: "Surplus to Goal",
+      typeGoalAllocate: "Goal Allocation",
+      typeGoalWithdraw: "Goal Withdrawal",
+      balanceTrendTitle: "Balance Trajectory",
+      balanceTrendSubtitle: "Growth of your savings balance over time",
+      initialBalanceLabel: "Initial Balance",
+      goalMovement: "Goal Movement",
+      closeHistory: "Close History",
     },
   },
 };

@@ -512,6 +512,26 @@ export interface SavingsGoal {
   createdAt: string;
 }
 
+export type SavingsTransactionType =
+  | "manual_deposit"
+  | "manual_withdraw"
+  | "surplus_sweep"
+  | "surplus_sweep_goal"
+  | "goal_allocate"
+  | "goal_withdraw";
+
+export interface SavingsHistoryItem {
+  id: string;
+  type: SavingsTransactionType;
+  amount: number;
+  balanceAfter: number;
+  note?: string;
+  createdAt: string;
+  goalId?: string;
+  goalName?: string;
+  goalEmoji?: string;
+}
+
 export interface WeekPatch {
   amount: number;
   patchedAt: string;
@@ -627,12 +647,36 @@ export async function deleteSavingsGoal(goalId: string) {
     ? user.user_metadata.savings_goals
     : [];
 
+  const targetGoal = existingGoals.find((g) => g.id === goalId);
   const updatedGoals = existingGoals.filter((g) => g.id !== goalId);
 
+  const updateData: Record<string, unknown> = {
+    savings_goals: updatedGoals,
+  };
+
+  if (targetGoal && Number(targetGoal.allocatedAmount || 0) > 0) {
+    const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
+    const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
+      ? user.user_metadata.savings_history
+      : [];
+
+    const newEntry: SavingsHistoryItem = {
+      id: crypto.randomUUID(),
+      type: "goal_withdraw",
+      amount: Number(targetGoal.allocatedAmount),
+      balanceAfter: currentManual,
+      note: `Pengembalian dana dari penghapusan ${targetGoal.emoji || "🎯"} ${targetGoal.name}`,
+      goalId,
+      goalName: targetGoal.name,
+      goalEmoji: targetGoal.emoji,
+      createdAt: new Date().toISOString(),
+    };
+
+    updateData.savings_history = [newEntry, ...existingHistory].slice(0, 200);
+  }
+
   const { error: updateError } = await supabase.auth.updateUser({
-    data: {
-      savings_goals: updatedGoals,
-    },
+    data: updateData,
   });
 
   if (updateError) {
@@ -663,6 +707,7 @@ export async function allocateSavingsToGoal(goalId: string, amount: number) {
     ? user.user_metadata.savings_goals
     : [];
 
+  const targetGoal = existingGoals.find((g) => g.id === goalId);
   const updatedGoals = existingGoals.map((g) => {
     if (g.id === goalId) {
       return {
@@ -673,9 +718,27 @@ export async function allocateSavingsToGoal(goalId: string, amount: number) {
     return g;
   });
 
+  const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
+  const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
+    ? user.user_metadata.savings_history
+    : [];
+
+  const newEntry: SavingsHistoryItem = {
+    id: crypto.randomUUID(),
+    type: "goal_allocate",
+    amount,
+    balanceAfter: currentManual,
+    note: `Alokasi dana ke ${targetGoal?.emoji || "🎯"} ${targetGoal?.name || "Target"}`,
+    goalId,
+    goalName: targetGoal?.name,
+    goalEmoji: targetGoal?.emoji,
+    createdAt: new Date().toISOString(),
+  };
+
   const { error: updateError } = await supabase.auth.updateUser({
     data: {
       savings_goals: updatedGoals,
+      savings_history: [newEntry, ...existingHistory].slice(0, 200),
     },
   });
 
@@ -707,6 +770,7 @@ export async function withdrawSavingsFromGoal(goalId: string, amount: number) {
     ? user.user_metadata.savings_goals
     : [];
 
+  const targetGoal = existingGoals.find((g) => g.id === goalId);
   const updatedGoals = existingGoals.map((g) => {
     if (g.id === goalId) {
       const current = Number(g.allocatedAmount || 0);
@@ -718,9 +782,27 @@ export async function withdrawSavingsFromGoal(goalId: string, amount: number) {
     return g;
   });
 
+  const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
+  const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
+    ? user.user_metadata.savings_history
+    : [];
+
+  const newEntry: SavingsHistoryItem = {
+    id: crypto.randomUUID(),
+    type: "goal_withdraw",
+    amount,
+    balanceAfter: currentManual,
+    note: `Penarikan dana dari ${targetGoal?.emoji || "🎯"} ${targetGoal?.name || "Target"}`,
+    goalId,
+    goalName: targetGoal?.name,
+    goalEmoji: targetGoal?.emoji,
+    createdAt: new Date().toISOString(),
+  };
+
   const { error: updateError } = await supabase.auth.updateUser({
     data: {
       savings_goals: updatedGoals,
+      savings_history: [newEntry, ...existingHistory].slice(0, 200),
     },
   });
 
@@ -824,17 +906,46 @@ export async function recordManualSavingsAdjustment(formData: FormData) {
 
   const type = formData.get("type") as "deposit" | "withdraw";
   const amount = Number(formData.get("amount"));
+  const note = (formData.get("note") as string)?.trim() || undefined;
 
   if (isNaN(amount) || amount <= 0) {
     throw new Error("Invalid adjustment amount");
   }
 
   const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
-  const updatedManual = type === "deposit" ? currentManual + amount : currentManual - amount;
+  const updatedManual = type === "deposit" ? currentManual + amount : Math.max(0, currentManual - amount);
+
+  const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
+    ? user.user_metadata.savings_history
+    : [];
+
+  const baseHistory: SavingsHistoryItem[] =
+    existingHistory.length === 0 && currentManual > 0
+      ? [
+          {
+            id: "initial-balance",
+            type: "manual_deposit",
+            amount: currentManual,
+            balanceAfter: currentManual,
+            note: "Saldo awal tercatat",
+            createdAt: user.created_at || new Date().toISOString(),
+          },
+        ]
+      : existingHistory;
+
+  const newEntry: SavingsHistoryItem = {
+    id: crypto.randomUUID(),
+    type: type === "deposit" ? "manual_deposit" : "manual_withdraw",
+    amount,
+    balanceAfter: updatedManual,
+    note: note || (type === "deposit" ? "Setor ke Tabungan" : "Penarikan Tabungan"),
+    createdAt: new Date().toISOString(),
+  };
 
   const { error: updateError } = await supabase.auth.updateUser({
     data: {
       savings_manual_deposit: updatedManual,
+      savings_history: [newEntry, ...baseHistory].slice(0, 200),
     },
   });
 
@@ -868,17 +979,16 @@ export async function sweepSurplusToSavings(amount: number, targetGoalId?: strin
   const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
   const updatedManual = currentManual + amount;
 
-  const updateData: Record<string, unknown> = {
-    savings_swept_surplus: updatedSwept,
-    savings_manual_deposit: updatedManual,
-  };
+  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
+    ? user.user_metadata.savings_goals
+    : [];
+
+  let targetGoal: SavingsGoal | undefined;
+  let updatedGoals = existingGoals;
 
   if (targetGoalId) {
-    const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
-      ? user.user_metadata.savings_goals
-      : [];
-
-    const updatedGoals = existingGoals.map((g) => {
+    targetGoal = existingGoals.find((g) => g.id === targetGoalId);
+    updatedGoals = existingGoals.map((g) => {
       if (g.id === targetGoalId) {
         return {
           ...g,
@@ -887,12 +997,135 @@ export async function sweepSurplusToSavings(amount: number, targetGoalId?: strin
       }
       return g;
     });
+  }
 
+  const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
+    ? user.user_metadata.savings_history
+    : [];
+
+  const baseHistory: SavingsHistoryItem[] =
+    existingHistory.length === 0 && currentManual > 0
+      ? [
+          {
+            id: "initial-balance",
+            type: "manual_deposit",
+            amount: currentManual,
+            balanceAfter: currentManual,
+            note: "Saldo awal tercatat",
+            createdAt: user.created_at || new Date().toISOString(),
+          },
+        ]
+      : existingHistory;
+
+  const newEntry: SavingsHistoryItem = {
+    id: crypto.randomUUID(),
+    type: targetGoalId ? "surplus_sweep_goal" : "surplus_sweep",
+    amount,
+    balanceAfter: updatedManual,
+    note: targetGoal
+      ? `Aliran sisa anggaran ke ${targetGoal.emoji || "🎯"} ${targetGoal.name}`
+      : "Aliran sisa anggaran mingguan ke tabungan",
+    goalId: targetGoal?.id,
+    goalName: targetGoal?.name,
+    goalEmoji: targetGoal?.emoji,
+    createdAt: new Date().toISOString(),
+  };
+
+  const updateData: Record<string, unknown> = {
+    savings_swept_surplus: updatedSwept,
+    savings_manual_deposit: updatedManual,
+    savings_history: [newEntry, ...baseHistory].slice(0, 200),
+  };
+
+  if (targetGoalId) {
     updateData.savings_goals = updatedGoals;
   }
 
   const { error: updateError } = await supabase.auth.updateUser({
     data: updateData,
+  });
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/savings");
+}
+
+export async function deleteSavingsHistoryEntry(entryId: string) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
+    ? user.user_metadata.savings_history
+    : [];
+
+  const entry = existingHistory.find((item) => item.id === entryId);
+  if (!entry) {
+    return;
+  }
+
+  let currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
+  let currentSwept = Number(user.user_metadata?.savings_swept_surplus || 0);
+  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
+    ? user.user_metadata.savings_goals
+    : [];
+  let updatedGoals = existingGoals;
+
+  // Revert the effect of the entry
+  if (entry.type === "manual_deposit") {
+    currentManual = Math.max(0, currentManual - entry.amount);
+  } else if (entry.type === "manual_withdraw") {
+    currentManual = currentManual + entry.amount;
+  } else if (entry.type === "surplus_sweep") {
+    currentManual = Math.max(0, currentManual - entry.amount);
+    currentSwept = Math.max(0, currentSwept - entry.amount);
+  } else if (entry.type === "surplus_sweep_goal") {
+    currentManual = Math.max(0, currentManual - entry.amount);
+    currentSwept = Math.max(0, currentSwept - entry.amount);
+    if (entry.goalId) {
+      updatedGoals = existingGoals.map((g) =>
+        g.id === entry.goalId
+          ? { ...g, allocatedAmount: Math.max(0, Number(g.allocatedAmount || 0) - entry.amount) }
+          : g
+      );
+    }
+  } else if (entry.type === "goal_allocate") {
+    if (entry.goalId) {
+      updatedGoals = existingGoals.map((g) =>
+        g.id === entry.goalId
+          ? { ...g, allocatedAmount: Math.max(0, Number(g.allocatedAmount || 0) - entry.amount) }
+          : g
+      );
+    }
+  } else if (entry.type === "goal_withdraw") {
+    if (entry.goalId) {
+      updatedGoals = existingGoals.map((g) =>
+        g.id === entry.goalId
+          ? { ...g, allocatedAmount: Number(g.allocatedAmount || 0) + entry.amount }
+          : g
+      );
+    }
+  }
+
+  const updatedHistory = existingHistory.filter((item) => item.id !== entryId);
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: {
+      savings_manual_deposit: currentManual,
+      savings_swept_surplus: currentSwept,
+      savings_goals: updatedGoals,
+      savings_history: updatedHistory,
+    },
   });
 
   if (updateError) {
