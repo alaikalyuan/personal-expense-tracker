@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import type { Viewport } from "next";
 import BottomNav from "./BottomNav";
+import ServiceWorkerRegister from "./ServiceWorkerRegister";
 import { LanguageProvider } from "@/utils/i18n/context";
 import { getLocaleServer } from "@/utils/i18n/server";
 import { ThemeProvider } from "@/utils/theme/context";
@@ -60,6 +61,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased min-h-screen relative`}>
         <ThemeProvider initialTheme={theme}>
           <LanguageProvider initialLocale={locale}>
+            <ServiceWorkerRegister />
             {children}
             <BottomNav />
           </LanguageProvider>

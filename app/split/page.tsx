@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import SplitBillHistoryClient, { HistoryBillRecord } from "./SplitBillHistoryClient";
+import { SubscriptionRecord } from "@/app/subscriptions/types";
 
 export default async function SplitHistoryPage() {
   const cookieStore = await cookies();
@@ -59,11 +60,22 @@ export default async function SplitHistoryPage() {
     console.error("Error fetching split bills:", error);
   }
 
+  // Fetch active shared subscriptions
+  const { data: rawSplitSubs } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("is_split", true)
+    .order("next_renewal_date", { ascending: true });
+
   const bills = (rawBills || []) as unknown as HistoryBillRecord[];
 
   return (
     <main className="max-w-md mx-auto p-4 pb-28 font-sans">
-      <SplitBillHistoryClient initialBills={bills} />
+      <SplitBillHistoryClient
+        initialBills={bills}
+        splitSubscriptions={(rawSplitSubs || []) as unknown as SubscriptionRecord[]}
+      />
     </main>
   );
 }

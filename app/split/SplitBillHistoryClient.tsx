@@ -10,12 +10,17 @@ import {
   ExternalLink,
   Search,
   AlertTriangle,
+  CreditCard,
+  Sparkles,
 } from "lucide-react";
 import {
   calculateSplitBreakdown,
   invalidateSplitCache,
 } from "@/utils/splitCalculator";
 import { deleteSplitBill } from "@/app/split/actions";
+import { SubscriptionRecord } from "@/app/subscriptions/types";
+import { createSplitBillFromSubscription } from "@/app/subscriptions/actions";
+import { useRouter } from "next/navigation";
 
 export interface HistoryBillRecord {
   id: string;
@@ -57,16 +62,33 @@ export interface HistoryBillRecord {
 
 interface SplitBillHistoryClientProps {
   initialBills: HistoryBillRecord[];
+  splitSubscriptions?: SubscriptionRecord[];
 }
 
 export default function SplitBillHistoryClient({
   initialBills,
+  splitSubscriptions = [],
 }: SplitBillHistoryClientProps) {
+  const router = useRouter();
   const [bills, setBills] = useState<HistoryBillRecord[]>(initialBills);
   const [filterTab, setFilterTab] = useState<"all" | "active" | "settled">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingBillId, setDeletingBillId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [triggeringSubId, setTriggeringSubId] = useState<string | null>(null);
+
+  const handleGenerateSplitFromSub = async (sub: SubscriptionRecord) => {
+    if (!confirm(`Buat Split Bill sekarang untuk "${sub.name}"?`)) return;
+    setTriggeringSubId(sub.id);
+    try {
+      const res = await createSplitBillFromSubscription(sub.id);
+      router.push(`/split/${res.billId}`);
+    } catch (err: unknown) {
+      alert((err as Error).message);
+    } finally {
+      setTriggeringSubId(null);
+    }
+  };
 
   // Compute stats and totals for each bill
   const billsWithStats = useMemo(() => {
@@ -221,6 +243,57 @@ export default function SplitBillHistoryClient({
           </span>
         </div>
       </div>
+
+      {/* Recurring Shared Subscriptions Section */}
+      {splitSubscriptions.length > 0 && (
+        <div className="p-4 rounded-3xl border border-purple-200/80 dark:border-purple-900/50 bg-purple-50/40 dark:bg-purple-950/20 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                Langganan Patungan Berulang ({splitSubscriptions.length})
+              </h3>
+            </div>
+            <Link
+              href="/subscriptions"
+              className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
+            >
+              Kelola &rarr;
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {splitSubscriptions.map((sub) => {
+              const friendsCount = (sub.split_config?.friends?.length || 0) + 1;
+              const perPerson = sub.price / friendsCount;
+              return (
+                <div
+                  key={sub.id}
+                  className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-purple-100 dark:border-purple-900/30 shadow-2xs"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                      {sub.name}
+                    </p>
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      Rp {Math.round(perPerson).toLocaleString("id-ID")}/org • Jadwal: {sub.next_renewal_date}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateSplitFromSub(sub)}
+                    disabled={triggeringSubId === sub.id}
+                    className="shrink-0 flex items-center gap-1 rounded-xl bg-purple-600 text-white hover:bg-purple-500 dark:bg-purple-500 dark:hover:bg-purple-400 dark:text-zinc-950 px-2.5 py-1.5 text-[11px] font-semibold transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>{triggeringSubId === sub.id ? "Membuat..." : "Buat Bill"}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Controls: Search & Tabs */}
       <div className="space-y-3">

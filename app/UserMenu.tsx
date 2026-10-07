@@ -16,9 +16,12 @@ import {
   Moon,
   Sparkles,
   Receipt,
+  CreditCard,
+  Bell,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { useTheme } from "@/utils/theme/context";
+import NotificationSettingsModal from "./NotificationSettingsModal";
 
 interface UserMenuProps {
   isGuest?: boolean;
@@ -28,6 +31,7 @@ interface UserMenuProps {
 export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { locale, setLocale, t } = useTranslation();
@@ -158,6 +162,52 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuPro
               </Link>
             )}
 
+            {/* Subscriptions Link */}
+            {isGuest ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  if (onOpenUpgrade) {
+                    onOpenUpgrade("login");
+                  } else {
+                    router.push("/login?next=/subscriptions");
+                  }
+                }}
+                className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer w-full text-left"
+              >
+                <div className="flex items-center gap-2.5">
+                  <CreditCard className="w-3.5 h-3.5 text-pink-500 dark:text-pink-400" />
+                  <span>Langganan</span>
+                </div>
+                <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-md">
+                  Login
+                </span>
+              </button>
+            ) : (
+              <Link
+                href="/subscriptions"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
+              >
+                <CreditCard className="w-3.5 h-3.5 text-pink-500 dark:text-pink-400" />
+                <span>Langganan</span>
+              </Link>
+            )}
+
+            {/* Notification & Reminder Settings */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                setIsNotificationModalOpen(true);
+              }}
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer w-full text-left"
+            >
+              <Bell className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400" />
+              <span>Notifikasi & Pengingat</span>
+            </button>
+
             <div className="my-1 border-t border-zinc-200/80 dark:border-zinc-800/80" />
 
             {/* Language Selector */}
@@ -241,7 +291,7 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuPro
                   if (onOpenUpgrade) {
                     onOpenUpgrade("signup");
                   } else {
-                    window.location.href = "/?auth=signup";
+                    router.push("/?auth=signup");
                   }
                 }}
                 className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
@@ -263,6 +313,13 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuPro
           </div>
         </div>
       )}
+
+      {/* PWA Notification & Reminder Settings Modal */}
+      <NotificationSettingsModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+        isGuest={isGuest}
+      />
     </div>
   );
 }

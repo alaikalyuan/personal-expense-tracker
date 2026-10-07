@@ -13,10 +13,11 @@ import {
   getDate,
   setDate,
 } from "date-fns";
+import Link from "next/link";
 import UserMenu from "./UserMenu";
 import TrackingStreak from "./TrackingStreak";
 import { StreakData } from "@/utils/streak";
-import { ShieldAlert, Sparkles } from "lucide-react";
+import { ShieldAlert, Sparkles, CreditCard, Lightbulb } from "lucide-react";
 import InstallPrompt from "./InstallPrompt";
 import CadenceToggle from "./CadenceToggle";
 import ProjectedBurnCard from "./ProjectedBurnCard";
@@ -27,6 +28,7 @@ import { useTranslation } from "@/utils/i18n/context";
 import { calculateExemptTotals, isExpenseExempt } from "@/utils/exemptions";
 import WelcomeGuestModal from "./WelcomeGuestModal";
 import UpgradeAccountModal from "./UpgradeAccountModal";
+import { getDailyQuote } from "@/utils/pwa/quotes";
 
 interface DashboardClientProps {
   initialCadence: "week" | "month";
@@ -40,6 +42,15 @@ interface DashboardClientProps {
   initialMergedCount?: number;
   initialAuthMode?: "login" | "signup";
   initialAuthError?: string;
+  upcomingSubscriptions?: Array<{
+    id: string;
+    name: string;
+    price: number;
+    billing_cycle: string;
+    next_renewal_date: string;
+    is_split: boolean;
+    payment_platform: string;
+  }>;
 }
 
 export default function DashboardClient({
@@ -54,13 +65,14 @@ export default function DashboardClient({
   initialMergedCount = 0,
   initialAuthMode,
   initialAuthError,
+  upcomingSubscriptions = [],
 }: DashboardClientProps) {
   const [cadence, setCadence] = useState<"week" | "month">(initialCadence);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(Boolean(initialAuthMode));
   const [authModalMode, setAuthModalMode] = useState<"signup" | "login">(initialAuthMode || "signup");
   const [authModalError, setAuthModalError] = useState<string | null>(initialAuthError || null);
   const [mergedToastCount, setMergedToastCount] = useState<number>(initialMergedCount);
-  const { t, formatDate, getCategoryLabel } = useTranslation();
+  const { locale, t, formatDate, getCategoryLabel } = useTranslation();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -98,6 +110,18 @@ export default function DashboardClient({
 
   const isMonth = cadence === "month";
   const now = useMemo(() => new Date(nowIso), [nowIso]);
+
+  const todayDateStr = useMemo(() => format(now, "yyyy-MM-dd"), [now]);
+  const hasExpenseToday = useMemo(() => {
+    return allExpenses.some((item) => {
+      const d = item.spent_at.includes("T") ? item.spent_at.split("T")[0] : item.spent_at;
+      return d === todayDateStr;
+    });
+  }, [allExpenses, todayDateStr]);
+
+  const dailyQuote = useMemo(() => {
+    return getDailyQuote(locale);
+  }, [locale]);
 
   // Date boundaries for Week
   const startOfWeekDate = useMemo(() => startOfWeek(now, { weekStartsOn: 1 }), [now]);
@@ -303,6 +327,51 @@ export default function DashboardClient({
 
       {/* PWA Install Banner */}
       <InstallPrompt />
+
+      {/* Upcoming Subscriptions Renewal Banner */}
+      {upcomingSubscriptions.length > 0 && (
+        <Link
+          href="/subscriptions"
+          className="rounded-2xl border border-pink-500/30 bg-pink-500/10 p-3.5 dark:border-pink-500/20 dark:bg-pink-500/10 flex items-center justify-between gap-3 transition-all hover:bg-pink-500/15"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-pink-500/20 text-pink-600 dark:text-pink-400">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                {upcomingSubscriptions.length} Langganan Segera Jatuh Tempo
+              </p>
+              <p className="text-[11px] text-zinc-600 dark:text-zinc-400 truncate">
+                {upcomingSubscriptions.map((s) => s.name).join(", ")}
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 shrink-0">
+            Lihat &rarr;
+          </span>
+        </Link>
+      )}
+
+      {/* Daily Motivational Quote & Record Reminder (if no expenses logged today) */}
+      {!hasExpenseToday && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 dark:border-amber-500/20 dark:bg-amber-500/10 flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 mt-0.5">
+            <Lightbulb className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+              Kutipan Finansial Hari Ini
+            </p>
+            <p className="text-[11px] text-zinc-700 dark:text-zinc-300 italic mt-0.5 leading-snug">
+              &ldquo;{dailyQuote.quote}&rdquo;
+            </p>
+            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium">
+              — {dailyQuote.author}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Hero Spent Summary */}
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-linear-to-b dark:from-zinc-900 dark:to-zinc-950 dark:shadow-sm">

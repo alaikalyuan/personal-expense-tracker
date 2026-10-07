@@ -82,6 +82,7 @@ export default async function DashboardPage(props: {
     { data: unifiedExpenses },
     { data: allUserExpenseDates },
     { data: priorMtdExpenses },
+    { data: upcomingSubscriptions },
   ] = await Promise.all([
     supabase
       .from("expenses")
@@ -101,6 +102,15 @@ export default async function DashboardPage(props: {
       .eq("user_id", user.id)
       .gte("spent_at", startOfLastMonthStr)
       .lte("spent_at", priorMtdEndStr),
+    !isGuest
+      ? supabase
+          .from("subscriptions")
+          .select("id, name, price, billing_cycle, next_renewal_date, is_split, payment_platform")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .lte("next_renewal_date", format(addDays(now, 4), "yyyy-MM-dd"))
+          .order("next_renewal_date", { ascending: true })
+      : Promise.resolve({ data: [] }),
   ]);
 
   const spentDates = (allUserExpenseDates || []).map((e) => e.spent_at);
@@ -129,6 +139,7 @@ export default async function DashboardPage(props: {
       initialMergedCount={initialMergedCount}
       initialAuthMode={initialAuthMode}
       initialAuthError={initialAuthError}
+      upcomingSubscriptions={upcomingSubscriptions || []}
     />
   );
 }
