@@ -17,7 +17,7 @@ import Link from "next/link";
 import UserMenu from "./UserMenu";
 import TrackingStreak from "./TrackingStreak";
 import { StreakData } from "@/utils/streak";
-import { ShieldAlert, Sparkles, CreditCard, Lightbulb } from "lucide-react";
+import { ShieldAlert, Sparkles, CreditCard } from "lucide-react";
 import InstallPrompt from "./InstallPrompt";
 import CadenceToggle from "./CadenceToggle";
 import ProjectedBurnCard from "./ProjectedBurnCard";
@@ -28,7 +28,6 @@ import { useTranslation } from "@/utils/i18n/context";
 import { calculateExemptTotals, isExpenseExempt } from "@/utils/exemptions";
 import WelcomeGuestModal from "./WelcomeGuestModal";
 import UpgradeAccountModal from "./UpgradeAccountModal";
-import { getDailyQuote } from "@/utils/pwa/quotes";
 
 interface DashboardClientProps {
   initialCadence: "week" | "month";
@@ -110,18 +109,6 @@ export default function DashboardClient({
 
   const isMonth = cadence === "month";
   const now = useMemo(() => new Date(nowIso), [nowIso]);
-
-  const todayDateStr = useMemo(() => format(now, "yyyy-MM-dd"), [now]);
-  const hasExpenseToday = useMemo(() => {
-    return allExpenses.some((item) => {
-      const d = item.spent_at.includes("T") ? item.spent_at.split("T")[0] : item.spent_at;
-      return d === todayDateStr;
-    });
-  }, [allExpenses, todayDateStr]);
-
-  const dailyQuote = useMemo(() => {
-    return getDailyQuote(locale);
-  }, [locale]);
 
   // Date boundaries for Week
   const startOfWeekDate = useMemo(() => startOfWeek(now, { weekStartsOn: 1 }), [now]);
@@ -351,26 +338,6 @@ export default function DashboardClient({
             Lihat &rarr;
           </span>
         </Link>
-      )}
-
-      {/* Daily Motivational Quote & Record Reminder (if no expenses logged today) */}
-      {!hasExpenseToday && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 dark:border-amber-500/20 dark:bg-amber-500/10 flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 mt-0.5">
-            <Lightbulb className="w-4 h-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-              Kutipan Finansial Hari Ini
-            </p>
-            <p className="text-[11px] text-zinc-700 dark:text-zinc-300 italic mt-0.5 leading-snug">
-              &ldquo;{dailyQuote.quote}&rdquo;
-            </p>
-            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium">
-              — {dailyQuote.author}
-            </p>
-          </div>
-        </div>
       )}
 
       {/* Hero Spent Summary */}
