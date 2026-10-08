@@ -1,5 +1,6 @@
 import type { CategoryKey } from "./i18n/dictionaries";
 import type { QuickChip } from "./quickChips";
+import type { SupportedCurrency } from "./money";
 import { addDays, subDays, addWeeks, subWeeks, startOfWeek, format, parseISO, getDate, getMonth, setDate, setMonth } from "date-fns";
 
 export interface ParsedExpense {
@@ -121,7 +122,8 @@ const CATEGORY_REGEXES: Record<Exclude<CategoryKey, "Others">, RegExp> = {
 export function parseQuickExpenseInput(
   input: string,
   todayStr: string,
-  customChips: QuickChip[] = []
+  customChips: QuickChip[] = [],
+  currency: SupportedCurrency = "IDR"
 ): ParsedExpense {
   const trimmed = input.trim();
   if (!trimmed) {
@@ -328,42 +330,58 @@ export function parseQuickExpenseInput(
   let amount: number | null = null;
   let matchedAmountText: string | undefined;
 
+  const isIdr = currency === "IDR";
+
   // Helper to parse unit string (e.g. "15k" -> 15000, "20.000" -> 20000)
   const parseUnitAmount = (raw: string): number | null => {
     const clean = raw.trim().toLowerCase();
     // Millions
-    const mMatch = clean.match(/^(\d+(?:[.,]\d+)?)\s*(?:jt|juta|mio|m)$/);
+    const mPattern = isIdr
+      ? /^(\d+(?:[.,]\d+)?)\s*(?:jt|juta|mio|m)$/
+      : /^(\d+(?:[.,]\d+)?)\s*(?:m|mio)$/;
+    const mMatch = clean.match(mPattern);
     if (mMatch) {
       const v = parseFloat(mMatch[1].replace(",", "."));
       return isNaN(v) ? null : Math.round(v * 1000000);
     }
     // Thousands suffix
-    const kMatch = clean.match(/^(\d+(?:[.,]\d+)?)\s*(?:k|rb|ribu)$/);
+    const kPattern = isIdr
+      ? /^(\d+(?:[.,]\d+)?)\s*(?:k|rb|ribu)$/
+      : /^(\d+(?:[.,]\d+)?)\s*k$/;
+    const kMatch = clean.match(kPattern);
     if (kMatch) {
       const v = parseFloat(kMatch[1].replace(",", "."));
       return isNaN(v) ? null : Math.round(v * 1000);
     }
     // Formatted thousands dot/comma or currency
-    const numClean = clean.replace(/^(?:rp|idr)\.?\s*/i, "").replace(/[.,]/g, "");
-    const val = parseInt(numClean, 10);
+    const numClean = clean.replace(/^(?:rp|idr|rm|usd|eur|sgd|aud|[$€])\.?\s*/i, "");
+    if (!isIdr && /\d+\.\d{1,2}$/.test(numClean)) {
+      const val = parseFloat(numClean);
+      return isNaN(val) ? null : val;
+    }
+    const val = parseInt(numClean.replace(/[.,]/g, ""), 10);
     return isNaN(val) ? null : val;
   };
 
   // Pattern A0: Explicit Multipliers (e.g. "2x 15k", "kopi 18k x 2", "2 * 20.000", "3 porsi 25k")
-  const prefixMultiplierRegex = /\b(\d+)\s*(?:x|\*|porsi|pcs|cup|gelas|bungkus|paket)\s+(\d+(?:[.,]\d+)?\s*(?:k|rb|ribu|jt|juta|mio|m)?|\d{1,3}(?:[.,]\d{3})+)\b/i;
-  const prefixMulMatch = text.match(prefixMultiplierRegex);
+  const qtyMultiplierPattern = isIdr
+    ? /\b(\d+)\s*(?:x|\*|porsi|pcs|cup|gelas|bungkus|paket)\s+(\d+(?:[.,]\d+)?\s*(?:k|rb|ribu|jt|juta|mio|m)?|\d{1,3}(?:[.,]\d{3})+)\b/i
+    : /\b(\d+)\s*(?:x|\*|pcs|cup|pack)\s+(\d+(?:[.,]\d+)?\s*(?:k|m|mio)?|\d{1,3}(?:[.,]\d{3})+)\b/i;
+  const prefixMulMatch = text.match(qtyMultiplierPattern);
   if (prefixMulMatch) {
     const qty = parseInt(prefixMulMatch[1], 10);
     const unitPrice = parseUnitAmount(prefixMulMatch[2]);
     if (!isNaN(qty) && qty > 0 && unitPrice !== null && unitPrice > 0) {
       amount = qty * unitPrice;
       matchedAmountText = prefixMulMatch[0];
-      text = text.replace(prefixMultiplierRegex, " ");
+      text = text.replace(qtyMultiplierPattern, " ");
     }
   }
 
   if (amount === null) {
-    const suffixMultiplierRegex = /\b(\d+(?:[.,]\d+)?\s*(?:k|rb|ribu|jt|juta|mio|m)?|\d{1,3}(?:[.,]\d{3})+)\s*(?:x|\*)\s*(\d+)\b/i;
+    const suffixMultiplierRegex = isIdr
+      ? /\b(\d+(?:[.,]\d+)?\s*(?:k|rb|ribu|jt|juta|mio|m)?|\d{1,3}(?:[.,]\d{3})+)\s*(?:x|\*)\s*(\d+)\b/i
+      : /\b(\d+(?:[.,]\d+)?\s*(?:k|m|mio)?|\d{1,3}(?:[.,]\d{3})+)\s*(?:x|\*)\s*(\d+)\b/i;
     const suffixMulMatch = text.match(suffixMultiplierRegex);
     if (suffixMulMatch) {
       const unitPrice = parseUnitAmount(suffixMulMatch[1]);
@@ -378,7 +396,9 @@ export function parseQuickExpenseInput(
 
   // Pattern A: Suffix multiplier (e.g. 25k, 25.5k, 20rb, 50ribu, 100k)
   if (amount === null) {
-    const suffixRegex = /\b(\d+(?:[.,]\d+)?)\s*(k|rb|ribu)\b/i;
+    const suffixRegex = isIdr
+      ? /\b(\d+(?:[.,]\d+)?)\s*(k|rb|ribu)\b/i
+      : /\b(\d+(?:[.,]\d+)?)\s*(k)\b/i;
     const suffixMatch = text.match(suffixRegex);
 
     if (suffixMatch) {
@@ -393,7 +413,9 @@ export function parseQuickExpenseInput(
 
   // Pattern B: Millions suffix multiplier (e.g. 1.5jt, 2juta, 1m)
   if (amount === null) {
-    const millionsRegex = /\b(\d+(?:[.,]\d+)?)\s*(jt|juta|mio)\b/i;
+    const millionsRegex = isIdr
+      ? /\b(\d+(?:[.,]\d+)?)\s*(jt|juta|mio)\b/i
+      : /\b(\d+(?:[.,]\d+)?)\s*(m|mio)\b/i;
     const millionsMatch = text.match(millionsRegex);
     if (millionsMatch) {
       const rawVal = parseFloat(millionsMatch[1].replace(",", "."));
@@ -405,22 +427,42 @@ export function parseQuickExpenseInput(
     }
   }
 
-  // Pattern C: Currency prefix (e.g. Rp 25.000, Rp25000, IDR 50.000, Rp 35,000)
+  // Pattern C: Currency prefix (e.g. Rp 25.000, $12.50, €15, RM 25)
   if (amount === null) {
-    const rpRegex = /\b(?:rp|idr)\.?\s*(\d{1,3}(?:[.,]\d{3})+|\d+)\b/i;
-    const rpMatch = text.match(rpRegex);
-    if (rpMatch) {
-      const cleanNum = rpMatch[1].replace(/[.,]/g, "");
-      const val = parseInt(cleanNum, 10);
+    const currPrefixRegex = /(?:[$€]|s\$|a\$|\b(?:rp|idr|rm|usd|eur|sgd|aud)\b\.?)\s*(\d{1,3}(?:[.,]\d{3})+|\d+(?:\.\d{1,2})?|\d+)/i;
+    const currMatch = text.match(currPrefixRegex);
+    if (currMatch) {
+      const matchedNumStr = currMatch[1];
+      let val: number;
+      if (!isIdr && /^\d+\.\d{1,2}$/.test(matchedNumStr)) {
+        val = parseFloat(matchedNumStr);
+      } else {
+        const cleanNum = matchedNumStr.replace(/[.,]/g, "");
+        val = parseInt(cleanNum, 10);
+      }
       if (!isNaN(val)) {
         amount = val;
-        matchedAmountText = rpMatch[0];
-        text = text.replace(rpRegex, " ");
+        matchedAmountText = currMatch[0];
+        text = text.replace(currPrefixRegex, " ");
       }
     }
   }
 
-  // Pattern D: Formatted number with dots or commas (e.g. 25.000, 150.000, 25,000)
+  // Pattern D: Decimal numbers for non-IDR currencies (e.g. "coffee 4.50" or "lunch 12.99")
+  if (amount === null && !isIdr) {
+    const decimalRegex = /\b(\d+\.\d{1,2})\b/;
+    const decimalMatch = text.match(decimalRegex);
+    if (decimalMatch) {
+      const val = parseFloat(decimalMatch[1]);
+      if (!isNaN(val)) {
+        amount = val;
+        matchedAmountText = decimalMatch[0];
+        text = text.replace(decimalRegex, " ");
+      }
+    }
+  }
+
+  // Pattern E: Formatted number with dots or commas (e.g. 25.000, 150.000, 25,000)
   if (amount === null) {
     const formattedRegex = /\b(\d{1,3}(?:[.,]\d{3})+)\b/;
     const formattedMatch = text.match(formattedRegex);
@@ -435,12 +477,13 @@ export function parseQuickExpenseInput(
     }
   }
 
-  // Pattern E: Disambiguated plain numbers (e.g. "2 roti 15000" or "indomie 25000")
+  // Pattern F: Disambiguated plain numbers (e.g. "2 roti 15000" or "indomie 25000" or "lunch 15")
   if (amount === null) {
     const plainMatches = [...text.matchAll(/\b(\d+)\b/g)];
     if (plainMatches.length > 0) {
-      // Find candidate amounts: prioritize numbers >= 100
-      let chosenMatch = plainMatches.find((m) => parseInt(m[1], 10) >= 100);
+      // For IDR prioritize numbers >= 100, for other currencies any positive integer
+      const minThreshold = isIdr ? 100 : 1;
+      let chosenMatch = plainMatches.find((m) => parseInt(m[1], 10) >= minThreshold);
       if (!chosenMatch) {
         // Fallback to the rightmost number
         chosenMatch = plainMatches[plainMatches.length - 1];
@@ -466,7 +509,7 @@ export function parseQuickExpenseInput(
 
   // Clean up remaining text to form the name
   let name = text
-    .replace(/\b(?:rp|idr)\b/gi, "")
+    .replace(/(?:[$€]|s\$|a\$|\b(?:rp|idr|rm|usd|eur|sgd|aud)\b)/gi, "")
     .replace(/[#@][\w-]+/g, "") // Clean remaining hashtags/mentions
     .replace(/\s+/g, " ")
     .trim();

@@ -11,13 +11,23 @@ import {
   Locale,
   CategoryKey,
 } from "./dictionaries";
+import {
+  SupportedCurrency,
+  DEFAULT_CURRENCY,
+  formatMoney,
+  getCurrencySymbol,
+  FormatMoneyOptions,
+} from "@/utils/money";
 
 interface LanguageContextType {
   locale: Locale;
   setLocale: (locale: Locale) => void;
+  currency: SupportedCurrency;
+  setCurrency: (currency: SupportedCurrency) => void;
+  currencySymbol: string;
   t: Dictionary;
   formatDate: (date: Date | string | number, formatStr: string) => string;
-  formatCurrency: (amount: number) => string;
+  formatCurrency: (amount: number, options?: FormatMoneyOptions) => string;
   getCategoryLabel: (category: string) => string;
   isPending: boolean;
 }
@@ -32,11 +42,14 @@ const dateLocales = {
 export function LanguageProvider({
   children,
   initialLocale = "id",
+  initialCurrency = DEFAULT_CURRENCY,
 }: {
   children: React.ReactNode;
   initialLocale?: Locale;
+  initialCurrency?: SupportedCurrency;
 }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const [currency, setCurrencyState] = useState<SupportedCurrency>(initialCurrency);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -44,6 +57,15 @@ export function LanguageProvider({
     setLocaleState(newLocale);
     // Set cookie for 1 year
     document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
+    startTransition(() => {
+      router.refresh();
+    });
+  };
+
+  const setCurrency = (newCurrency: SupportedCurrency) => {
+    setCurrencyState(newCurrency);
+    // Set cookie for 1 year
+    document.cookie = `NEXT_CURRENCY=${newCurrency}; path=/; max-age=31536000; SameSite=Lax`;
     startTransition(() => {
       router.refresh();
     });
@@ -63,9 +85,11 @@ export function LanguageProvider({
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return `Rp ${Number(amount || 0).toLocaleString("id-ID")}`;
+  const formatCurrency = (amount: number, options?: FormatMoneyOptions) => {
+    return formatMoney(amount, currency, options);
   };
+
+  const currencySymbol = getCurrencySymbol(currency);
 
   const getCategoryLabel = (category: string) => {
     if (!category) return t.common.none;
@@ -80,6 +104,9 @@ export function LanguageProvider({
       value={{
         locale,
         setLocale,
+        currency,
+        setCurrency,
+        currencySymbol,
         t,
         formatDate,
         formatCurrency,

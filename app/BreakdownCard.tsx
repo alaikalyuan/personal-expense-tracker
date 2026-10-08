@@ -51,7 +51,7 @@ export default function BreakdownCard({
   categoryData,
   weeklyTotal,
 }: BreakdownCardProps) {
-  const { t, getCategoryLabel } = useTranslation();
+  const { t, getCategoryLabel, formatCurrency } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState<"bar" | "category">("bar");
   const isMonth = period === "month";
@@ -104,7 +104,7 @@ export default function BreakdownCard({
                 ? isMonth
                   ? t.breakdown.monthActivitySubtitle
                   : t.breakdown.pastSevenDays
-                : `${t.breakdown.totalAmount} Rp ${weeklyTotal.toLocaleString("id-ID")}`
+                : `${t.breakdown.totalAmount} ${formatCurrency(weeklyTotal)}`
               : isMonth
               ? t.breakdown.monthActivitySubtitle
               : t.breakdown.summarySubtitle}
@@ -199,7 +199,7 @@ export default function BreakdownCard({
                             className={`flex-1 flex flex-col items-center cursor-pointer group focus:outline-hidden ${
                               week.isFuture ? "opacity-35" : "opacity-100"
                             }`}
-                            aria-label={`${week.weekLabel}: Rp ${week.amount.toLocaleString("id-ID")}`}
+                            aria-label={`${week.weekLabel}: ${formatCurrency(week.amount)}`}
                           >
                             <div className="h-5 flex items-center justify-center">
                               <span
@@ -261,13 +261,13 @@ export default function BreakdownCard({
                           )}
                         </span>
                         <span className="font-semibold text-zinc-900 dark:text-zinc-200">
-                          Rp {selectedWeek.amount.toLocaleString("id-ID")}
+                          {formatCurrency(selectedWeek.amount)}
                         </span>
                       </div>
                     )}
                     {peakWeek && peakWeek.amount > 0 && (
                       <p className="mt-1 text-[10px] text-zinc-500 text-center">
-                        {t.breakdown.peakDay}: {peakWeek.weekLabel} (Rp {peakWeek.amount.toLocaleString("id-ID")})
+                        {t.breakdown.peakDay}: {peakWeek.weekLabel} ({formatCurrency(peakWeek.amount)})
                       </p>
                     )}
                   </>
@@ -291,7 +291,7 @@ export default function BreakdownCard({
                             className={`flex-1 flex flex-col items-center cursor-pointer group focus:outline-hidden ${
                               day.isFuture ? "opacity-35" : "opacity-100"
                             }`}
-                            aria-label={`${day.dayName}: Rp ${day.amount.toLocaleString("id-ID")}`}
+                            aria-label={`${day.dayName}: ${formatCurrency(day.amount)}`}
                           >
                             <div className="h-5 flex items-center justify-center">
                               <span
@@ -353,13 +353,13 @@ export default function BreakdownCard({
                           )}
                         </span>
                         <span className="font-semibold text-zinc-900 dark:text-zinc-200">
-                          Rp {selectedDay.amount.toLocaleString("id-ID")}
+                          {formatCurrency(selectedDay.amount)}
                         </span>
                       </div>
                     )}
                     {peakDay && peakDay.amount > 0 && (
                       <p className="mt-1 text-[10px] text-zinc-500 text-center">
-                        {t.breakdown.peakDay}: {peakDay.dayName} (Rp {peakDay.amount.toLocaleString("id-ID")})
+                        {t.breakdown.peakDay}: {peakDay.dayName} ({formatCurrency(peakDay.amount)})
                       </p>
                     )}
                   </>
@@ -387,7 +387,7 @@ export default function BreakdownCard({
                         {getCategoryLabel(item.category)}
                       </span>
                       <span className="font-medium text-zinc-900 dark:text-zinc-200">
-                        Rp {item.amount.toLocaleString("id-ID")}{" "}
+                        {formatCurrency(item.amount)}{" "}
                         <span className="text-zinc-500 text-[10px]">
                           ({item.percentage}%)
                         </span>

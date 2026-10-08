@@ -32,7 +32,7 @@ export default function SavingsBalanceHistory({
   coreSavings,
   onOpenAdjustmentModal,
 }: SavingsBalanceHistoryProps) {
-  const { t, formatDate } = useTranslation();
+  const { t, formatDate, formatCurrency } = useTranslation();
 
   const [activeFilter, setActiveFilter] = useState<"all" | "inflow" | "outflow" | "goals">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -290,7 +290,7 @@ export default function SavingsBalanceHistory({
               {t.savings.totalInflow}
             </span>
             <p className="mt-0.5 text-xs font-bold text-teal-800 dark:text-teal-300 truncate">
-              +Rp {totalInflow.toLocaleString("id-ID")}
+              +{formatCurrency(totalInflow)}
             </p>
           </div>
 
@@ -300,7 +300,7 @@ export default function SavingsBalanceHistory({
               {t.savings.totalOutflow}
             </span>
             <p className="mt-0.5 text-xs font-bold text-rose-800 dark:text-rose-300 truncate">
-              -Rp {totalOutflow.toLocaleString("id-ID")}
+              -{formatCurrency(totalOutflow)}
             </p>
           </div>
 
@@ -310,7 +310,7 @@ export default function SavingsBalanceHistory({
               {t.savings.currentBalance}
             </span>
             <p className="mt-0.5 text-xs font-bold text-zinc-900 dark:text-white truncate">
-              Rp {coreSavings.toLocaleString("id-ID")}
+              {formatCurrency(coreSavings)}
             </p>
           </div>
         </div>
@@ -372,7 +372,7 @@ export default function SavingsBalanceHistory({
                 {formatDate(chartPoints[0].date, "d MMM yyyy")}
               </span>
               <span className="font-semibold text-teal-700 dark:text-teal-300">
-                Rp {chartPoints[chartPoints.length - 1].balance.toLocaleString("id-ID")}
+                {formatCurrency(chartPoints[chartPoints.length - 1].balance)}
               </span>
               <span>
                 {formatDate(chartPoints[chartPoints.length - 1].date, "d MMM yyyy")}
@@ -511,11 +511,10 @@ export default function SavingsBalanceHistory({
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="text-right">
                       <p className={`text-xs ${cfg.amountColor}`}>
-                        {cfg.prefix}Rp {Number(item.amount || 0).toLocaleString("id-ID")}
+                        {cfg.prefix}{formatCurrency(Number(item.amount || 0))}
                       </p>
                       <p className="text-[10px] text-zinc-500 font-medium">
-                        {t.savings.runningBalance}: Rp{" "}
-                        {Number(item.balanceAfter || 0).toLocaleString("id-ID")}
+                        {t.savings.runningBalance}: {formatCurrency(Number(item.balanceAfter || 0))}
                       </p>
                     </div>
 

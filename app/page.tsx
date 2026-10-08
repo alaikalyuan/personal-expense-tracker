@@ -16,6 +16,7 @@ import DashboardClient from "./DashboardClient";
 import { getNowInTimezone } from "@/utils/date";
 import { calculateStreak } from "@/utils/streak";
 import { getDictionaryServer } from "@/utils/i18n/server";
+import { getPrimaryWallets } from "@/utils/wallets/server";
 
 export default async function DashboardPage(props: {
   searchParams?: Promise<{
@@ -121,10 +122,23 @@ export default async function DashboardPage(props: {
     0
   );
 
-  const weeklyBudget = Number(user.user_metadata?.weekly_budget || 500000);
-  const monthlyBudget = Number(
-    user.user_metadata?.monthly_budget || Math.round((weeklyBudget / 7) * totalDaysInMonth)
+  const { spendingWallet } = await getPrimaryWallets(
+    supabase,
+    user.id,
+    user.user_metadata
   );
+
+  const weeklyBudget =
+    spendingWallet?.weekly_budget !== null && spendingWallet?.weekly_budget !== undefined
+      ? Number(spendingWallet.weekly_budget)
+      : Number(user.user_metadata?.weekly_budget || 500000);
+
+  const monthlyBudget =
+    spendingWallet?.monthly_budget !== null && spendingWallet?.monthly_budget !== undefined
+      ? Number(spendingWallet.monthly_budget)
+      : Number(
+          user.user_metadata?.monthly_budget || Math.round((weeklyBudget / 7) * totalDaysInMonth)
+        );
 
   return (
     <DashboardClient

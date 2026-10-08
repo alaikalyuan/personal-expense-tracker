@@ -5,7 +5,7 @@ import type { Viewport } from "next";
 import BottomNav from "./BottomNav";
 import ServiceWorkerRegister from "./ServiceWorkerRegister";
 import { LanguageProvider } from "@/utils/i18n/context";
-import { getLocaleServer } from "@/utils/i18n/server";
+import { getLocaleServer, getCurrencyServer } from "@/utils/i18n/server";
 import { ThemeProvider } from "@/utils/theme/context";
 import { getThemeServer } from "@/utils/theme/server";
 
@@ -42,7 +42,11 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [locale, theme] = await Promise.all([getLocaleServer(), getThemeServer()]);
+  const [locale, theme, currency] = await Promise.all([
+    getLocaleServer(),
+    getThemeServer(),
+    getCurrencyServer(),
+  ]);
 
   return (
     <html
@@ -60,7 +64,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased min-h-screen relative`}>
         <ThemeProvider initialTheme={theme}>
-          <LanguageProvider initialLocale={locale}>
+          <LanguageProvider initialLocale={locale} initialCurrency={currency}>
             <ServiceWorkerRegister />
             {children}
             <BottomNav />

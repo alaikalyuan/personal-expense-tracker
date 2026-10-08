@@ -9,6 +9,7 @@ import {
   SplitItemRecord,
   SplitParticipantRecord,
 } from "@/utils/splitCalculator";
+import { getCurrencyServer, formatCurrencyServer } from "@/utils/i18n/server";
 
 export interface CreateSplitBillPayload {
   title: string;
@@ -184,13 +185,14 @@ export async function createSplitBill(payload: CreateSplitBillPayload) {
       const creatorShare = creatorCalc?.totalOwed || 0;
 
       if (creatorShare > 0) {
+        const currency = await getCurrencyServer();
         const { data: expenseRecord } = await supabase
           .from("expenses")
           .insert({
             user_id: user.id,
             category: payload.category || "Food & Dining",
             name: `Split: ${payload.title.trim()}`,
-            note: `[Split Bill] Porsi pribadi dari total Rp ${calculation.grandTotal.toLocaleString("id-ID")}`,
+            note: `[Split Bill] Porsi pribadi dari total ${formatCurrencyServer(calculation.grandTotal, currency)}`,
             amount: creatorShare,
             spent_at: getTodayString(),
           })

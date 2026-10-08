@@ -8,6 +8,13 @@ import {
   Locale,
   CategoryKey,
 } from "./dictionaries";
+import {
+  SupportedCurrency,
+  DEFAULT_CURRENCY,
+  isSupportedCurrency,
+  formatMoney,
+  FormatMoneyOptions,
+} from "@/utils/money";
 
 const dateLocales = {
   id: idLocale,
@@ -49,8 +56,21 @@ export function formatDateServer(
   }
 }
 
-export function formatCurrencyServer(amount: number): string {
-  return `Rp ${Number(amount || 0).toLocaleString("id-ID")}`;
+export async function getCurrencyServer(): Promise<SupportedCurrency> {
+  const cookieStore = await cookies();
+  const currencyCookie = cookieStore.get("NEXT_CURRENCY")?.value;
+  if (isSupportedCurrency(currencyCookie)) {
+    return currencyCookie;
+  }
+  return DEFAULT_CURRENCY;
+}
+
+export function formatCurrencyServer(
+  amount: number,
+  currency: SupportedCurrency = DEFAULT_CURRENCY,
+  options?: FormatMoneyOptions
+): string {
+  return formatMoney(amount, currency, options);
 }
 
 export function getCategoryLabelServer(

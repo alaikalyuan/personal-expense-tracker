@@ -42,6 +42,7 @@ export interface Dictionary {
     theme: string;
     light: string;
     dark: string;
+    currency: string;
     quickAddAria: string;
     savings: string;
   };
@@ -490,6 +491,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       theme: "Tema",
       light: "Terang",
       dark: "Gelap",
+      currency: "Mata Uang",
       quickAddAria: "Tambah pengeluaran",
       savings: "Tabungan",
     },
@@ -562,8 +564,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       preset2m5: "2.5jt",
       preset5m: "5jt",
       preset10m: "10jt",
-      exemptSummary: "Rp {amount} ({count} sekali pakai) dikecualikan",
-      exemptSuggestTitle: "{name} (Rp {amount}) membuatmu overbudget. Mau tandai sebagai One-Off?",
+      exemptSummary: "{amount} ({count} sekali pakai) dikecualikan",
+      exemptSuggestTitle: "{name} ({amount}) membuatmu overbudget. Mau tandai sebagai One-Off?",
       exemptSuggestAction: "Kecualikan",
     },
     burnRate: {
@@ -721,8 +723,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       basedOnElapsedDays: "Berdasarkan {days} hari berjalan",
       lastWeekDailyAvg: "Rata-rata Harian Minggu Lalu",
       acrossAllDays: "Rata-rata selama 7 hari",
-      pacingSaving: "Kamu lebih hemat ~Rp {amount} per hari sejauh ini!",
-      pacingOver: "Pacing ~Rp {amount} lebih boros per hari dibanding minggu lalu.",
+      pacingSaving: "Kamu lebih hemat ~{amount} per hari sejauh ini!",
+      pacingOver: "Pacing ~{amount} lebih boros per hari dibanding minggu lalu.",
       trendTitle: "Perbandingan Tren Harian",
       viewBreakdown: "Rincian",
       viewChart: "Grafik",
@@ -955,6 +957,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       theme: "Theme",
       light: "Light",
       dark: "Dark",
+      currency: "Currency",
       quickAddAria: "Add expense",
       savings: "Savings",
     },
@@ -1027,8 +1030,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       preset2m5: "2.5jt",
       preset5m: "5jt",
       preset10m: "10jt",
-      exemptSummary: "Rp {amount} ({count} one-off) excluded from routine budget",
-      exemptSuggestTitle: "{name} (Rp {amount}) caused you to go overbudget. Mark as One-Off?",
+      exemptSummary: "{amount} ({count} one-off) excluded from routine budget",
+      exemptSuggestTitle: "{name} ({amount}) caused you to go overbudget. Mark as One-Off?",
       exemptSuggestAction: "Exempt",
     },
     burnRate: {
@@ -1186,8 +1189,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       basedOnElapsedDays: "Based on {days} elapsed days",
       lastWeekDailyAvg: "Last Week Daily Avg",
       acrossAllDays: "Across all 7 days",
-      pacingSaving: "You are spending ~Rp {amount} less per day so far!",
-      pacingOver: "Pacing ~Rp {amount} more per day than last week.",
+      pacingSaving: "You are spending ~{amount} less per day so far!",
+      pacingOver: "Pacing ~{amount} more per day than last week.",
       trendTitle: "Daily Trend Comparison",
       viewBreakdown: "Breakdown",
       viewChart: "Chart",

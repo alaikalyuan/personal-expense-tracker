@@ -18,9 +18,15 @@ import {
   Receipt,
   CreditCard,
   Bell,
+  Coins,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { useTheme } from "@/utils/theme/context";
+import {
+  CURRENCY_CODES,
+  SUPPORTED_CURRENCIES,
+  SupportedCurrency,
+} from "@/utils/money";
 import NotificationSettingsModal from "./NotificationSettingsModal";
 
 interface UserMenuProps {
@@ -34,7 +40,7 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuPro
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const { locale, setLocale, t } = useTranslation();
+  const { locale, setLocale, currency, setCurrency, t } = useTranslation();
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -278,6 +284,29 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuPro
                   {t.nav.dark}
                 </button>
               </div>
+            </div>
+
+            {/* Currency Selector */}
+            <div className="flex items-center justify-between px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+              <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+                <Coins className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+                <span className="text-[11px]">{t.nav.currency}</span>
+              </span>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value as SupportedCurrency)}
+                aria-label={t.nav.currency}
+                className="rounded-lg bg-zinc-100 dark:bg-zinc-950 px-2 py-0.5 text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 cursor-pointer focus:outline-hidden"
+              >
+                {CURRENCY_CODES.map((code) => {
+                  const cfg = SUPPORTED_CURRENCIES[code];
+                  return (
+                    <option key={code} value={code}>
+                      {cfg.flag} {cfg.code} ({cfg.symbol})
+                    </option>
+                  );
+                })}
+              </select>
             </div>
 
             <div className="my-1 border-t border-zinc-200/80 dark:border-zinc-800/80" />

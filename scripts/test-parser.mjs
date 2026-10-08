@@ -170,6 +170,30 @@ const tests = [
     today: "2026-09-28", // Monday
     expected: { name: "Lunch", amount: 30000, category: "Food & Dining", spentAt: "2026-09-23" },
   },
+  // 22. Multi-currency: USD decimal
+  {
+    input: "coffee 4.50",
+    currency: "USD",
+    expected: { name: "Coffee", amount: 4.5, category: "Food & Dining", spentAt: TODAY },
+  },
+  // 23. Multi-currency: USD with dollar sign
+  {
+    input: "$12 lunch",
+    currency: "USD",
+    expected: { name: "Lunch", amount: 12, category: "Food & Dining", spentAt: TODAY },
+  },
+  // 24. Multi-currency: EUR with euro sign and decimal
+  {
+    input: "€8.50 pizza",
+    currency: "EUR",
+    expected: { name: "Pizza", amount: 8.5, category: "Food & Dining", spentAt: TODAY },
+  },
+  // 25. Multi-currency: MYR
+  {
+    input: "RM 15 nasi lemak",
+    currency: "MYR",
+    expected: { name: "Nasi lemak", amount: 15, category: "Food & Dining", spentAt: TODAY },
+  },
 ];
 
 let passed = 0;
@@ -177,7 +201,7 @@ let failed = 0;
 
 for (const t of tests) {
   try {
-    const res = parseQuickExpenseInput(t.input, t.today || TODAY);
+    const res = parseQuickExpenseInput(t.input, t.today || TODAY, [], t.currency || "IDR");
     if (t.expected.name !== undefined) {
       assert.equal(res.name, t.expected.name, `Name mismatch for "${t.input}": got "${res.name}", expected "${t.expected.name}"`);
     }

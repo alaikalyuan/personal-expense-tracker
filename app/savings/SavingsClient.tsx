@@ -89,7 +89,7 @@ export default function SavingsClient({
   isGuest = false,
   savingsHistory = [],
 }: SavingsClientProps) {
-  const { t } = useTranslation();
+  const { t, formatCurrency, currencySymbol, currency } = useTranslation();
 
   // Mindful quote index
   const [quoteIndex, setQuoteIndex] = useState(0);
@@ -313,7 +313,7 @@ export default function SavingsClient({
               </span>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-                  Rp {coreSavings.toLocaleString("id-ID")}
+                  {formatCurrency(coreSavings)}
                 </span>
               </div>
               <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
@@ -360,7 +360,7 @@ export default function SavingsClient({
                 {t.savings.availableForGoals}
               </span>
               <p className="mt-0.5 text-sm font-bold text-teal-700 dark:text-teal-300">
-                Rp {availableCoreSavings.toLocaleString("id-ID")}
+                {formatCurrency(availableCoreSavings)}
               </p>
             </div>
 
@@ -369,7 +369,7 @@ export default function SavingsClient({
                 {t.savings.allocatedToGoals}
               </span>
               <p className="mt-0.5 text-sm font-bold text-zinc-800 dark:text-zinc-200">
-                Rp {totalAllocatedToGoals.toLocaleString("id-ID")}
+                {formatCurrency(totalAllocatedToGoals)}
               </p>
             </div>
           </div>
@@ -385,7 +385,7 @@ export default function SavingsClient({
               </span>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-                  +Rp {availableSurplus.toLocaleString("id-ID")}
+                  +{formatCurrency(availableSurplus)}
                 </span>
               </div>
               <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
@@ -415,7 +415,7 @@ export default function SavingsClient({
                 {t.savings.totalSurplusEarned}
               </span>
               <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                +Rp {unspentSurplusTotal.toLocaleString("id-ID")}
+                +{formatCurrency(unspentSurplusTotal)}
               </p>
             </div>
 
@@ -424,7 +424,7 @@ export default function SavingsClient({
                 {t.savings.sweptSurplusTotal}
               </span>
               <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                Rp {sweptSurplus.toLocaleString("id-ID")}
+                {formatCurrency(sweptSurplus)}
               </p>
             </div>
           </div>
@@ -437,7 +437,7 @@ export default function SavingsClient({
                 <span>{t.savings.ongoingWeekLabel}</span>
               </span>
               <span className="font-semibold text-amber-900 dark:text-amber-200">
-                ~Rp {ongoingProjectedSurplus.toLocaleString("id-ID")}
+                ~{formatCurrency(ongoingProjectedSurplus)}
               </span>
             </div>
           )}
@@ -547,7 +547,7 @@ export default function SavingsClient({
                           {goal.name}
                         </h3>
                         <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                          Target: Rp {target.toLocaleString("id-ID")}
+                          Target: {formatCurrency(target)}
                         </p>
                       </div>
                     </div>
@@ -576,7 +576,7 @@ export default function SavingsClient({
                   <div className="mt-3">
                     <div className="flex justify-between items-center text-[11px] mb-1.5">
                       <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                        Rp {allocated.toLocaleString("id-ID")}{" "}
+                        {formatCurrency(allocated)}{" "}
                         <span className="text-zinc-500 font-normal">
                           ({rawPercent}%)
                         </span>
@@ -592,7 +592,7 @@ export default function SavingsClient({
                         </button>
                       ) : (
                         <span className="text-[10px] text-zinc-500">
-                          Rp {Math.max(0, target - allocated).toLocaleString("id-ID")} {t.budget.left}
+                          {formatCurrency(Math.max(0, target - allocated))} {t.budget.left}
                         </span>
                       )}
                     </div>
@@ -682,7 +682,7 @@ export default function SavingsClient({
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-teal-600 dark:text-teal-400">
-              +{unspentSurplusTotal.toLocaleString("id-ID")}
+              +{formatCurrency(unspentSurplusTotal)}
             </span>
             <ChevronDown
               className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${
@@ -709,13 +709,11 @@ export default function SavingsClient({
                       {week.label}
                     </p>
                     <p className="text-[10px] text-zinc-500">
-                      {t.savings.weekPacingLabel}: Rp{" "}
-                      {week.regularSpend.toLocaleString("id-ID")} / Rp{" "}
-                      {week.budget.toLocaleString("id-ID")}
+                      {t.savings.weekPacingLabel}: {formatCurrency(week.regularSpend)} / {formatCurrency(week.budget)}
                     </p>
                   </div>
                   <span className="text-[11px] font-bold text-teal-600 dark:text-teal-400">
-                    +Rp {week.surplus.toLocaleString("id-ID")}
+                    +{formatCurrency(week.surplus)}
                   </span>
                 </div>
               ))
@@ -785,8 +783,8 @@ export default function SavingsClient({
                 <input
                   type="number"
                   required
-                  min="1000"
-                  step="1000"
+                  min="0.01"
+                  step="any"
                   value={goalTarget}
                   onChange={(e) => setGoalTarget(e.target.value)}
                   placeholder={t.savings.targetAmountPlaceholder}
@@ -883,14 +881,14 @@ export default function SavingsClient({
                 <div className="flex justify-between text-[11px] text-zinc-500 mb-1">
                   <span>{t.savings.allocationAmountLabel}</span>
                   <span>
-                    {t.savings.maxAvailable}: Rp{" "}
-                    {(allocationSource === "core" ? availableCoreSavings : availableSurplus).toLocaleString("id-ID")}
+                    {t.savings.maxAvailable}: {formatCurrency(allocationSource === "core" ? availableCoreSavings : availableSurplus)}
                   </span>
                 </div>
                 <input
                   type="number"
                   required
-                  min="1"
+                  min="0.01"
+                  step="any"
                   max={allocationSource === "core" ? availableCoreSavings : availableSurplus}
                   value={allocationAmount}
                   onChange={(e) => setAllocationAmount(e.target.value)}
@@ -971,13 +969,14 @@ export default function SavingsClient({
                 <div className="flex justify-between text-[11px] text-zinc-500 mb-1">
                   <span>{t.savings.allocationAmountLabel}</span>
                   <span>
-                    {t.savings.maxAllocated}: Rp {withdrawingGoal.allocatedAmount.toLocaleString("id-ID")}
+                    {t.savings.maxAllocated}: {formatCurrency(withdrawingGoal.allocatedAmount)}
                   </span>
                 </div>
                 <input
                   type="number"
                   required
-                  min="1"
+                  min="0.01"
+                  step="any"
                   max={withdrawingGoal.allocatedAmount}
                   value={withdrawingAmount}
                   onChange={(e) => setWithdrawingAmount(e.target.value)}
@@ -1031,15 +1030,16 @@ export default function SavingsClient({
             <form onSubmit={handleSweep} className="mt-4 flex flex-col gap-3.5">
               <div>
                 <div className="flex justify-between text-[11px] text-zinc-500 mb-1">
-                  <span>Nominal yang Dialirkan (Rp)</span>
+                  <span>Nominal yang Dialirkan ({currencySymbol})</span>
                   <span>
-                    {t.savings.maxAvailable}: Rp {availableSurplus.toLocaleString("id-ID")}
+                    {t.savings.maxAvailable}: {formatCurrency(availableSurplus)}
                   </span>
                 </div>
                 <input
                   type="number"
                   required
-                  min="1"
+                  min="0.01"
+                  step="any"
                   max={availableSurplus}
                   value={sweepAmount}
                   onChange={(e) => setSweepAmount(e.target.value)}
@@ -1054,14 +1054,14 @@ export default function SavingsClient({
                   onClick={() => setSweepAmount(String(Math.round(availableSurplus * 0.5)))}
                   className="flex-1 py-1 text-[11px] font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
                 >
-                  50% (Rp {Math.round(availableSurplus * 0.5).toLocaleString("id-ID")})
+                  50% ({formatCurrency(Math.round(availableSurplus * 0.5))})
                 </button>
                 <button
                   type="button"
                   onClick={() => setSweepAmount(String(availableSurplus))}
                   className="flex-1 py-1 text-[11px] font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
                 >
-                  Semua (Rp {availableSurplus.toLocaleString("id-ID")})
+                  Semua ({formatCurrency(availableSurplus)})
                 </button>
               </div>
 
@@ -1110,7 +1110,7 @@ export default function SavingsClient({
                           >
                             {goals.map((g) => (
                               <option key={g.id} value={g.id}>
-                                {g.emoji} {g.name} (Terkumpul Rp {g.allocatedAmount.toLocaleString("id-ID")} / Rp {g.targetAmount.toLocaleString("id-ID")})
+                                {g.emoji} {g.name} (Terkumpul {formatCurrency(g.allocatedAmount)} / {formatCurrency(g.targetAmount)})
                               </option>
                             ))}
                           </select>
@@ -1196,11 +1196,11 @@ export default function SavingsClient({
                 <input
                   type="number"
                   required
-                  min="1000"
-                  step="1000"
+                  min="0.01"
+                  step="any"
                   value={adjustmentAmount}
                   onChange={(e) => setAdjustmentAmount(e.target.value)}
-                  placeholder="cth. 250000"
+                  placeholder={currency === "IDR" ? "cth. 250000" : "cth. 50"}
                   className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
                 />
               </div>

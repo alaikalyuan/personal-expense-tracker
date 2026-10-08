@@ -55,7 +55,7 @@ export default function SubscriptionsClient({
   isGuest = false,
 }: SubscriptionsClientProps) {
   const router = useRouter();
-  const { formatCurrency } = useTranslation();
+  const { formatCurrency, currencySymbol } = useTranslation();
   const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>(initialSubscriptions);
   const [activeTab, setActiveTab] = useState<"all" | "split" | "personal">("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -726,13 +726,14 @@ export default function SubscriptionsClient({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Harga (Rp)
+                    Harga ({currencySymbol})
                   </label>
                   <input
                     type="number"
                     required
                     min="0"
-                    placeholder="86900"
+                    step="any"
+                    placeholder={currencySymbol === "Rp" ? "86900" : "9.99"}
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"

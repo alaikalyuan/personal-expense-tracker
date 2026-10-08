@@ -32,7 +32,7 @@ export default function ExportShareModal({
   startDateStr,
   endDateStr,
 }: ExportShareModalProps) {
-  const { t, locale, formatDate, getCategoryLabel } = useTranslation();
+  const { t, locale, formatDate, getCategoryLabel, formatCurrency } = useTranslation();
   const [activeTab, setActiveTab] = useState<"whatsapp" | "csv">("whatsapp");
   const [copied, setCopied] = useState(false);
 
@@ -103,36 +103,30 @@ export default function ExportShareModal({
     }
     lines.push("");
     lines.push(
-      `💰 *${t.exportShare.recapTotal}:* Rp ${summary.total.toLocaleString(
-        "id-ID"
-      )}`
+      `💰 *${t.exportShare.recapTotal}:* ${formatCurrency(summary.total)}`
     );
 
     if (summary.budget > 0) {
       lines.push(
-        `🎯 *${t.exportShare.recapBudget}:* Rp ${summary.budget.toLocaleString(
-          "id-ID"
-        )}`
+        `🎯 *${t.exportShare.recapBudget}:* ${formatCurrency(summary.budget)}`
       );
       if (summary.isOver) {
         lines.push(
           `⚠️ *${
             t.exportShare.recapOverBudget
-          }:* Rp ${Math.abs(summary.remaining).toLocaleString("id-ID")}`
+          }:* +${formatCurrency(Math.abs(summary.remaining))}`
         );
       } else {
         lines.push(
           `✅ *${
             t.exportShare.recapRemaining
-          }:* Rp ${summary.remaining.toLocaleString("id-ID")}`
+          }:* ${formatCurrency(summary.remaining)}`
         );
       }
     }
 
     lines.push(
-      `📈 *${t.exportShare.recapDailyAvg}:* Rp ${summary.dailyAvg.toLocaleString(
-        "id-ID"
-      )}/${locale === "id" ? "hari" : "day"}`
+      `📈 *${t.exportShare.recapDailyAvg}:* ${formatCurrency(summary.dailyAvg)}/${locale === "id" ? "hari" : "day"}`
     );
 
     if (summary.topCategories.length > 0) {
@@ -140,7 +134,7 @@ export default function ExportShareModal({
       lines.push(`🏆 *${t.exportShare.recapTopCategories}:*`);
       summary.topCategories.slice(0, 3).forEach((item) => {
         lines.push(
-          ` • ${item.label}: Rp ${item.amount.toLocaleString("id-ID")} (${
+          ` • ${item.label}: ${formatCurrency(item.amount)} (${
             item.percentage
           }%)`
         );
@@ -152,7 +146,7 @@ export default function ExportShareModal({
       lines.push(
         `⭐ *${t.exportShare.recapLargestSpend}:* ${
           summary.largestExpense.name
-        } (Rp ${Number(summary.largestExpense.amount).toLocaleString("id-ID")})`
+        } (${formatCurrency(Number(summary.largestExpense.amount))})`
       );
     }
 
@@ -160,7 +154,7 @@ export default function ExportShareModal({
     lines.push(`✨ _${t.exportShare.recapFooter}_`);
 
     return lines.join("\n");
-  }, [summary, t, locale]);
+  }, [summary, t, locale, formatCurrency]);
 
   const handleCopyRecap = async () => {
     try {
@@ -387,7 +381,7 @@ export default function ExportShareModal({
                   <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
                     <span>{t.exportShare.recapTotal}:</span>
                     <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                      Rp {summary.total.toLocaleString("id-ID")}
+                      {formatCurrency(summary.total)}
                     </span>
                   </div>
                   <div className="flex justify-between text-zinc-600 dark:text-zinc-400">

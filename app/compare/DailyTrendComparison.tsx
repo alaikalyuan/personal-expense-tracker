@@ -12,6 +12,7 @@ import {
   Flame,
   Sparkles,
 } from "lucide-react";
+import { useTranslation } from "@/utils/i18n/context";
 
 export interface DayComparisonItem {
   dayName: string;
@@ -63,6 +64,7 @@ export default function DailyTrendComparison({
   stats,
   dict,
 }: DailyTrendComparisonProps) {
+  const { formatCurrency } = useTranslation();
   const [activeTab, setActiveTab] = useState<"breakdown" | "chart">("chart");
 
   // Select today by default in chart view, or first day if today not in current week
@@ -170,7 +172,7 @@ export default function DailyTrendComparison({
               <Flame className="w-3 h-3 text-amber-500" />
               {dict.highestSpend
                 .replace("{day}", stats.peakDay.dayName)
-                .replace("{amount}", `Rp ${stats.peakDay.amount.toLocaleString("id-ID")}`)}
+                .replace("{amount}", formatCurrency(stats.peakDay.amount))}
             </span>
           )}
 
@@ -179,7 +181,7 @@ export default function DailyTrendComparison({
               <Sparkles className="w-3 h-3 text-emerald-500" />
               {dict.biggestSaving
                 .replace("{day}", stats.bestSavingDay.dayName)
-                .replace("{amount}", `Rp ${stats.bestSavingDay.amount.toLocaleString("id-ID")}`)}
+                .replace("{amount}", formatCurrency(stats.bestSavingDay.amount))}
             </span>
           )}
         </div>
@@ -250,7 +252,7 @@ export default function DailyTrendComparison({
                       ) : hasDecreased ? (
                         <span className="inline-flex items-center text-xs font-bold text-emerald-600 dark:text-emerald-400 gap-0.5">
                           <ArrowDownRight className="w-3.5 h-3.5" />
-                          -Rp {Math.abs(day.diff).toLocaleString("id-ID")}
+                          -{formatCurrency(Math.abs(day.diff))}
                           {day.diffPct !== null && (
                             <span className="text-[10px] font-medium text-emerald-600/90 dark:text-emerald-400/90 ml-0.5">
                               ({day.diffPct}%)
@@ -260,7 +262,7 @@ export default function DailyTrendComparison({
                       ) : hasIncreased ? (
                         <span className="inline-flex items-center text-xs font-bold text-rose-600 dark:text-rose-400 gap-0.5">
                           <ArrowUpRight className="w-3.5 h-3.5" />
-                          +Rp {day.diff.toLocaleString("id-ID")}
+                          +{formatCurrency(day.diff)}
                           {day.diffPct !== null && (
                             <span className="text-[10px] font-medium text-rose-600/90 dark:text-rose-400/90 ml-0.5">
                               (+{day.diffPct}%)
@@ -303,7 +305,7 @@ export default function DailyTrendComparison({
                             : "text-zinc-400 dark:text-zinc-500 font-normal"
                         }`}
                       >
-                        {day.isFuture ? "—" : `Rp ${day.thisAmt.toLocaleString("id-ID")}`}
+                        {day.isFuture ? "—" : formatCurrency(day.thisAmt)}
                       </span>
                     </div>
 
@@ -329,7 +331,7 @@ export default function DailyTrendComparison({
                             : "text-zinc-400 dark:text-zinc-500"
                         }`}
                       >
-                        Rp {day.lastAmt.toLocaleString("id-ID")}
+                        {formatCurrency(day.lastAmt)}
                       </span>
                     </div>
                   </div>
@@ -433,7 +435,7 @@ export default function DailyTrendComparison({
                     <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
                       {selectedDay.isFuture
                         ? "—"
-                        : `Rp ${selectedDay.thisAmt.toLocaleString("id-ID")}`}
+                        : formatCurrency(selectedDay.thisAmt)}
                     </p>
                   </div>
                   <div className="rounded-lg bg-white dark:bg-zinc-900 p-2.5 border border-zinc-200/60 dark:border-zinc-800">
@@ -441,7 +443,7 @@ export default function DailyTrendComparison({
                       {dict.lastWeek}
                     </p>
                     <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 mt-0.5">
-                      Rp {selectedDay.lastAmt.toLocaleString("id-ID")}
+                      {formatCurrency(selectedDay.lastAmt)}
                     </p>
                   </div>
                 </div>
@@ -454,13 +456,13 @@ export default function DailyTrendComparison({
                     {selectedDay.diff < 0 ? (
                       <span className="inline-flex items-center font-bold text-emerald-600 dark:text-emerald-400 gap-1">
                         <ArrowDownRight className="w-3.5 h-3.5" />
-                        -Rp {Math.abs(selectedDay.diff).toLocaleString("id-ID")}
+                        -{formatCurrency(Math.abs(selectedDay.diff))}
                         {selectedDay.diffPct !== null && ` (${selectedDay.diffPct}%)`}
                       </span>
                     ) : selectedDay.diff > 0 ? (
                       <span className="inline-flex items-center font-bold text-rose-600 dark:text-rose-400 gap-1">
                         <ArrowUpRight className="w-3.5 h-3.5" />
-                        +Rp {selectedDay.diff.toLocaleString("id-ID")}
+                        +{formatCurrency(selectedDay.diff)}
                         {selectedDay.diffPct !== null && ` (+${selectedDay.diffPct}%)`}
                       </span>
                     ) : (

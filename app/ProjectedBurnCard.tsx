@@ -22,7 +22,7 @@ export default function ProjectedBurnCard({
   totalDays,
   priorMtdSpend,
 }: ProjectedBurnCardProps) {
-  const { t } = useTranslation();
+  const { t, formatCurrency, locale } = useTranslation();
 
   const safeElapsedDays = Math.max(elapsedDays, 1);
   const remainingDays = Math.max(totalDays - elapsedDays, 0);
@@ -110,7 +110,7 @@ export default function ProjectedBurnCard({
         </p>
         <div className="mt-1 flex items-baseline justify-between gap-2 flex-wrap">
           <span className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-            Rp {projectedTotal.toLocaleString("id-ID")}
+            {formatCurrency(projectedTotal)}
           </span>
           {monthlyBudget > 0 && (
             <span className={`text-xs font-semibold ${
@@ -119,15 +119,15 @@ export default function ProjectedBurnCard({
                 : "text-emerald-600 dark:text-emerald-400"
             }`}>
               {isProjectedOver
-                ? `+Rp ${projectedDiff.toLocaleString("id-ID")}`
-                : `-Rp ${projectedDiff.toLocaleString("id-ID")}`}
+                ? `+${formatCurrency(projectedDiff)}`
+                : `-${formatCurrency(projectedDiff)}`}
             </span>
           )}
         </div>
         <p className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">
           {isProjectedOver
-            ? `${t.burnRate.projectedExceedNote} Rp ${projectedDiff.toLocaleString("id-ID")}.`
-            : `${t.burnRate.projectedSafeNote} Rp ${projectedDiff.toLocaleString("id-ID")}.`}
+            ? `${t.burnRate.projectedExceedNote} ${formatCurrency(projectedDiff)}.`
+            : `${t.burnRate.projectedSafeNote} ${formatCurrency(projectedDiff)}.`}
         </p>
       </div>
 
@@ -138,7 +138,7 @@ export default function ProjectedBurnCard({
             {t.burnRate.dailyVelocity}
           </p>
           <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
-            Rp {Math.round(dailyVelocity).toLocaleString("id-ID")}/hari
+            {formatCurrency(Math.round(dailyVelocity))}/{locale === "id" ? "hari" : "day"}
           </p>
         </div>
 
@@ -147,7 +147,7 @@ export default function ProjectedBurnCard({
             {t.burnRate.targetDailyPace}
           </p>
           <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
-            Rp {safeTargetDailyPace.toLocaleString("id-ID")}/hari
+            {formatCurrency(safeTargetDailyPace)}/{locale === "id" ? "hari" : "day"}
           </p>
         </div>
       </div>
@@ -163,14 +163,14 @@ export default function ProjectedBurnCard({
               <>
                 <TrendingUp className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
                 <span className="text-rose-600 dark:text-rose-400">
-                  +{momPercent}% (+Rp {momDiff.toLocaleString("id-ID")})
+                  +{momPercent}% (+{formatCurrency(momDiff)})
                 </span>
               </>
             ) : momDiff < 0 ? (
               <>
                 <TrendingDown className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                 <span className="text-emerald-600 dark:text-emerald-400">
-                  -{momPercent}% (-Rp {Math.abs(momDiff).toLocaleString("id-ID")})
+                  -{momPercent}% (-{formatCurrency(Math.abs(momDiff))})
                 </span>
               </>
             ) : (

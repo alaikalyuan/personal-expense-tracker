@@ -16,6 +16,11 @@ import SavingsClient, {
 } from "./SavingsClient";
 import { ExpenseItem } from "@/app/ExpenseList";
 import { SavingsHistoryItem } from "@/app/actions";
+import {
+  getPrimaryWallets,
+  getSavingsGoals,
+  getSavingsHistory,
+} from "@/utils/wallets/server";
 
 export default async function SavingsPage() {
   const cookieStore = await cookies();
@@ -32,24 +37,40 @@ export default async function SavingsPage() {
 
   const isGuest = Boolean(user.is_anonymous);
 
-  // Active weekly budget (default: 500,000 IDR)
-  const weeklyBudget = Number(user.user_metadata?.weekly_budget || 500000);
+  // Active weekly budget & primary wallets
+  const { spendingWallet, stashWallet } = await getPrimaryWallets(
+    supabase,
+    user.id,
+    user.user_metadata
+  );
 
-  // User savings goals from metadata
-  const rawGoals: SavingsGoalItem[] = Array.isArray(user.user_metadata?.savings_goals)
-    ? user.user_metadata.savings_goals
-    : [];
+  const weeklyBudget =
+    spendingWallet?.weekly_budget !== null && spendingWallet?.weekly_budget !== undefined
+      ? Number(spendingWallet.weekly_budget)
+      : Number(user.user_metadata?.weekly_budget || 500000);
 
-  // Core Savings balance (Tabungan Pokok) from metadata
-  const coreSavings = Number(user.user_metadata?.savings_manual_deposit || 0);
+  // User savings goals from savings_goals table (with metadata fallback)
+  const rawGoals: SavingsGoalItem[] = await getSavingsGoals(
+    supabase,
+    user.id,
+    user.user_metadata
+  );
+
+  // Core Savings balance (Tabungan Pokok) from stash wallet (with metadata fallback)
+  const coreSavings = stashWallet
+    ? Number(stashWallet.current_balance)
+    : Number(user.user_metadata?.savings_manual_deposit || 0);
 
   // Cumulative surplus already swept/transferred from metadata
   const sweptSurplus = Number(user.user_metadata?.savings_swept_surplus || 0);
 
-  // Savings balance history from metadata
-  const rawHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
-    ? user.user_metadata.savings_history
-    : [];
+  // Savings balance history from wallet_transactions (with metadata fallback)
+  const rawHistory: SavingsHistoryItem[] = await getSavingsHistory(
+    supabase,
+    user.id,
+    stashWallet?.id,
+    user.user_metadata
+  );
 
   let savingsHistory = rawHistory;
   if (savingsHistory.length === 0 && coreSavings > 0) {

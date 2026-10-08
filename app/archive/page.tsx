@@ -16,12 +16,15 @@ import { getNowInTimezone } from "@/utils/date";
 import {
   getDictionaryServer,
   formatDateServer,
+  getCurrencyServer,
+  formatCurrencyServer,
 } from "@/utils/i18n/server";
 
 export default async function ArchivePage() {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
   const { t, locale } = await getDictionaryServer();
+  const currency = await getCurrencyServer();
 
   const {
     data: { user },
@@ -157,14 +160,14 @@ export default async function ArchivePage() {
             <div>
               <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.archive.totalSpent}</p>
               <p className="mt-0.5 text-xs font-bold text-zinc-900 dark:text-white truncate">
-                Rp {totalArchivedSpend.toLocaleString("id-ID")}
+                {formatCurrencyServer(totalArchivedSpend, currency)}
               </p>
             </div>
 
             <div className="border-l border-zinc-200/80 pl-2.5 dark:border-zinc-800/80">
               <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.archive.weeklyAvg}</p>
               <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">
-                Rp {avgArchivedSpend.toLocaleString("id-ID")}
+                {formatCurrencyServer(avgArchivedSpend, currency)}
               </p>
             </div>
 

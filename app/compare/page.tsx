@@ -24,6 +24,8 @@ import {
   getDictionaryServer,
   formatDateServer,
   getCategoryLabelServer,
+  getCurrencyServer,
+  formatCurrencyServer,
 } from "@/utils/i18n/server";
 
 const categoryColors: Record<string, string> = {
@@ -39,6 +41,7 @@ export default async function ComparePage() {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
   const { t, locale } = await getDictionaryServer();
+  const currency = await getCurrencyServer();
 
   const {
     data: { user },
@@ -234,7 +237,7 @@ export default async function ComparePage() {
           <div>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">{t.compare.thisWeek}</p>
             <p className="mt-0.5 text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-              Rp {thisTotal.toLocaleString("id-ID")}
+              {formatCurrencyServer(thisTotal, currency)}
             </p>
             <p className="text-[10px] text-zinc-500 mt-0.5">
               {locale === "id" ? `Hari ke-${todayDayIndex} dari 7` : `Day ${todayDayIndex} of 7`}
@@ -244,7 +247,7 @@ export default async function ComparePage() {
           <div className="border-l border-zinc-200/80 pl-4 dark:border-zinc-800/80">
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">{t.compare.lastWeek}</p>
             <p className="mt-0.5 text-2xl font-bold tracking-tight text-zinc-700 dark:text-zinc-300">
-              Rp {lastTotal.toLocaleString("id-ID")}
+              {formatCurrencyServer(lastTotal, currency)}
             </p>
             <p className="text-[10px] text-zinc-500 mt-0.5">{t.compare.fullSevenDays}</p>
           </div>
@@ -271,8 +274,8 @@ export default async function ComparePage() {
             )}
           </div>
           <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
-            {diffAmount < 0 ? "-" : diffAmount > 0 ? "+" : ""}Rp{" "}
-            {Math.abs(diffAmount).toLocaleString("id-ID")}
+            {diffAmount < 0 ? "-" : diffAmount > 0 ? "+" : ""}
+            {formatCurrencyServer(Math.abs(diffAmount), currency)}
           </span>
         </div>
       </div>
@@ -286,7 +289,7 @@ export default async function ComparePage() {
           <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-zinc-800/60 dark:bg-zinc-950/60">
             <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.compare.currentDailyAvg}</p>
             <p className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-100">
-              Rp {Math.round(thisDailyAvg).toLocaleString("id-ID")}
+              {formatCurrencyServer(Math.round(thisDailyAvg), currency)}
             </p>
             <p className="text-[9px] text-zinc-500 mt-0.5">
               {t.compare.basedOnElapsedDays.replace("{days}", String(todayDayIndex))}
@@ -296,7 +299,7 @@ export default async function ComparePage() {
           <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-zinc-800/60 dark:bg-zinc-950/60">
             <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.compare.lastWeekDailyAvg}</p>
             <p className="mt-1 text-sm font-bold text-zinc-700 dark:text-zinc-300">
-              Rp {Math.round(lastDailyAvg).toLocaleString("id-ID")}
+              {formatCurrencyServer(Math.round(lastDailyAvg), currency)}
             </p>
             <p className="text-[9px] text-zinc-500 mt-0.5">{t.compare.acrossAllDays}</p>
           </div>
@@ -307,14 +310,14 @@ export default async function ComparePage() {
             <span className="text-emerald-600 dark:text-emerald-400 font-medium">
               {t.compare.pacingSaving.replace(
                 "{amount}",
-                Math.round(lastDailyAvg - thisDailyAvg).toLocaleString("id-ID")
+                formatCurrencyServer(Math.round(lastDailyAvg - thisDailyAvg), currency)
               )}
             </span>
           ) : (
             <span className="text-amber-600 dark:text-amber-400 font-medium">
               {t.compare.pacingOver.replace(
                 "{amount}",
-                Math.round(thisDailyAvg - lastDailyAvg).toLocaleString("id-ID")
+                formatCurrencyServer(Math.round(thisDailyAvg - lastDailyAvg), currency)
               )}
             </span>
           )}
@@ -359,8 +362,8 @@ export default async function ComparePage() {
         ) : (
           <div className="space-y-3">
             {categoryComparison.map((cat) => {
+              const hasDecreased = cat.diff > 0 ? false : cat.diff < 0;
               const hasIncreased = cat.diff > 0;
-              const hasDecreased = cat.diff < 0;
 
               return (
                 <div
@@ -378,9 +381,9 @@ export default async function ComparePage() {
                         {getCategoryLabelServer(cat.category, locale)}
                       </p>
                       <p className="text-[10px] text-zinc-500">
-                        Rp {cat.thisAmt.toLocaleString("id-ID")}{" "}
-                        <span className="text-zinc-400 dark:text-zinc-600">{t.common.vs}</span> Rp{" "}
-                        {cat.lastAmt.toLocaleString("id-ID")}
+                        {formatCurrencyServer(cat.thisAmt, currency)}{" "}
+                        <span className="text-zinc-400 dark:text-zinc-600">{t.common.vs}</span>{" "}
+                        {formatCurrencyServer(cat.lastAmt, currency)}
                       </p>
                     </div>
                   </div>
@@ -389,12 +392,12 @@ export default async function ComparePage() {
                     {hasDecreased ? (
                       <span className="inline-flex items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 gap-0.5">
                         <ArrowDownRight className="w-3.5 h-3.5" />
-                        Rp {Math.abs(cat.diff).toLocaleString("id-ID")}
+                        {formatCurrencyServer(Math.abs(cat.diff), currency)}
                       </span>
                     ) : hasIncreased ? (
                       <span className="inline-flex items-center text-xs font-semibold text-rose-600 dark:text-rose-400 gap-0.5">
                         <ArrowUpRight className="w-3.5 h-3.5" />
-                        Rp {Math.abs(cat.diff).toLocaleString("id-ID")}
+                        {formatCurrencyServer(Math.abs(cat.diff), currency)}
                       </span>
                     ) : (
                       <span className="text-xs font-medium text-zinc-500">

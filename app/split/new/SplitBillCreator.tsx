@@ -25,6 +25,7 @@ import {
 } from "@/utils/splitCalculator";
 import { createSplitBill } from "@/app/split/actions";
 import FriendViewPreviewModal from "./FriendViewPreviewModal";
+import { useTranslation } from "@/utils/i18n/context";
 
 interface FormParticipant {
   id: string;
@@ -77,6 +78,7 @@ export default function SplitBillCreator({
   defaultPayment,
 }: SplitBillCreatorProps) {
   const router = useRouter();
+  const { formatCurrency, currencySymbol, currency } = useTranslation();
 
   // General Bill Info
   const [title, setTitle] = useState("");
@@ -334,7 +336,7 @@ export default function SplitBillCreator({
     }
 
     if (calculation.grandTotal <= 0) {
-      setErrorMsg("Total tagihan tidak boleh Rp 0.");
+      setErrorMsg(`Total tagihan tidak boleh ${formatCurrency(0)}.`);
       return;
     }
 
@@ -390,11 +392,7 @@ export default function SplitBillCreator({
   };
 
   const formatRupiah = (amt: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(amt);
+    return formatCurrency(amt);
   };
 
   return (
@@ -734,12 +732,12 @@ export default function SplitBillCreator({
                 {/* Price input */}
                 <div className="relative w-32 sm:w-40">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-zinc-400">
-                    Rp
+                    {currencySymbol}
                   </span>
                   <input
                     type="number"
                     min="0"
-                    step="1000"
+                    step="any"
                     value={item.price || ""}
                     onChange={(e) => handleUpdateItem(item.id, { price: Number(e.target.value) })}
                     placeholder="0"
@@ -909,12 +907,12 @@ export default function SplitBillCreator({
             </label>
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-zinc-400">
-                Rp
+                {currencySymbol}
               </span>
               <input
                 type="number"
                 min="0"
-                step="1000"
+                step="any"
                 value={extraFee || ""}
                 onChange={(e) => setExtraFee(Number(e.target.value))}
                 placeholder="0"
@@ -930,12 +928,12 @@ export default function SplitBillCreator({
             </label>
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-emerald-500">
-                -Rp
+                -{currencySymbol}
               </span>
               <input
                 type="number"
                 min="0"
-                step="1000"
+                step="any"
                 value={discountAmount || ""}
                 onChange={(e) => setDiscountAmount(Number(e.target.value))}
                 placeholder="0"
@@ -951,11 +949,18 @@ export default function SplitBillCreator({
             Pembulatan Total per Orang:
           </span>
           <div className="flex gap-1.5">
-            {[
-              { step: 100, label: "Rp 100" },
-              { step: 500, label: "Rp 500" },
-              { step: 1, label: "Persis" },
-            ].map((r) => (
+            {(currency === "IDR"
+              ? [
+                  { step: 100, label: "Rp 100" },
+                  { step: 500, label: "Rp 500" },
+                  { step: 1, label: "Persis" },
+                ]
+              : [
+                  { step: 1, label: `${currencySymbol} 1` },
+                  { step: 0.1, label: `${currencySymbol} 0.1` },
+                  { step: 0.01, label: "Persis" },
+                ]
+            ).map((r) => (
               <button
                 key={r.step}
                 type="button"

@@ -48,7 +48,7 @@ export default function ExpenseList({
   endDateStr,
   dashboardPeriod = "week",
 }: ExpenseListProps) {
-  const { t, formatDate, getCategoryLabel } = useTranslation();
+  const { t, formatDate, getCategoryLabel, formatCurrency, currencySymbol, currency } = useTranslation();
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
   const [editIsExempt, setEditIsExempt] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -245,11 +245,11 @@ export default function ExpenseList({
         <div className="flex items-center gap-2.5">
           {Number(item.amount) === 0 ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-              Rp 0 🎉
+              {formatCurrency(0)} 🎉
             </span>
           ) : (
             <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Rp {Number(item.amount).toLocaleString("id-ID")}
+              {formatCurrency(Number(item.amount))}
             </span>
           )}
 
@@ -447,7 +447,7 @@ export default function ExpenseList({
                     .replace("{total}", String(baseExpenses.length))}
                   {" • "}
                   <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    Rp {filteredTotal.toLocaleString("id-ID")}
+                    {formatCurrency(filteredTotal)}
                   </strong>
                 </span>
                 <button
@@ -577,7 +577,7 @@ export default function ExpenseList({
                       </span>
                     </div>
                     <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                      Rp {group.totalAmount.toLocaleString("id-ID")}
+                      {formatCurrency(group.totalAmount)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -637,13 +637,13 @@ export default function ExpenseList({
               <div className="flex gap-2">
                 <div className="flex w-1/2 items-center rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:focus-within:border-zinc-500">
                   <span className="mr-2 text-sm font-semibold text-zinc-400">
-                    Rp
+                    {currencySymbol}
                   </span>
                   <input
                     name="amount"
                     type="number"
-                    inputMode="numeric"
-                    step="1"
+                    inputMode={currency === "IDR" ? "numeric" : "decimal"}
+                    step={currency === "IDR" ? "1" : "0.01"}
                     defaultValue={editingExpense.amount}
                     required
                     className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-zinc-400 text-zinc-900 dark:placeholder:text-zinc-500 dark:text-zinc-100"

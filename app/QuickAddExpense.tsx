@@ -109,7 +109,7 @@ const CATEGORY_STYLES: Record<
 };
 
 function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: string }) {
-  const { t, getCategoryLabel, formatDate } = useTranslation();
+  const { t, getCategoryLabel, formatDate, currency, currencySymbol, formatCurrency } = useTranslation();
 
   // Mode: "standard" vs "quick_type" (lazy initialization from localStorage)
   const [inputMode, setInputMode] = useState<"standard" | "quick_type">(() => getStoredInputMode());
@@ -176,8 +176,8 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
 
   // Live parsed expense for Quick Type mode
   const parsedExpense = useMemo(() => {
-    return parseQuickExpenseInput(quickInput, today, chips);
-  }, [quickInput, today, chips]);
+    return parseQuickExpenseInput(quickInput, today, chips, currency);
+  }, [quickInput, today, chips, currency]);
 
   // Effective values for Quick Type mode (respecting manual 1-tap overrides)
   const effectiveCategory = overrideCategory ?? parsedExpense.category;
@@ -378,7 +378,7 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
       await addExpense(formData);
 
       if (keepBatch) {
-        const feedback = `${parsedExpense.name} (Rp ${parsedExpense.amount.toLocaleString("id-ID")})`;
+        const feedback = `${parsedExpense.name} (${formatCurrency(parsedExpense.amount || 0)})`;
         setBatchFeedback(feedback);
         setQuickInput("");
         setOverrideCategory(null);
@@ -593,20 +593,33 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
               </div>
             </div>
 
-            {/* Hero Amount Input with live IDR thousands display */}
+            {/* Hero Amount Input with live currency display */}
             <div className="flex flex-col gap-1.5">
               <div className="relative flex items-center rounded-2xl border-2 border-zinc-200 bg-zinc-50/70 p-3 focus-within:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:focus-within:border-zinc-200 transition-all">
                 <span className="text-base font-bold text-zinc-400 dark:text-zinc-500 mr-2 select-none">
-                  Rp
+                  {currencySymbol}
                 </span>
                 <input
                   ref={amountInputRef}
                   type="text"
-                  inputMode="numeric"
-                  value={amount > 0 ? amount.toLocaleString("id-ID") : ""}
+                  inputMode={currency === "IDR" ? "numeric" : "decimal"}
+                  value={
+                    amount > 0
+                      ? currency === "IDR"
+                        ? amount.toLocaleString("id-ID")
+                        : String(amount)
+                      : ""
+                  }
                   onChange={(e) => {
-                    const digits = e.target.value.replace(/\D/g, "");
-                    setAmount(digits ? parseInt(digits, 10) : 0);
+                    if (currency === "IDR") {
+                      const digits = e.target.value.replace(/\D/g, "");
+                      setAmount(digits ? parseInt(digits, 10) : 0);
+                    } else {
+                      const clean = e.target.value.replace(/[^0-9.]/g, "");
+                      const parts = clean.split(".");
+                      const valStr = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join("")}` : clean;
+                      setAmount(valStr ? parseFloat(valStr) || 0 : 0);
+                    }
                   }}
                   placeholder="0"
                   className="w-full bg-transparent text-2xl font-extrabold tracking-tight outline-none placeholder:text-zinc-300 text-zinc-900 dark:placeholder:text-zinc-600 dark:text-zinc-50"
@@ -623,14 +636,22 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                 )}
               </div>
 
-              {/* Quick Amount Pills (+10k, +20k, +50k, +100k, Clear) */}
+              {/* Quick Amount Pills */}
               <div className="grid grid-cols-5 gap-1.5">
-                {[
-                  { label: "+10k", val: 10000 },
-                  { label: "+20k", val: 20000 },
-                  { label: "+50k", val: 50000 },
-                  { label: "+100k", val: 100000 },
-                ].map((item) => (
+                {(currency === "IDR"
+                  ? [
+                      { label: "+10k", val: 10000 },
+                      { label: "+20k", val: 20000 },
+                      { label: "+50k", val: 50000 },
+                      { label: "+100k", val: 100000 },
+                    ]
+                  : [
+                      { label: "+5", val: 5 },
+                      { label: "+10", val: 10 },
+                      { label: "+20", val: 20 },
+                      { label: "+50", val: 50 },
+                    ]
+                ).map((item) => (
                   <button
                     key={item.label}
                     type="button"
@@ -864,7 +885,7 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                 ) : (
                   <span>
                     {t.expenses.addTitle}
-                    {amount > 0 ? ` (Rp ${amount.toLocaleString("id-ID")})` : ""}
+                    {amount > 0 ? ` (${formatCurrency(amount)})` : ""}
                   </span>
                 )}
               </button>
@@ -978,7 +999,7 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                       {parsedExpense.name}
                     </span>
                     <span className="text-lg font-extrabold text-zinc-900 dark:text-white shrink-0">
-                      Rp {parsedExpense.amount?.toLocaleString("id-ID")}
+                      {formatCurrency(parsedExpense.amount || 0)}
                     </span>
                   </div>
 
@@ -1172,7 +1193,7 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                 ) : (
                   <span>
                     {t.expenses.addTitle}
-                    {parsedExpense.amount ? ` (Rp ${parsedExpense.amount.toLocaleString("id-ID")})` : ""}
+                    {parsedExpense.amount ? ` (${formatCurrency(parsedExpense.amount)})` : ""}
                   </span>
                 )}
               </button>
@@ -1214,7 +1235,7 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                       <p className="font-semibold text-zinc-900 dark:text-zinc-100">{chip.name}</p>
                       <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
                         {getCategoryLabel(chip.category)}
-                        {chip.defaultAmount ? ` • Rp ${chip.defaultAmount.toLocaleString("id-ID")}` : ""}
+                        {chip.defaultAmount ? ` • ${formatCurrency(chip.defaultAmount)}` : ""}
                       </span>
                     </div>
                   </div>

@@ -12,6 +12,7 @@ import {
   SplitCalculationSummary,
   ParticipantCalculation,
 } from "@/utils/splitCalculator";
+import { useTranslation } from "@/utils/i18n/context";
 
 interface FriendViewPreviewModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export default function FriendViewPreviewModal({
   calculation,
   paymentInfo,
 }: FriendViewPreviewModalProps) {
+  const { formatCurrency } = useTranslation();
   const [selectedParticipantId, setSelectedParticipantId] = useState<string>(
     calculation.participants.find((p) => !p.isCreator)?.participantId ||
       calculation.participants[0]?.participantId ||
@@ -50,11 +52,7 @@ export default function FriendViewPreviewModal({
     calculation.participants[0];
 
   const formatRupiah = (amt: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(amt);
+    return formatCurrency(amt);
   };
 
   return (

@@ -26,6 +26,7 @@ import {
   SplitCalculationSummary,
 } from "@/utils/splitCalculator";
 import { toggleParticipantPaid, deleteSplitBill } from "@/app/split/actions";
+import { useTranslation } from "@/utils/i18n/context";
 
 interface SplitBillViewerProps {
   bill: SplitBillRecord;
@@ -41,6 +42,7 @@ export default function SplitBillViewer({
   isHost,
 }: SplitBillViewerProps) {
   const router = useRouter();
+  const { formatCurrency } = useTranslation();
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -101,11 +103,7 @@ export default function SplitBillViewer({
   }, [allPaid]);
 
   const formatRupiah = (amt: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(amt);
+    return formatCurrency(amt);
   };
 
   const handleCopyLink = () => {

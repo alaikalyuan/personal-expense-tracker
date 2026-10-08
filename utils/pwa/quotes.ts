@@ -20,8 +20,8 @@ export const FINANCE_QUOTES: FinanceQuote[] = [
   },
   {
     id: 3,
-    textId: "Catat Rp 1.000 hari ini, selamatkan jutaan rupiah di masa depan.",
-    textEn: "Record a single dollar today, safeguard thousands tomorrow.",
+    textId: "Catat pengeluaran kecil hari ini, selamatkan keuanganmu di masa depan.",
+    textEn: "Record small expenses today, safeguard your finances tomorrow.",
     author: "SakuTrack",
   },
   {

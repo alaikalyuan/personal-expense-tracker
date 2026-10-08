@@ -21,6 +21,7 @@ import { deleteSplitBill } from "@/app/split/actions";
 import { SubscriptionRecord } from "@/app/subscriptions/types";
 import { createSplitBillFromSubscription } from "@/app/subscriptions/actions";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/utils/i18n/context";
 
 export interface HistoryBillRecord {
   id: string;
@@ -70,6 +71,7 @@ export default function SplitBillHistoryClient({
   splitSubscriptions = [],
 }: SplitBillHistoryClientProps) {
   const router = useRouter();
+  const { formatCurrency } = useTranslation();
   const [bills, setBills] = useState<HistoryBillRecord[]>(initialBills);
   const [filterTab, setFilterTab] = useState<"all" | "active" | "settled">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -176,11 +178,7 @@ export default function SplitBillHistoryClient({
   };
 
   const formatRupiah = (amt: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(amt);
+    return formatCurrency(amt);
   };
 
   return (
@@ -276,7 +274,7 @@ export default function SplitBillHistoryClient({
                       {sub.name}
                     </p>
                     <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      Rp {Math.round(perPerson).toLocaleString("id-ID")}/org • Jadwal: {sub.next_renewal_date}
+                      {formatCurrency(perPerson)}/org • Jadwal: {sub.next_renewal_date}
                     </p>
                   </div>
                   <button

@@ -71,7 +71,7 @@ export default function DashboardClient({
   const [authModalMode, setAuthModalMode] = useState<"signup" | "login">(initialAuthMode || "signup");
   const [authModalError, setAuthModalError] = useState<string | null>(initialAuthError || null);
   const [mergedToastCount, setMergedToastCount] = useState<number>(initialMergedCount);
-  const { locale, t, formatDate, getCategoryLabel } = useTranslation();
+  const { t, formatDate, getCategoryLabel, formatCurrency } = useTranslation();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -348,7 +348,7 @@ export default function DashboardClient({
               {isMonth ? t.dashboard.spentThisMonth : t.dashboard.spentThisWeek}
             </p>
             <p className="mt-1 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-              Rp {activePeriodTotal.toLocaleString("id-ID")}
+              {formatCurrency(activePeriodTotal)}
             </p>
           </div>
         </div>
@@ -381,7 +381,7 @@ export default function DashboardClient({
               {t.dashboard.dailyAvg}
             </p>
             <p className="mt-0.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-              Rp {Math.round(avgDailySpend).toLocaleString("id-ID")}
+              {formatCurrency(Math.round(avgDailySpend))}
             </p>
             <p className="mt-0.5 text-[10px] text-zinc-500">
               {isMonth
@@ -402,7 +402,7 @@ export default function DashboardClient({
               {topCategoryName}
             </p>
             <p className="mt-0.5 truncate text-[10px] text-zinc-500">
-              Rp {Number(topCategory[1]).toLocaleString("id-ID")}
+              {formatCurrency(Number(topCategory[1]))}
             </p>
           </div>
 
@@ -412,7 +412,7 @@ export default function DashboardClient({
               {t.dashboard.largest}
             </p>
             <p className="mt-0.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-              Rp {largestSpend.toLocaleString("id-ID")}
+              {formatCurrency(largestSpend)}
             </p>
             <p
               className="mt-0.5 truncate text-[10px] text-zinc-500"

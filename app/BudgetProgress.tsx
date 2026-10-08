@@ -26,25 +26,53 @@ export default function BudgetProgress({
   exemptCount,
   unexemptAnomaly,
 }: BudgetProgressProps) {
-  const { t, locale } = useTranslation();
+  const { t, locale, formatCurrency, currency, currencySymbol } = useTranslation();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [budgetInput, setBudgetInput] = useState(String(weeklyBudget));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExempting, setIsExempting] = useState(false);
 
-  const presetBudgets = period === "month"
-    ? [
-        { label: t.budget.preset1m5, value: 1500000 },
-        { label: t.budget.preset2m5, value: 2500000 },
-        { label: t.budget.preset5m, value: 5000000 },
-        { label: t.budget.preset10m, value: 10000000 },
-      ]
-    : [
-        { label: t.budget.preset250k, value: 250000 },
-        { label: t.budget.preset500k, value: 500000 },
-        { label: t.budget.preset1m, value: 1000000 },
-        { label: t.budget.preset2m, value: 2000000 },
-      ];
+  const presetBudgets = currency === "IDR"
+    ? (period === "month"
+        ? [
+            { label: t.budget.preset1m5, value: 1500000 },
+            { label: t.budget.preset2m5, value: 2500000 },
+            { label: t.budget.preset5m, value: 5000000 },
+            { label: t.budget.preset10m, value: 10000000 },
+          ]
+        : [
+            { label: t.budget.preset250k, value: 250000 },
+            { label: t.budget.preset500k, value: 500000 },
+            { label: t.budget.preset1m, value: 1000000 },
+            { label: t.budget.preset2m, value: 2000000 },
+          ])
+    : (currency === "MYR"
+        ? (period === "month"
+            ? [
+                { label: "1.5k", value: 1500 },
+                { label: "2.5k", value: 2500 },
+                { label: "4k", value: 4000 },
+                { label: "6k", value: 6000 },
+              ]
+            : [
+                { label: "300", value: 300 },
+                { label: "500", value: 500 },
+                { label: "1k", value: 1000 },
+                { label: "1.5k", value: 1500 },
+              ])
+        : (period === "month"
+            ? [
+                { label: "500", value: 500 },
+                { label: "1k", value: 1000 },
+                { label: "1.5k", value: 1500 },
+                { label: "2.5k", value: 2500 },
+              ]
+            : [
+                { label: "100", value: 100 },
+                { label: "200", value: 200 },
+                { label: "300", value: 300 },
+                { label: "500", value: 500 },
+              ]));
 
   // Base calculation on regular operational spend if one-offs exist
   const activeSpend = regularTotal !== undefined ? regularTotal : weeklyTotal;
@@ -96,7 +124,7 @@ export default function BudgetProgress({
           <span>
             {rawPercent}% {t.budget.percentUsedOf}{" "}
             <span className="text-zinc-900 dark:text-zinc-200 font-semibold">
-              Rp {weeklyBudget.toLocaleString("id-ID")}
+              {formatCurrency(weeklyBudget)}
             </span>
           </span>
         </span>
@@ -128,7 +156,7 @@ export default function BudgetProgress({
         {isOver ? (
           <>
             <span className="font-semibold text-amber-600 dark:text-amber-400">
-              +Rp {Math.abs(remaining).toLocaleString("id-ID")} {t.budget.aboveTargetBy}
+              +{formatCurrency(Math.abs(remaining))} {t.budget.aboveTargetBy}
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
               {t.budget.honestTrackingBadge}
@@ -138,13 +166,13 @@ export default function BudgetProgress({
           <>
             <span className="text-zinc-500 dark:text-zinc-400">
               <span className={`font-semibold ${textColor}`}>
-                Rp {remaining.toLocaleString("id-ID")}
+                {formatCurrency(remaining)}
               </span>{" "}
               {t.budget.left}
             </span>
 
             <span className="text-zinc-500">
-              ~Rp {dailyAllowance.toLocaleString("id-ID")}/{locale === "id" ? "hari" : "day"} ({locale === "id" ? `sisa ${daysRemaining} hari` : `${daysRemaining}d left`})
+              ~{formatCurrency(dailyAllowance)}/{locale === "id" ? "hari" : "day"} ({locale === "id" ? `sisa ${daysRemaining} hari` : `${daysRemaining}d left`})
             </span>
           </>
         )}
@@ -156,7 +184,7 @@ export default function BudgetProgress({
           <Tag className="w-3 h-3 text-amber-500 shrink-0" />
           <span>
             {t.budget.exemptSummary
-              .replace("{amount}", exemptTotal.toLocaleString("id-ID"))
+              .replace("{amount}", formatCurrency(exemptTotal))
               .replace("{count}", String(exemptCount || 1))}
           </span>
         </div>
@@ -170,7 +198,7 @@ export default function BudgetProgress({
             <p className="text-[11px] leading-snug font-medium break-words">
               {t.budget.exemptSuggestTitle
                 .replace("{name}", unexemptAnomaly.name)
-                .replace("{amount}", unexemptAnomaly.amount.toLocaleString("id-ID"))}
+                .replace("{amount}", formatCurrency(unexemptAnomaly.amount))}
             </p>
           </div>
           <button
@@ -257,16 +285,16 @@ export default function BudgetProgress({
               {/* Amount input */}
               <div className="flex items-center rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:focus-within:border-zinc-500 mt-1">
                 <span className="mr-2 text-sm font-semibold text-zinc-400">
-                  Rp
+                  {currencySymbol}
                 </span>
                 <input
                   name="budget"
                   type="number"
-                  inputMode="numeric"
-                  step="1000"
+                  inputMode={currency === "IDR" ? "numeric" : "decimal"}
+                  step={currency === "IDR" ? "1000" : "1"}
                   value={budgetInput}
                   onChange={(e) => setBudgetInput(e.target.value)}
-                  placeholder="e.g. 500000"
+                  placeholder={currency === "IDR" ? "e.g. 500000" : "e.g. 100"}
                   required
                   className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-zinc-400 text-zinc-900 dark:placeholder:text-zinc-500 dark:text-zinc-100"
                 />

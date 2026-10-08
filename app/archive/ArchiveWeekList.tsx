@@ -20,7 +20,7 @@ interface ArchiveWeekListProps {
 }
 
 export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
-  const { t, getCategoryLabel } = useTranslation();
+  const { t, getCategoryLabel, formatCurrency } = useTranslation();
 
   // Default open the most recent past week
   const [expandedWeeks, setExpandedWeeks] = useState<Record<string, boolean>>(() => {
@@ -174,7 +174,7 @@ export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
 
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                    Rp {week.totalAmount.toLocaleString("id-ID")}
+                    {formatCurrency(week.totalAmount)}
                   </span>
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800/80 dark:bg-zinc-950/60 dark:text-zinc-400">
                     <ChevronDown

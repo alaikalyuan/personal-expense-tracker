@@ -4,6 +4,7 @@ import { sendWebPushNotification } from "@/utils/pwa/webPushServer";
 import { getDailyQuote } from "@/utils/pwa/quotes";
 import { getTodayString, getNowInTimezone } from "@/utils/date";
 import { computeNextRenewalDate } from "@/app/subscriptions/types";
+import { formatMoney } from "@/utils/money";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
@@ -83,7 +84,7 @@ async function handleCron(req: NextRequest) {
                 : `📅 Perpanjangan Langganan: ${sub.name}`,
               body: sub.is_split
                 ? `Langganan patungan ${sub.name} jatuh tempo hari ini. Buka aplikasi untuk memeriksa rincian patungan.`
-                : `${sub.name} diperpanjang hari ini (Rp ${Number(sub.price).toLocaleString("id-ID")}).`,
+                : `${sub.name} diperpanjang hari ini (${formatMoney(Number(sub.price), "IDR")}).`,
               url: sub.is_split ? "/split" : "/subscriptions",
               tag: `renewal-${sub.id}`,
             });
