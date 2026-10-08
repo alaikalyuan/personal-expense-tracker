@@ -777,6 +777,36 @@ export interface Dictionary {
     guestAlert: string;
     saveFailedAlert: string;
   };
+  aiAdvisor: {
+    cardTitle: string;
+    cardBadge: string;
+    cardTeaserDefault: string;
+    cardAction: string;
+    modalTitle: string;
+    modalSubtitle: string;
+    disclaimer: string;
+    inputPlaceholder: string;
+    send: string;
+    thinking: string;
+    resetChat: string;
+    promptChips: {
+      budgetPacing: string;
+      whereToCut: string;
+      subscriptions: string;
+      savingsGoal: string;
+    };
+    apiKeyModalTitle: string;
+    apiKeyLabel: string;
+    apiKeyPlaceholder: string;
+    apiKeyHint: string;
+    apiKeySave: string;
+    apiKeySavedToast: string;
+    apiKeyRemove: string;
+    apiKeyRemovedToast: string;
+    apiKeyRequiredError: string;
+    networkError: string;
+    welcomeMessage: string;
+  };
 }
 
 export const dictionaries: Record<Locale, Dictionary> = {
@@ -1565,6 +1595,36 @@ export const dictionaries: Record<Locale, Dictionary> = {
       guestAlert: "Silakan masuk atau buat akun terdaftar terlebih dahulu untuk mengaktifkan push notifikasi.",
       saveFailedAlert: "Gagal menyimpan preferensi: {error}",
     },
+    aiAdvisor: {
+      cardTitle: "Asisten Keuangan AI",
+      cardBadge: "DeepSeek AI",
+      cardTeaserDefault: "Dapatkan saran cerdas seputar anggaran & pengeluaranmu",
+      cardAction: "Tanya AI",
+      modalTitle: "Asisten Keuangan AI",
+      modalSubtitle: "Menganalisis pengeluaran & anggaran untuk memberikan wawasan keuangan pribadi",
+      disclaimer: "Analisis berbasis AI dari data pengeluaranmu. Bukan nasihat keuangan legal atau formal.",
+      inputPlaceholder: "Tanyakan sesuatu tentang pengeluaranmu...",
+      send: "Kirim",
+      thinking: "Menganalisis data pengeluaran...",
+      resetChat: "Mulai Ulang Chat",
+      promptChips: {
+        budgetPacing: "Bagaimana laju pengeluaran & anggaranku saat ini?",
+        whereToCut: "Di kategori mana saya bisa berhemat?",
+        subscriptions: "Analisis pengeluaran langganan rutin saya",
+        savingsGoal: "Beri saran target tabungan yang realistis",
+      },
+      apiKeyModalTitle: "Konfigurasi DeepSeek API Key",
+      apiKeyLabel: "Kunci API Pribadi (Opsional)",
+      apiKeyPlaceholder: "sk-...",
+      apiKeyHint: "Disimpan secara lokal di browsermu jika ingin memakai kuota API pribadi.",
+      apiKeySave: "Simpan Kunci",
+      apiKeySavedToast: "API key berhasil disimpan!",
+      apiKeyRemove: "Hapus Kunci",
+      apiKeyRemovedToast: "API key dihapus, kembali ke default server.",
+      apiKeyRequiredError: "DeepSeek API key belum dikonfigurasi. Atur di .env.local atau masukkan kunci pribadi di pengaturan AI.",
+      networkError: "Gagal terhubung ke layanan AI. Silakan coba sesaat lagi.",
+      welcomeMessage: "Halo! Saya asisten keuangan pribadimu. Saya dapat menganalisis kebiasaan belanja, laju anggaran, dan langgananmu untuk memberikan tips finansial yang relevan. Ada yang ingin kamu ketahui?",
+    },
   },
   en: {
     common: {
@@ -2350,6 +2410,36 @@ export const dictionaries: Record<Locale, Dictionary> = {
       unsupportedAlert: "This browser or device does not support Web Push Notifications.",
       guestAlert: "Please sign in or create an account first to enable push notifications.",
       saveFailedAlert: "Failed to save preferences: {error}",
+    },
+    aiAdvisor: {
+      cardTitle: "AI Financial Advisor",
+      cardBadge: "DeepSeek AI",
+      cardTeaserDefault: "Get personalized insights on your budget & spending habits",
+      cardAction: "Ask AI",
+      modalTitle: "AI Financial Advisor",
+      modalSubtitle: "Analyzes your real-time expenses and budgets to provide personalized financial guidance",
+      disclaimer: "AI-generated insights based on your spending data. Not certified financial advice.",
+      inputPlaceholder: "Ask anything about your spending...",
+      send: "Send",
+      thinking: "Analyzing finances...",
+      resetChat: "Reset Chat",
+      promptChips: {
+        budgetPacing: "How is my budget pacing right now?",
+        whereToCut: "Where can I cut expenses this period?",
+        subscriptions: "Review my recurring subscriptions",
+        savingsGoal: "Suggest a realistic savings target",
+      },
+      apiKeyModalTitle: "DeepSeek API Key Configuration",
+      apiKeyLabel: "Personal API Key (Optional)",
+      apiKeyPlaceholder: "sk-...",
+      apiKeyHint: "Saved locally in your browser if you wish to use your personal DeepSeek quota.",
+      apiKeySave: "Save Key",
+      apiKeySavedToast: "API key saved successfully!",
+      apiKeyRemove: "Remove Key",
+      apiKeyRemovedToast: "Personal API key removed. Using server default.",
+      apiKeyRequiredError: "DeepSeek API key is not configured. Set DEEPSEEK_API_KEY in .env.local or add your personal key in AI settings.",
+      networkError: "Failed to connect to the AI service. Please try again.",
+      welcomeMessage: "Hello! I am your personal financial assistant. I can analyze your spending patterns, budget pace, and recurring subscriptions to provide actionable tips. What would you like to explore?",
     },
   },
 };

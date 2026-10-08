@@ -30,6 +30,8 @@ import WelcomeGuestModal from "./WelcomeGuestModal";
 import UpgradeAccountModal from "./UpgradeAccountModal";
 import SakuSwitcher from "./SakuSwitcher";
 import { WalletBalance } from "@/utils/wallets/server";
+import AiAdvisorCard from "./AiAdvisorCard";
+import AiAdvisorModal from "./AiAdvisorModal";
 
 interface DashboardClientProps {
   initialCadence: "week" | "month";
@@ -79,6 +81,7 @@ export default function DashboardClient({
   const [authModalMode, setAuthModalMode] = useState<"signup" | "login">(initialAuthMode || "signup");
   const [authModalError, setAuthModalError] = useState<string | null>(initialAuthError || null);
   const [mergedToastCount, setMergedToastCount] = useState<number>(initialMergedCount);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const { t, formatDate, getCategoryLabel, formatCurrency } = useTranslation();
 
   useEffect(() => {
@@ -455,6 +458,15 @@ export default function DashboardClient({
         />
       )}
 
+      {/* AI Financial Advisor Insights Card */}
+      <AiAdvisorCard
+        onOpenChat={() => setIsAiModalOpen(true)}
+        activePeriodTotal={activePeriodTotal}
+        activeBudget={activeBudget}
+        topCategoryName={topCategoryName}
+        isOverBudget={isOverBudget}
+      />
+
       {/* Breakdown Card */}
       <BreakdownCard
         period={cadence}
@@ -486,6 +498,11 @@ export default function DashboardClient({
           }}
         />
       )}
+      <AiAdvisorModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        isGuest={isGuest}
+      />
       <UpgradeAccountModal
         isOpen={isUpgradeModalOpen}
         onClose={() => {
