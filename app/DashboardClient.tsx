@@ -345,7 +345,7 @@ export default function DashboardClient({
             </div>
             <div className="min-w-0">
               <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                {upcomingSubscriptions.length} Langganan Segera Jatuh Tempo
+                {upcomingSubscriptions.length} {t.subscriptions.upcomingDueBanner}
               </p>
               <p className="text-[11px] text-zinc-600 dark:text-zinc-400 truncate">
                 {upcomingSubscriptions.map((s) => s.name).join(", ")}
@@ -353,7 +353,7 @@ export default function DashboardClient({
             </div>
           </div>
           <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 shrink-0">
-            Lihat &rarr;
+            {t.subscriptions.viewDetails} &rarr;
           </span>
         </Link>
       )}

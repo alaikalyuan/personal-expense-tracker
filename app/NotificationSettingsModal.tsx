@@ -17,6 +17,7 @@ import {
   getCurrentPushSubscription,
 } from "@/utils/pwa/pushManager";
 import { updateNotificationSettings } from "@/app/subscriptions/actions";
+import { useTranslation } from "@/utils/i18n/context";
 
 interface NotificationSettingsModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export default function NotificationSettingsModal({
   isGuest = false,
   initialSettings,
 }: NotificationSettingsModalProps) {
+  const { t } = useTranslation();
   const [isSupported] = useState(() => isPushNotificationSupported());
   const [permission, setPermission] = useState<NotificationPermission>(() =>
     typeof window !== "undefined" && "Notification" in window ? Notification.permission : "default"
@@ -76,12 +78,12 @@ export default function NotificationSettingsModal({
 
   const handleTogglePush = async () => {
     if (!isSupported) {
-      alert("Browser atau perangkat ini belum mendukung Web Push Notifications.");
+      alert(t.notifications.unsupportedAlert);
       return;
     }
 
     if (isGuest) {
-      alert("Silakan masuk atau buat akun terdaftar terlebih dahulu untuk mengaktifkan push notifikasi.");
+      alert(t.notifications.guestAlert);
       return;
     }
 
@@ -98,14 +100,14 @@ export default function NotificationSettingsModal({
         setPermission("granted");
         setTestStatus({
           type: "success",
-          msg: "Push notifikasi berhasil diaktifkan pada perangkat ini!",
+          msg: t.notifications.enableSuccess,
         });
       }
     } catch (err: unknown) {
       const e = err as Error;
       setTestStatus({
         type: "error",
-        msg: e.message || "Gagal mengaktifkan push notifikasi.",
+        msg: e.message || t.notifications.enableError,
       });
     } finally {
       setIsTogglingPush(false);
@@ -128,23 +130,23 @@ export default function NotificationSettingsModal({
       onClose();
     } catch (err: unknown) {
       const e = err as Error;
-      alert(`Gagal menyimpan preferensi: ${e.message}`);
+      alert(t.notifications.saveFailedAlert.replace("{error}", e.message));
     }
   };
 
   const handleSendTest = async () => {
-    setTestStatus({ type: "loading", msg: "Mengirimkan notifikasi uji coba..." });
+    setTestStatus({ type: "loading", msg: t.notifications.testSending });
     try {
       await sendTestNotification();
       setTestStatus({
         type: "success",
-        msg: "Notifikasi uji coba terkirim! Cek baki notifikasi perangkatmu.",
+        msg: t.notifications.testSuccess,
       });
     } catch (err: unknown) {
       const e = err as Error;
       setTestStatus({
         type: "error",
-        msg: e.message || "Gagal mengirimkan notifikasi uji coba.",
+        msg: e.message || t.notifications.testError,
       });
     }
   };
@@ -160,16 +162,17 @@ export default function NotificationSettingsModal({
             </div>
             <div>
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                Notifikasi & Pengingat PWA
+                {t.notifications.title}
               </h3>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                Atur jadwal pengingat catat & langganan
+                {t.notifications.subtitle}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label={t.notifications.closeBtn}
             className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -181,7 +184,7 @@ export default function NotificationSettingsModal({
           <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-900 dark:text-amber-200 flex items-start gap-2">
             <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
             <span>
-              Push notifikasi memerlukan akun terdaftar agar server dapat mengirimkan pesan saat aplikasi ditutup.
+              {t.notifications.guestWarning}
             </span>
           </div>
         )}
@@ -191,14 +194,14 @@ export default function NotificationSettingsModal({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                Push Notifikasi Perangkat
+                {t.notifications.pushCardTitle}
               </p>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                 {isSubscribed
-                  ? "Aktif pada perangkat ini"
+                  ? t.notifications.pushActive
                   : permission === "denied"
-                  ? "Diblokir oleh browser. Buka pengaturan browser untuk mengizinkan."
-                  : "Terima notifikasi walau aplikasi tertutup"}
+                  ? t.notifications.pushBlocked
+                  : t.notifications.pushInactive}
               </p>
             </div>
             <button
@@ -211,7 +214,7 @@ export default function NotificationSettingsModal({
                   : "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200"
               }`}
             >
-              {isTogglingPush ? "Memproses..." : isSubscribed ? "Aktif" : "Aktifkan"}
+              {isTogglingPush ? t.notifications.btnProcessing : isSubscribed ? t.notifications.btnActive : t.notifications.btnEnable}
             </button>
           </div>
 
@@ -224,7 +227,7 @@ export default function NotificationSettingsModal({
                 className="flex items-center gap-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 cursor-pointer"
               >
                 <Send className="w-3 h-3" />
-                <span>Kirim Tes Notifikasi</span>
+                <span>{t.notifications.sendTestBtn}</span>
               </button>
             </div>
           )}
@@ -253,10 +256,10 @@ export default function NotificationSettingsModal({
               <Clock className="w-4 h-4 text-indigo-500" />
               <div>
                 <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                  Waktu Pengingat Harian
+                  {t.notifications.dailyReminderTime}
                 </p>
                 <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                  Pukul pengingat untuk mengisi catatan hari ini
+                  {t.notifications.dailyReminderTimeDesc}
                 </p>
               </div>
             </div>
@@ -272,10 +275,10 @@ export default function NotificationSettingsModal({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                Pengingat Catat Pengeluaran
+                {t.notifications.reminderToggleTitle}
               </p>
               <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                Ingatkan jika belum mencatat pengeluaran hari ini
+                {t.notifications.reminderToggleDesc}
               </p>
             </div>
             <input
@@ -292,10 +295,10 @@ export default function NotificationSettingsModal({
               <Sparkles className="w-4 h-4 text-amber-500" />
               <div>
                 <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                  Quotes Motivasi Keuangan
+                  {t.notifications.quotesToggleTitle}
                 </p>
                 <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                  Sertakan kutipan inspiratif hemat & disiplin finansial
+                  {t.notifications.quotesToggleDesc}
                 </p>
               </div>
             </div>
@@ -311,10 +314,10 @@ export default function NotificationSettingsModal({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                Peringatan Jatuh Tempo Langganan
+                {t.notifications.subsToggleTitle}
               </p>
               <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                Ingatkan sebelum aplikasi digital diperpanjang
+                {t.notifications.subsToggleDesc}
               </p>
             </div>
             <input
@@ -329,9 +332,9 @@ export default function NotificationSettingsModal({
         {/* PWA Tips */}
         <div className="mt-5 p-3 rounded-xl bg-zinc-100/60 dark:bg-zinc-800/60 text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
           <p className="font-semibold text-zinc-700 dark:text-zinc-300 mb-0.5">
-            Tips Penggunaan di Ponsel (Android & iOS)
+            {t.notifications.tipsTitle}
           </p>
-          Pasang SakuTrack ke Layar Utama (Add to Home Screen) agar notifikasi dapat muncul di layar kunci seperti aplikasi bawaan.
+          {t.notifications.tipsDesc}
         </div>
 
         {/* Footer Buttons */}
@@ -341,14 +344,14 @@ export default function NotificationSettingsModal({
             onClick={onClose}
             className="flex-1 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
-            Tutup
+            {t.notifications.closeBtn}
           </button>
           <button
             type="button"
             onClick={handleSavePreferences}
             className="flex-1 py-2 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors cursor-pointer shadow-xs"
           >
-            Simpan Pengaturan
+            {t.notifications.saveBtn}
           </button>
         </div>
       </div>

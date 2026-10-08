@@ -45,6 +45,10 @@ export interface Dictionary {
     currency: string;
     quickAddAria: string;
     savings: string;
+    splitBill: string;
+    subscriptions: string;
+    notifications: string;
+    loginBadge: string;
   };
   categories: Record<CategoryKey, string>;
   dashboard: {
@@ -499,6 +503,280 @@ export interface Dictionary {
     remainingBudget: string;
     spentThisWeek: string;
   };
+  subscriptions: {
+    title: string;
+    subtitle: string;
+    add: string;
+    backToHome: string;
+    guestBadge: string;
+    guestDesc: string;
+    loginBtn: string;
+    totalCostMonth: string;
+    activeCount: string;
+    myShareMonth: string;
+    splitSavings: string;
+    upcomingRenewalsCount: string;
+    upcomingRenewalsDesc: string;
+    tabAll: string;
+    tabSplit: string;
+    tabPersonal: string;
+    emptyTitle: string;
+    emptyDesc: string;
+    addSubscription: string;
+    pausedBadge: string;
+    perMonth: string;
+    perYear: string;
+    perWeek: string;
+    splitBadge: string;
+    perPersonShort: string;
+    renewalToday: string;
+    renewalInDays: string;
+    splitBillBtn: string;
+    createSplitConfirm: string;
+    viewLastSplitBill: string;
+    resumeTitle: string;
+    pauseTitle: string;
+    editTitle: string;
+    deleteTitle: string;
+    deleteConfirm: string;
+    editModalTitle: string;
+    createModalTitle: string;
+    quickPresetsTitle: string;
+    serviceNameLabel: string;
+    serviceNamePlaceholder: string;
+    priceLabel: string;
+    billingCycleLabel: string;
+    cycleMonthly: string;
+    cycleYearly: string;
+    cycleWeekly: string;
+    renewalDateLabel: string;
+    paymentPlatformLabel: string;
+    payFromWalletLabel: string;
+    primaryBadge: string;
+    remindBeforeLabel: string;
+    daysCount: string;
+    splitAccountTitle: string;
+    splitAccountDesc: string;
+    addFriendLabel: string;
+    addFriendPlaceholder: string;
+    addFriendBtn: string;
+    hostBadge: string;
+    portionPerPerson: string;
+    totalSplitDesc: string;
+    autoCreateSplit: string;
+    autoLogExpenses: string;
+    cancelBtn: string;
+    saveChanges: string;
+    savingBtn: string;
+    updateSuccess: string;
+    createSuccess: string;
+    upcomingDueBanner: string;
+    viewDetails: string;
+  };
+  splitBill: {
+    backToHome: string;
+    newSplit: string;
+    historyTitle: string;
+    historySubtitle: string;
+    totalBills: string;
+    unpaid: string;
+    paid: string;
+    recurringTitle: string;
+    manageLink: string;
+    perPersonShort: string;
+    scheduleLabel: string;
+    createBillBtn: string;
+    creatingBillBtn: string;
+    createBillConfirm: string;
+    searchPlaceholder: string;
+    tabAll: string;
+    tabUnpaid: string;
+    tabPaid: string;
+    emptyTitle: string;
+    emptySearchDesc: string;
+    emptyDefaultDesc: string;
+    createSplitBillBtn: string;
+    peopleCount: string;
+    paidBadge: string;
+    paidRatio: string;
+    totalBill: string;
+    yourShareHost: string;
+    waitingFor: string;
+    deleteBillAria: string;
+    openAndShare: string;
+    deleteModalTitle: string;
+    deleteModalDesc: string;
+    deleteExpenseWarning: string;
+    cancelBtn: string;
+    deleteConfirmBtn: string;
+    deletingBtn: string;
+    deleteFailedAlert: string;
+    historyBack: string;
+    back: string;
+    hostBadge: string;
+    deleteBillBtn: string;
+    billDetails: string;
+    paymentStatus: string;
+    paidSummary: string;
+    markPaid: string;
+    markUnpaid: string;
+    deliveryFee: string;
+    copied: string;
+    copyLink: string;
+    qrCode: string;
+    whatsapp: string;
+    transferToMethod: string;
+    transferDestination: string;
+    accountHolder: string;
+    copyAccountNo: string;
+    participantBreakdown: string;
+    menuOrdered: string;
+    splitBetweenCount: string;
+    subtotalMenu: string;
+    taxProportional: string;
+    serviceCharge: string;
+    discountReduction: string;
+    scanQrTitle: string;
+    scanQrDesc: string;
+    generatingQr: string;
+    closeModal: string;
+    savingStatus: string;
+    unpaidBadge: string;
+    paidBadgeText: string;
+    waSplitBillTitle: string;
+    waTotalBill: string;
+    waBreakdownTitle: string;
+    waTransferTo: string;
+    waAccountNo: string;
+    waAccountName: string;
+    waCheckLink: string;
+    deleteBillModalTitle: string;
+    deleteBillModalDesc: string;
+    deleteBillExpenseWarning: string;
+    newSplitTitle: string;
+    newSplitSubtitle: string;
+    newSplitBadge: string;
+    draftFoundNotice: string;
+    restoreDraftBtn: string;
+    discardDraftBtn: string;
+    step1Title: string;
+    step1Subtitle: string;
+    billTitleLabel: string;
+    billTitlePlaceholder: string;
+    presetLunch: string;
+    presetCoffee: string;
+    presetElectricity: string;
+    presetWifi: string;
+    presetGroceries: string;
+    splitMethodLabel: string;
+    modeItemizedTitle: string;
+    modeItemizedSubtitle: string;
+    modeItemizedDesc: string;
+    modeEqualTitle: string;
+    modeEqualSubtitle: string;
+    modeEqualDesc: string;
+    step2Title: string;
+    step2Subtitle: string;
+    friendNamePlaceholder: string;
+    addFriendBtn: string;
+    friendExistsError: string;
+    removeParticipantAria: string;
+    step3Title: string;
+    totalBillTitle: string;
+    step3SubtitleItemized: string;
+    step3SubtitleEqual: string;
+    addItemBtn: string;
+    menuItemPlaceholder: string;
+    totalAmountPlaceholder: string;
+    deleteItemAria: string;
+    assignedToLabel: string;
+    assignAllBtn: string;
+    addAnotherItemBtn: string;
+    step4Title: string;
+    step4Subtitle: string;
+    taxLabel: string;
+    taxPresetNone: string;
+    taxPresetNoneDesc: string;
+    taxPresetPB1: string;
+    taxPresetPB1Desc: string;
+    taxPresetPPN: string;
+    taxPresetPPNDesc: string;
+    taxPresetCustom: string;
+    taxPresetCustomDesc: string;
+    taxPercentageLabel: string;
+    servicePercentageLabel: string;
+    extraFeeInputLabel: string;
+    discountInputLabel: string;
+    roundingPersonLabel: string;
+    roundingExact: string;
+    step5Title: string;
+    step5Subtitle: string;
+    paymentMethodLabel: string;
+    accountNumberLabel: string;
+    accountNumberPlaceholder: string;
+    accountNameLabel: string;
+    accountNamePlaceholder: string;
+    saveAsDefaultLabel: string;
+    autoLogTrackerLabel: string;
+    autoLogTrackerDesc: string;
+    categoryLabel: string;
+    walletSourceLabel: string;
+    primaryBadge: string;
+    realtimeSummaryTitle: string;
+    totalAllBills: string;
+    estimatedOwedPerPerson: string;
+    previewFriendBtn: string;
+    previewShortBtn: string;
+    publishBtn: string;
+    publishingBtn: string;
+    errTitleRequired: string;
+    errItemsRequired: string;
+    errTotalZero: string;
+    errGenericCreate: string;
+    previewModalTitle: string;
+    previewModalSubtitle: string;
+    selectParticipantLabel: string;
+    billForFriend: string;
+    itemizedBreakdownTitle: string;
+    portionColumn: string;
+    noItemsAssigned: string;
+    noPaymentDestination: string;
+    continueEditingBtn: string;
+    confirmPublishBtn: string;
+  };
+  notifications: {
+    title: string;
+    subtitle: string;
+    guestWarning: string;
+    pushCardTitle: string;
+    pushActive: string;
+    pushBlocked: string;
+    pushInactive: string;
+    btnProcessing: string;
+    btnActive: string;
+    btnEnable: string;
+    sendTestBtn: string;
+    dailyReminderTime: string;
+    dailyReminderTimeDesc: string;
+    reminderToggleTitle: string;
+    reminderToggleDesc: string;
+    quotesToggleTitle: string;
+    quotesToggleDesc: string;
+    subsToggleTitle: string;
+    subsToggleDesc: string;
+    tipsTitle: string;
+    tipsDesc: string;
+    closeBtn: string;
+    saveBtn: string;
+    testSending: string;
+    testSuccess: string;
+    testError: string;
+    enableSuccess: string;
+    enableError: string;
+    unsupportedAlert: string;
+    guestAlert: string;
+    saveFailedAlert: string;
+  };
 }
 
 export const dictionaries: Record<Locale, Dictionary> = {
@@ -536,6 +814,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       currency: "Mata Uang",
       quickAddAria: "Tambah pengeluaran",
       savings: "Tabungan",
+      splitBill: "Split Bill",
+      subscriptions: "Langganan",
+      notifications: "Notifikasi & Pengingat",
+      loginBadge: "Masuk",
     },
     categories: {
       "Food & Dining": "Makanan & Minuman",
@@ -1009,6 +1291,280 @@ export const dictionaries: Record<Locale, Dictionary> = {
       remainingBudget: "Sisa Anggaran",
       spentThisWeek: "Terpakai Minggu Ini",
     },
+    subscriptions: {
+      title: "Langganan Digital",
+      subtitle: "Kelola aplikasi digital & tagihan patungan",
+      add: "Tambah",
+      backToHome: "Kembali ke Beranda",
+      guestBadge: "Akun Tamu (Guest)",
+      guestDesc: "Masuk atau buat akun terdaftar untuk menyimpan dan menyinkronkan data langganan secara permanen.",
+      loginBtn: "Login",
+      totalCostMonth: "Total Biaya / Bulan",
+      activeCount: "langganan aktif",
+      myShareMonth: "Porsi Saya / Bulan",
+      splitSavings: "Hemat {amount} via patungan",
+      upcomingRenewalsCount: "{count} langganan segera diperpanjang",
+      upcomingRenewalsDesc: "Periksa tagihan atau siapkan saldo pembayaran",
+      tabAll: "Semua",
+      tabSplit: "Patungan",
+      tabPersonal: "Pribadi",
+      emptyTitle: "Belum ada langganan",
+      emptyDesc: "Tambahkan aplikasi seperti Spotify, Google One, ChatGPT, Netflix, atau Patreon untuk melacak siklus dan patungan.",
+      addSubscription: "Tambah Langganan",
+      pausedBadge: "Jeda",
+      perMonth: "bulan",
+      perYear: "tahun",
+      perWeek: "minggu",
+      splitBadge: "Patungan {count} Orang ({friends})",
+      perPersonShort: "/org",
+      renewalToday: "Perpanjangan hari ini",
+      renewalInDays: "{days} hari lagi ({date})",
+      splitBillBtn: "Split Bill",
+      createSplitConfirm: 'Buat Split Bill sekarang untuk "{name}"?',
+      viewLastSplitBill: "Lihat Split Bill Terakhir",
+      resumeTitle: "Lanjutkan Langganan",
+      pauseTitle: "Jeda Langganan",
+      editTitle: "Edit",
+      deleteTitle: "Hapus",
+      deleteConfirm: 'Hapus langganan "{name}"?',
+      editModalTitle: "Edit Langganan",
+      createModalTitle: "Tambah Langganan Baru",
+      quickPresetsTitle: "Pilih Cepat Preset Aplikasi",
+      serviceNameLabel: "Nama Layanan",
+      serviceNamePlaceholder: "cth: Spotify Family, ChatGPT Plus",
+      priceLabel: "Harga",
+      billingCycleLabel: "Siklus Tagihan",
+      cycleMonthly: "Bulanan",
+      cycleYearly: "Tahunan",
+      cycleWeekly: "Mingguan",
+      renewalDateLabel: "Tgl Perpanjangan",
+      paymentPlatformLabel: "Platform Pembayaran",
+      payFromWalletLabel: "Bayar dari Saku",
+      primaryBadge: "(Utama)",
+      remindBeforeLabel: "Ingatkan Sebelum Jatuh Tempo",
+      daysCount: "{days} Hari",
+      splitAccountTitle: "Patungan Akun dengan Teman?",
+      splitAccountDesc: "Bagi tagihan dan jadwalkan Split Bill otomatis",
+      addFriendLabel: "Tambah Teman Patungan",
+      addFriendPlaceholder: "Nama teman (cth: Budi, Citra)",
+      addFriendBtn: "Tambah",
+      hostBadge: "Saya (Pemilik)",
+      portionPerPerson: "Porsi Per Orang:",
+      totalSplitDesc: "Total {total} dibagi {count} orang",
+      autoCreateSplit: "Otomatis buat Split Bill saat tiba tanggal perpanjangan",
+      autoLogExpenses: "Otomatis catat porsi pribadi ke pengeluaran bulanan",
+      cancelBtn: "Batal",
+      saveChanges: "Simpan Perubahan",
+      savingBtn: "Menyimpan...",
+      updateSuccess: "Langganan berhasil diperbarui!",
+      createSuccess: "Langganan baru berhasil ditambahkan!",
+      upcomingDueBanner: "Langganan Segera Jatuh Tempo",
+      viewDetails: "Lihat",
+    },
+    splitBill: {
+      backToHome: "Kembali ke Beranda",
+      newSplit: "Split Baru",
+      historyTitle: "Riwayat Split Bill",
+      historySubtitle: "Pantau status tagihan yang Anda buat, siapa yang sudah bayar, dan kelola arsip patungan Anda.",
+      totalBills: "Total Tagihan",
+      unpaid: "Belum Lunas",
+      paid: "Sudah Lunas",
+      recurringTitle: "Langganan Patungan Berulang",
+      manageLink: "Kelola",
+      perPersonShort: "/org",
+      scheduleLabel: "Jadwal",
+      createBillBtn: "Buat Bill",
+      creatingBillBtn: "Membuat...",
+      createBillConfirm: 'Buat Split Bill sekarang untuk "{name}"?',
+      searchPlaceholder: "Cari nama tagihan, kategori, atau teman...",
+      tabAll: "Semua",
+      tabUnpaid: "Belum Lunas",
+      tabPaid: "Lunas",
+      emptyTitle: "Tidak ada Split Bill ditemukan",
+      emptySearchDesc: "Coba ubah kata kunci pencarian Anda.",
+      emptyDefaultDesc: "Anda belum memiliki tagihan split pada kategori ini.",
+      createSplitBillBtn: "Buat Split Bill Baru",
+      peopleCount: "orang",
+      paidBadge: "Lunas",
+      paidRatio: "{paid}/{total} Bayar",
+      totalBill: "Total Tagihan",
+      yourShareHost: "Porsi Anda (Host)",
+      waitingFor: "Menunggu",
+      deleteBillAria: "Hapus tagihan",
+      openAndShare: "Buka & Bagikan",
+      deleteModalTitle: "Hapus Split Bill?",
+      deleteModalDesc: 'Tagihan "{title}" dan seluruh rincian teman akan dihapus secara permanen.',
+      deleteExpenseWarning: "Catatan pengeluaran terkait di pelacak pribadi juga akan ikut dihapus.",
+      cancelBtn: "Batal",
+      deleteConfirmBtn: "Ya, Hapus",
+      deletingBtn: "Menghapus...",
+      deleteFailedAlert: "Gagal menghapus split bill.",
+      historyBack: "Riwayat Split",
+      back: "Kembali",
+      hostBadge: "Host",
+      deleteBillBtn: "Hapus",
+      billDetails: "Rincian Split Bill",
+      paymentStatus: "Status Pembayaran",
+      paidSummary: "{paid} dari {total} orang lunas ({percent}%)",
+      markPaid: "Tandai Sudah Bayar",
+      markUnpaid: "Tandai Belum Bayar",
+      deliveryFee: "Ongkir / Biaya Tambahan",
+      copied: "Disalin!",
+      copyLink: "Salin Link",
+      qrCode: "Kode QR",
+      whatsapp: "WhatsApp",
+      transferToMethod: "Transfer ke {method}",
+      transferDestination: "Tujuan Transfer",
+      accountHolder: "a/n {name}",
+      copyAccountNo: "Salin No",
+      participantBreakdown: "Rincian Pembayaran Masing-Masing ({count} Orang)",
+      menuOrdered: "Menu & Porsi Pesanan:",
+      splitBetweenCount: "patungan {count} org",
+      subtotalMenu: "Subtotal Menu",
+      taxProportional: "Pajak (Proporsional)",
+      serviceCharge: "Service Charge",
+      discountReduction: "Diskon / Potongan",
+      scanQrTitle: "Pindai Kode QR",
+      scanQrDesc: "Arahkan kamera HP teman ke kode QR ini untuk langsung membuka rincian tagihan",
+      generatingQr: "Membuat QR Code...",
+      closeModal: "Tutup",
+      savingStatus: "Menyimpan...",
+      unpaidBadge: "Belum Bayar",
+      paidBadgeText: "Lunas",
+      waSplitBillTitle: "🍽️ *Split Bill: {title}*",
+      waTotalBill: "Total Tagihan: {amount}",
+      waBreakdownTitle: "*Rincian per Orang:*",
+      waTransferTo: "💳 *Transfer ke {method}:*",
+      waAccountNo: "No: {number}",
+      waAccountName: "a/n: {name}",
+      waCheckLink: "🔗 *Cek rincian menu lengkap & status di browser:*",
+      deleteBillModalTitle: "Hapus Split Bill Ini?",
+      deleteBillModalDesc: 'Tagihan "{title}" dan seluruh rincian teman akan dihapus secara permanen.',
+      deleteBillExpenseWarning: "Catatan pengeluaran terkait di pelacak pribadi juga akan ikut dihapus.",
+      newSplitTitle: "Buat Split Bill",
+      newSplitSubtitle: "Bagi tagihan makan bersama, patungan kos, atau WiFi. Teman bisa langsung cek & salin nomor rekening tanpa daftar.",
+      newSplitBadge: "Split Bill Baru",
+      draftFoundNotice: "Ditemukan draf tagihan sebelumnya yang belum disimpan.",
+      restoreDraftBtn: "Pulihkan",
+      discardDraftBtn: "Abaikan",
+      step1Title: "Informasi Tagihan",
+      step1Subtitle: "Nama pengeluaran dan cara pembagian",
+      billTitleLabel: "Nama / Judul Tagihan",
+      billTitlePlaceholder: "Contoh: Makan Bareng Resto Padang, WiFi Kosan, dsb.",
+      presetLunch: "Makan Siang",
+      presetCoffee: "Nongkrong Kopi",
+      presetElectricity: "Listrik PLN Kos",
+      presetWifi: "WiFi Indihome",
+      presetGroceries: "Belanja Mingguan",
+      splitMethodLabel: "Metode Pembagian Tagihan",
+      modeItemizedTitle: "Pilih Per Menu",
+      modeItemizedSubtitle: "Cocok untuk resto & cafe",
+      modeItemizedDesc: "Setiap orang hanya membayar menu yang dipesan. Pajak & diskon dihitung proporsional.",
+      modeEqualTitle: "Bagi Rata",
+      modeEqualSubtitle: "Cocok untuk WiFi, listrik kos, galon",
+      modeEqualDesc: "Cukup masukkan total biaya, langsung dibagi rata secara adil ke semua peserta.",
+      step2Title: "Daftar Peserta Patungan",
+      step2Subtitle: "{count} orang ikut patungan",
+      friendNamePlaceholder: "Ketik nama teman (cth: Budi, Siti)...",
+      addFriendBtn: "Tambah",
+      friendExistsError: 'Nama "{name}" sudah ada di daftar.',
+      removeParticipantAria: "Hapus {name}",
+      step3Title: "Menu & Porsi Pesanan",
+      totalBillTitle: "Total Tagihan",
+      step3SubtitleItemized: "Tentukan siapa saja yang memesan/makan menu ini",
+      step3SubtitleEqual: "Semua peserta akan menanggung secara rata",
+      addItemBtn: "Tambah Menu",
+      menuItemPlaceholder: "Menu #{index} (cth: Ayam Bakar)",
+      totalAmountPlaceholder: "Total Biaya / Tagihan",
+      deleteItemAria: "Hapus item",
+      assignedToLabel: "Yang ikut makan/pesan:",
+      assignAllBtn: "Bagi ke Semua ({count})",
+      addAnotherItemBtn: "Tambah Menu Lainnya",
+      step4Title: "Pajak, Service & Penyesuaian",
+      step4Subtitle: "Pajak dan diskon akan dibagikan secara proporsional sesuai porsi masing-masing",
+      taxLabel: "Pajak Restoran / PPN",
+      taxPresetNone: "0% (Nett)",
+      taxPresetNoneDesc: "Tanpa Pajak",
+      taxPresetPB1: "10% PB1",
+      taxPresetPB1Desc: "Pajak Resto",
+      taxPresetPPN: "11% PPN",
+      taxPresetPPNDesc: "PPN Umum",
+      taxPresetCustom: "Kustom",
+      taxPresetCustomDesc: "Input %",
+      taxPercentageLabel: "Persentase Pajak:",
+      servicePercentageLabel: "Service Charge (%)",
+      extraFeeInputLabel: "Ongkir / Biaya Tambahan",
+      discountInputLabel: "Diskon / Voucher Promo",
+      roundingPersonLabel: "Pembulatan Total per Orang:",
+      roundingExact: "Persis",
+      step5Title: "Tujuan Transfer Pembayaran",
+      step5Subtitle: "Rekening / e-wallet Anda agar teman bisa langsung salin nomor transfer",
+      paymentMethodLabel: "Metode Transfer",
+      accountNumberLabel: "Nomor Rekening / No. HP E-Wallet",
+      accountNumberPlaceholder: "cth: 1234567890 / 08123456789",
+      accountNameLabel: "Atas Nama (A/N)",
+      accountNamePlaceholder: "cth: Alaikal Hamdi",
+      saveAsDefaultLabel: "Simpan sebagai rekening default untuk split bill berikutnya",
+      autoLogTrackerLabel: "Integrasi Otomatis ke Catatan Pengeluaran",
+      autoLogTrackerDesc: "Otomatis catat porsi pribadi Anda ({amount}) ke anggaran minggu ini agar burn rate tetap akurat.",
+      categoryLabel: "Kategori Pengeluaran:",
+      walletSourceLabel: "Catat ke Saku:",
+      primaryBadge: "(Utama)",
+      realtimeSummaryTitle: "Ringkasan Perhitungan Real-Time",
+      totalAllBills: "Total Seluruh Tagihan",
+      estimatedOwedPerPerson: "Perkiraan Tanggungan per Orang:",
+      previewFriendBtn: "Pratinjau Teman",
+      previewShortBtn: "Pratinjau",
+      publishBtn: "Publikasikan",
+      publishingBtn: "Memproses...",
+      errTitleRequired: "Harap masukkan nama tagihan (contoh: Makan Bareng Warteg).",
+      errItemsRequired: "Harap masukkan minimal 1 menu atau harga.",
+      errTotalZero: "Total tagihan tidak boleh {amount}.",
+      errGenericCreate: "Terjadi kesalahan saat membuat tagihan.",
+      previewModalTitle: "Pratinjau Tampilan Teman",
+      previewModalSubtitle: "Inilah yang akan dilihat teman di browser",
+      selectParticipantLabel: "Pilih Peserta untuk Dilihat:",
+      billForFriend: "Tagihan untuk {name}",
+      itemizedBreakdownTitle: "Rincian Menu / Pesanan",
+      portionColumn: "Porsi",
+      noItemsAssigned: "Tidak ada item tersendiri",
+      noPaymentDestination: "Belum ada nomor rekening/e-wallet yang dimasukkan",
+      continueEditingBtn: "Lanjut Edit",
+      confirmPublishBtn: "Semua Sesuai, Publikasikan!",
+    },
+    notifications: {
+      title: "Notifikasi & Pengingat PWA",
+      subtitle: "Atur jadwal pengingat catat & langganan",
+      guestWarning: "Push notifikasi memerlukan akun terdaftar agar server dapat mengirimkan pesan saat aplikasi ditutup.",
+      pushCardTitle: "Push Notifikasi Perangkat",
+      pushActive: "Aktif pada perangkat ini",
+      pushBlocked: "Diblokir oleh browser. Buka pengaturan browser untuk mengizinkan.",
+      pushInactive: "Terima notifikasi walau aplikasi tertutup",
+      btnProcessing: "Memproses...",
+      btnActive: "Aktif",
+      btnEnable: "Aktifkan",
+      sendTestBtn: "Kirim Tes Notifikasi",
+      dailyReminderTime: "Waktu Pengingat Harian",
+      dailyReminderTimeDesc: "Pukul pengingat untuk mengisi catatan hari ini",
+      reminderToggleTitle: "Pengingat Catat Pengeluaran",
+      reminderToggleDesc: "Ingatkan jika belum mencatat pengeluaran hari ini",
+      quotesToggleTitle: "Quotes Motivasi Keuangan",
+      quotesToggleDesc: "Sertakan kutipan inspiratif hemat & disiplin finansial",
+      subsToggleTitle: "Peringatan Jatuh Tempo Langganan",
+      subsToggleDesc: "Ingatkan sebelum aplikasi digital diperpanjang",
+      tipsTitle: "Tips Penggunaan di Ponsel (Android & iOS)",
+      tipsDesc: "Pasang SakuTrack ke Layar Utama (Add to Home Screen) agar notifikasi dapat muncul di layar kunci seperti aplikasi bawaan.",
+      closeBtn: "Tutup",
+      saveBtn: "Simpan Pengaturan",
+      testSending: "Mengirimkan notifikasi uji coba...",
+      testSuccess: "Notifikasi uji coba terkirim! Cek baki notifikasi perangkatmu.",
+      testError: "Gagal mengirimkan notifikasi uji coba.",
+      enableSuccess: "Push notifikasi berhasil diaktifkan pada perangkat ini!",
+      enableError: "Gagal mengaktifkan push notifikasi.",
+      unsupportedAlert: "Browser atau perangkat ini belum mendukung Web Push Notifications.",
+      guestAlert: "Silakan masuk atau buat akun terdaftar terlebih dahulu untuk mengaktifkan push notifikasi.",
+      saveFailedAlert: "Gagal menyimpan preferensi: {error}",
+    },
   },
   en: {
     common: {
@@ -1044,6 +1600,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       currency: "Currency",
       quickAddAria: "Add expense",
       savings: "Savings",
+      splitBill: "Split Bill",
+      subscriptions: "Subscriptions",
+      notifications: "Notifications & Reminders",
+      loginBadge: "Log in",
     },
     categories: {
       "Food & Dining": "Food & Dining",
@@ -1516,6 +2076,280 @@ export const dictionaries: Record<Locale, Dictionary> = {
       currentBalance: "Current Balance",
       remainingBudget: "Remaining Budget",
       spentThisWeek: "Spent This Week",
+    },
+    subscriptions: {
+      title: "Digital Subscriptions",
+      subtitle: "Manage digital subscriptions & shared bills",
+      add: "Add",
+      backToHome: "Back to Home",
+      guestBadge: "Guest Account",
+      guestDesc: "Sign in or create an account to permanently sync and save your subscription records.",
+      loginBtn: "Log in",
+      totalCostMonth: "Total Cost / Month",
+      activeCount: "active subscriptions",
+      myShareMonth: "My Share / Month",
+      splitSavings: "Save {amount} via split",
+      upcomingRenewalsCount: "{count} subscriptions renewing soon",
+      upcomingRenewalsDesc: "Check upcoming bills or prepare your payment balance",
+      tabAll: "All",
+      tabSplit: "Split",
+      tabPersonal: "Personal",
+      emptyTitle: "No subscriptions yet",
+      emptyDesc: "Add apps like Spotify, Google One, ChatGPT, Netflix, or Patreon to track cycles and splits.",
+      addSubscription: "Add Subscription",
+      pausedBadge: "Paused",
+      perMonth: "month",
+      perYear: "year",
+      perWeek: "week",
+      splitBadge: "Split with {count} People ({friends})",
+      perPersonShort: "/person",
+      renewalToday: "Renews today",
+      renewalInDays: "In {days} days ({date})",
+      splitBillBtn: "Split Bill",
+      createSplitConfirm: 'Create Split Bill now for "{name}"?',
+      viewLastSplitBill: "View Last Split Bill",
+      resumeTitle: "Resume Subscription",
+      pauseTitle: "Pause Subscription",
+      editTitle: "Edit",
+      deleteTitle: "Delete",
+      deleteConfirm: 'Delete subscription "{name}"?',
+      editModalTitle: "Edit Subscription",
+      createModalTitle: "Add New Subscription",
+      quickPresetsTitle: "Quick App Presets",
+      serviceNameLabel: "Service Name",
+      serviceNamePlaceholder: "e.g. Spotify Family, ChatGPT Plus",
+      priceLabel: "Price",
+      billingCycleLabel: "Billing Cycle",
+      cycleMonthly: "Monthly",
+      cycleYearly: "Yearly",
+      cycleWeekly: "Weekly",
+      renewalDateLabel: "Renewal Date",
+      paymentPlatformLabel: "Payment Platform",
+      payFromWalletLabel: "Pay from Wallet",
+      primaryBadge: "(Primary)",
+      remindBeforeLabel: "Remind Before Renewal",
+      daysCount: "{days} Days",
+      splitAccountTitle: "Split Account with Friends?",
+      splitAccountDesc: "Split costs and schedule automatic split bills",
+      addFriendLabel: "Add Split Friends",
+      addFriendPlaceholder: "Friend's name (e.g. Alex, Sam)",
+      addFriendBtn: "Add",
+      hostBadge: "Me (Host)",
+      portionPerPerson: "Share Per Person:",
+      totalSplitDesc: "Total {total} split among {count} people",
+      autoCreateSplit: "Automatically create Split Bill on renewal date",
+      autoLogExpenses: "Automatically log personal share to monthly expenses",
+      cancelBtn: "Cancel",
+      saveChanges: "Save Changes",
+      savingBtn: "Saving...",
+      updateSuccess: "Subscription updated successfully!",
+      createSuccess: "New subscription added successfully!",
+      upcomingDueBanner: "Subscriptions Renewing Soon",
+      viewDetails: "View",
+    },
+    splitBill: {
+      backToHome: "Back to Home",
+      newSplit: "New Split",
+      historyTitle: "Split Bill History",
+      historySubtitle: "Track bill status, see who has paid, and manage your split bills.",
+      totalBills: "Total Bills",
+      unpaid: "Unpaid",
+      paid: "Settled",
+      recurringTitle: "Recurring Split Subscriptions",
+      manageLink: "Manage",
+      perPersonShort: "/person",
+      scheduleLabel: "Schedule",
+      createBillBtn: "Create Bill",
+      creatingBillBtn: "Creating...",
+      createBillConfirm: 'Create Split Bill now for "{name}"?',
+      searchPlaceholder: "Search bill name, category, or friends...",
+      tabAll: "All",
+      tabUnpaid: "Unpaid",
+      tabPaid: "Settled",
+      emptyTitle: "No Split Bills found",
+      emptySearchDesc: "Try changing your search keywords.",
+      emptyDefaultDesc: "You don't have any split bills in this category yet.",
+      createSplitBillBtn: "Create New Split Bill",
+      peopleCount: "people",
+      paidBadge: "Settled",
+      paidRatio: "{paid}/{total} Paid",
+      totalBill: "Total Bill",
+      yourShareHost: "Your Share (Host)",
+      waitingFor: "Waiting",
+      deleteBillAria: "Delete bill",
+      openAndShare: "Open & Share",
+      deleteModalTitle: "Delete Split Bill?",
+      deleteModalDesc: 'Bill "{title}" and all participant details will be permanently deleted.',
+      deleteExpenseWarning: "The related expense entry in your personal tracker will also be deleted.",
+      cancelBtn: "Cancel",
+      deleteConfirmBtn: "Yes, Delete",
+      deletingBtn: "Deleting...",
+      deleteFailedAlert: "Failed to delete split bill.",
+      historyBack: "Split History",
+      back: "Back",
+      hostBadge: "Host",
+      deleteBillBtn: "Delete",
+      billDetails: "Split Bill Details",
+      paymentStatus: "Payment Status",
+      paidSummary: "{paid} of {total} people settled ({percent}%)",
+      markPaid: "Mark as Paid",
+      markUnpaid: "Mark as Unpaid",
+      deliveryFee: "Delivery & Extra Fees",
+      copied: "Copied!",
+      copyLink: "Copy Link",
+      qrCode: "QR Code",
+      whatsapp: "WhatsApp",
+      transferToMethod: "Transfer to {method}",
+      transferDestination: "Transfer Destination",
+      accountHolder: "a/n {name}",
+      copyAccountNo: "Copy No",
+      participantBreakdown: "Participant Payment Breakdown ({count} People)",
+      menuOrdered: "Menu & Ordered Portions:",
+      splitBetweenCount: "split {count} people",
+      subtotalMenu: "Menu Subtotal",
+      taxProportional: "Tax (Proportional)",
+      serviceCharge: "Service Charge",
+      discountReduction: "Discount",
+      scanQrTitle: "Scan QR Code",
+      scanQrDesc: "Point a friend's phone camera at this QR code to view the bill directly",
+      generatingQr: "Generating QR Code...",
+      closeModal: "Close",
+      savingStatus: "Saving...",
+      unpaidBadge: "Unpaid",
+      paidBadgeText: "Paid",
+      waSplitBillTitle: "🍽️ *Split Bill: {title}*",
+      waTotalBill: "Total Bill: {amount}",
+      waBreakdownTitle: "*Breakdown per Person:*",
+      waTransferTo: "💳 *Transfer to {method}:*",
+      waAccountNo: "No: {number}",
+      waAccountName: "a/n: {name}",
+      waCheckLink: "🔗 *Check complete menu details & status in browser:*",
+      deleteBillModalTitle: "Delete Split Bill?",
+      deleteBillModalDesc: 'Bill "{title}" and all participant details will be permanently deleted.',
+      deleteBillExpenseWarning: "The related expense entry in your personal tracker will also be deleted.",
+      newSplitTitle: "Create Split Bill",
+      newSplitSubtitle: "Split dining, rent, or WiFi bills easily. Friends can check details & copy account numbers without registering.",
+      newSplitBadge: "New Split Bill",
+      draftFoundNotice: "Found an unsaved previous split draft.",
+      restoreDraftBtn: "Restore",
+      discardDraftBtn: "Discard",
+      step1Title: "Bill Information",
+      step1Subtitle: "Expense title and split method",
+      billTitleLabel: "Bill Name / Title",
+      billTitlePlaceholder: "e.g. Dinner with Friends, Apartment WiFi, etc.",
+      presetLunch: "Lunch",
+      presetCoffee: "Coffee Hangout",
+      presetElectricity: "Apartment Electricity",
+      presetWifi: "Home WiFi",
+      presetGroceries: "Weekly Groceries",
+      splitMethodLabel: "Split Method",
+      modeItemizedTitle: "Per Item (Itemized)",
+      modeItemizedSubtitle: "Best for restaurants & cafes",
+      modeItemizedDesc: "Each person pays for items they ordered. Tax & discounts are split proportionally.",
+      modeEqualTitle: "Split Equally",
+      modeEqualSubtitle: "Best for rent, utilities, group tickets",
+      modeEqualDesc: "Just enter the total cost, and it will be split equally among all participants.",
+      step2Title: "Participants List",
+      step2Subtitle: "{count} people participating",
+      friendNamePlaceholder: "Type friend's name (e.g. Alex, Sam)...",
+      addFriendBtn: "Add",
+      friendExistsError: 'Name "{name}" is already in the list.',
+      removeParticipantAria: "Remove {name}",
+      step3Title: "Menu & Ordered Portions",
+      totalBillTitle: "Total Bill",
+      step3SubtitleItemized: "Select who ordered or shared each item",
+      step3SubtitleEqual: "All participants share the cost equally",
+      addItemBtn: "Add Menu Item",
+      menuItemPlaceholder: "Item #{index} (e.g. Grilled Chicken)",
+      totalAmountPlaceholder: "Total Cost / Bill",
+      deleteItemAria: "Delete item",
+      assignedToLabel: "Ordered / Shared by:",
+      assignAllBtn: "Split to All ({count})",
+      addAnotherItemBtn: "Add Another Item",
+      step4Title: "Tax, Service & Adjustments",
+      step4Subtitle: "Tax and discounts will be split proportionally based on individual shares",
+      taxLabel: "Restaurant Tax / VAT",
+      taxPresetNone: "0% (Net)",
+      taxPresetNoneDesc: "No Tax",
+      taxPresetPB1: "10% PB1",
+      taxPresetPB1Desc: "Dine-in Tax",
+      taxPresetPPN: "11% VAT",
+      taxPresetPPNDesc: "Standard VAT",
+      taxPresetCustom: "Custom",
+      taxPresetCustomDesc: "Input %",
+      taxPercentageLabel: "Tax Percentage:",
+      servicePercentageLabel: "Service Charge (%)",
+      extraFeeInputLabel: "Delivery / Extra Fees",
+      discountInputLabel: "Discount / Promo Voucher",
+      roundingPersonLabel: "Rounding Total per Person:",
+      roundingExact: "Exact",
+      step5Title: "Payment Transfer Destination",
+      step5Subtitle: "Your bank account or e-wallet so friends can easily copy transfer details",
+      paymentMethodLabel: "Transfer Method",
+      accountNumberLabel: "Account Number / E-Wallet Mobile",
+      accountNumberPlaceholder: "e.g. 1234567890 / 08123456789",
+      accountNameLabel: "Account Name (A/N)",
+      accountNamePlaceholder: "e.g. John Doe",
+      saveAsDefaultLabel: "Save as default payment info for future split bills",
+      autoLogTrackerLabel: "Automatic Expense Tracker Integration",
+      autoLogTrackerDesc: "Automatically log your personal share ({amount}) to this week's budget to keep your burn rate accurate.",
+      categoryLabel: "Expense Category:",
+      walletSourceLabel: "Record to Saku:",
+      primaryBadge: "(Primary)",
+      realtimeSummaryTitle: "Real-Time Calculation Summary",
+      totalAllBills: "Grand Total Bill",
+      estimatedOwedPerPerson: "Estimated Share per Person:",
+      previewFriendBtn: "Preview Friend's View",
+      previewShortBtn: "Preview",
+      publishBtn: "Publish",
+      publishingBtn: "Publishing...",
+      errTitleRequired: "Please enter a bill title (e.g. Dinner with Friends).",
+      errItemsRequired: "Please enter at least 1 menu item or price.",
+      errTotalZero: "Total bill cannot be {amount}.",
+      errGenericCreate: "An error occurred while creating the bill.",
+      previewModalTitle: "Friend's View Preview",
+      previewModalSubtitle: "This is what friends will see in their browser",
+      selectParticipantLabel: "Select Participant to Preview:",
+      billForFriend: "Bill for {name}",
+      itemizedBreakdownTitle: "Menu / Order Breakdown",
+      portionColumn: "Portion",
+      noItemsAssigned: "No individual items assigned",
+      noPaymentDestination: "No bank account or e-wallet details provided yet",
+      continueEditingBtn: "Continue Editing",
+      confirmPublishBtn: "All Good, Publish!",
+    },
+    notifications: {
+      title: "PWA Notifications & Reminders",
+      subtitle: "Set reminder schedules & subscription alerts",
+      guestWarning: "Push notifications require a registered account so the server can send alerts when the app is closed.",
+      pushCardTitle: "Device Push Notifications",
+      pushActive: "Active on this device",
+      pushBlocked: "Blocked by browser. Open browser settings to allow notifications.",
+      pushInactive: "Receive notifications even when the app is closed",
+      btnProcessing: "Processing...",
+      btnActive: "Active",
+      btnEnable: "Enable",
+      sendTestBtn: "Send Test Notification",
+      dailyReminderTime: "Daily Reminder Time",
+      dailyReminderTimeDesc: "Time to remind you to log your expenses today",
+      reminderToggleTitle: "Expense Logging Reminder",
+      reminderToggleDesc: "Remind if no expenses have been recorded today",
+      quotesToggleTitle: "Financial Motivation Quotes",
+      quotesToggleDesc: "Include inspirational quotes on mindful spending",
+      subsToggleTitle: "Subscription Renewal Alert",
+      subsToggleDesc: "Remind before digital subscriptions auto-renew",
+      tipsTitle: "Mobile Tips (Android & iOS)",
+      tipsDesc: "Add SakuTrack to Home Screen so notifications can display on your lock screen just like native apps.",
+      closeBtn: "Close",
+      saveBtn: "Save Settings",
+      testSending: "Sending test notification...",
+      testSuccess: "Test notification sent! Check your device notification tray.",
+      testError: "Failed to send test notification.",
+      enableSuccess: "Push notifications successfully enabled on this device!",
+      enableError: "Failed to enable push notifications.",
+      unsupportedAlert: "This browser or device does not support Web Push Notifications.",
+      guestAlert: "Please sign in or create an account first to enable push notifications.",
+      saveFailedAlert: "Failed to save preferences: {error}",
     },
   },
 };

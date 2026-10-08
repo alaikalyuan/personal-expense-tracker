@@ -62,7 +62,7 @@ export default function SubscriptionsClient({
   defaultWalletId = null,
 }: SubscriptionsClientProps) {
   const router = useRouter();
-  const { formatCurrency, currencySymbol } = useTranslation();
+  const { formatCurrency, currencySymbol, t } = useTranslation();
   const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>(initialSubscriptions);
   const [activeTab, setActiveTab] = useState<"all" | "split" | "personal">("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -263,7 +263,7 @@ export default function SubscriptionsClient({
               : s
           )
         );
-        setActionMessage({ type: "success", text: "Langganan berhasil diperbarui!" });
+        setActionMessage({ type: "success", text: t.subscriptions.updateSuccess });
       } else {
         const res = await createSubscription(payload);
         const newSub: SubscriptionRecord = {
@@ -285,7 +285,7 @@ export default function SubscriptionsClient({
           updated_at: new Date().toISOString(),
         };
         setSubscriptions([newSub, ...subscriptions]);
-        setActionMessage({ type: "success", text: "Langganan baru berhasil ditambahkan!" });
+        setActionMessage({ type: "success", text: t.subscriptions.createSuccess });
       }
 
       setIsModalOpen(false);
@@ -299,7 +299,7 @@ export default function SubscriptionsClient({
   };
 
   const handleDelete = async (id: string, subName: string) => {
-    if (!confirm(`Hapus langganan "${subName}"?`)) return;
+    if (!confirm(t.subscriptions.deleteConfirm.replace("{name}", subName))) return;
     try {
       await deleteSubscription(id);
       setSubscriptions((prev) => prev.filter((s) => s.id !== id));
@@ -323,7 +323,7 @@ export default function SubscriptionsClient({
   };
 
   const handleManualSplitBillCreation = async (sub: SubscriptionRecord) => {
-    if (!confirm(`Buat Split Bill sekarang untuk "${sub.name}"?`)) return;
+    if (!confirm(t.subscriptions.createSplitConfirm.replace("{name}", sub.name))) return;
     setProcessingSubId(sub.id);
     try {
       const res = await createSplitBillFromSubscription(sub.id);
@@ -368,16 +368,16 @@ export default function SubscriptionsClient({
           <Link
             href="/"
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 active:scale-95 transition-all shadow-2xs"
-            aria-label="Kembali ke Beranda"
+            aria-label={t.subscriptions.backToHome}
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
             <h1 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
-              Langganan Digital
+              {t.subscriptions.title}
             </h1>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-              Kelola aplikasi digital & tagihan patungan
+              {t.subscriptions.subtitle}
             </p>
           </div>
         </div>
@@ -388,7 +388,7 @@ export default function SubscriptionsClient({
           className="flex items-center gap-1.5 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 font-semibold px-3 py-2 text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>Tambah</span>
+          <span>{t.subscriptions.add}</span>
         </button>
       </header>
 
@@ -397,16 +397,16 @@ export default function SubscriptionsClient({
         <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
           <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
           <div className="flex-1">
-            <p className="font-semibold">Akun Tamu (Guest)</p>
+            <p className="font-semibold">{t.subscriptions.guestBadge}</p>
             <p className="text-[11px] text-amber-800 dark:text-amber-300/80 mt-0.5">
-              Masuk atau buat akun terdaftar untuk menyimpan dan menyinkronkan data langganan secara permanen.
+              {t.subscriptions.guestDesc}
             </p>
           </div>
           <Link
             href="/login?next=/subscriptions"
             className="rounded-lg bg-amber-600 text-white px-2.5 py-1 text-[11px] font-semibold hover:bg-amber-700 transition-colors"
           >
-            Login
+            {t.subscriptions.loginBtn}
           </Link>
         </div>
       )}
@@ -430,22 +430,22 @@ export default function SubscriptionsClient({
       {/* Summary Cards */}
       <section className="grid grid-cols-2 gap-2.5 mb-5">
         <div className="rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-xs dark:border-zinc-800/80 dark:bg-zinc-900">
-          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Total Biaya / Bulan</p>
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{t.subscriptions.totalCostMonth}</p>
           <p className="text-base font-bold text-zinc-900 dark:text-zinc-50 mt-1">
             {formatCurrency(metrics.totalMonthly)}
           </p>
           <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">
-            {subscriptions.filter((s) => s.status === "active").length} langganan aktif
+            {subscriptions.filter((s) => s.status === "active").length} {t.subscriptions.activeCount}
           </p>
         </div>
 
         <div className="rounded-2xl border border-indigo-200/60 bg-indigo-50/50 p-3.5 shadow-xs dark:border-indigo-900/40 dark:bg-indigo-950/20">
-          <p className="text-[11px] text-indigo-700 dark:text-indigo-300">Porsi Saya / Bulan</p>
+          <p className="text-[11px] text-indigo-700 dark:text-indigo-300">{t.subscriptions.myShareMonth}</p>
           <p className="text-base font-bold text-indigo-950 dark:text-indigo-100 mt-1">
             {formatCurrency(metrics.myMonthlyShare)}
           </p>
           <p className="text-[10px] text-indigo-600/80 dark:text-indigo-400/80 mt-0.5">
-            Hemat {formatCurrency(metrics.friendsMonthlyShare)} via patungan
+            {t.subscriptions.splitSavings.replace("{amount}", formatCurrency(metrics.friendsMonthlyShare))}
           </p>
         </div>
       </section>
@@ -459,10 +459,10 @@ export default function SubscriptionsClient({
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                {metrics.upcomingRenewalsCount} langganan segera diperpanjang
+                {t.subscriptions.upcomingRenewalsCount.replace("{count}", String(metrics.upcomingRenewalsCount))}
               </p>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                Periksa tagihan atau siapkan saldo pembayaran
+                {t.subscriptions.upcomingRenewalsDesc}
               </p>
             </div>
           </div>
@@ -480,7 +480,7 @@ export default function SubscriptionsClient({
               : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
           }`}
         >
-          Semua ({subscriptions.length})
+          {t.subscriptions.tabAll} ({subscriptions.length})
         </button>
         <button
           type="button"
@@ -491,7 +491,7 @@ export default function SubscriptionsClient({
               : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
           }`}
         >
-          Patungan ({subscriptions.filter((s) => s.is_split).length})
+          {t.subscriptions.tabSplit} ({subscriptions.filter((s) => s.is_split).length})
         </button>
         <button
           type="button"
@@ -502,7 +502,7 @@ export default function SubscriptionsClient({
               : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
           }`}
         >
-          Pribadi ({subscriptions.filter((s) => !s.is_split).length})
+          {t.subscriptions.tabPersonal} ({subscriptions.filter((s) => !s.is_split).length})
         </button>
       </div>
 
@@ -512,10 +512,10 @@ export default function SubscriptionsClient({
           <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800 p-8 text-center bg-white/50 dark:bg-zinc-900/50">
             <Sparkles className="w-8 h-8 mx-auto text-zinc-400 dark:text-zinc-600 mb-2 stroke-[1.5]" />
             <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-              Belum ada langganan
+              {t.subscriptions.emptyTitle}
             </p>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
-              Tambahkan aplikasi seperti Spotify, Google One, ChatGPT, Netflix, atau Patreon untuk melacak siklus dan patungan.
+              {t.subscriptions.emptyDesc}
             </p>
             <button
               type="button"
@@ -523,7 +523,7 @@ export default function SubscriptionsClient({
               className="mt-3.5 inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 text-white px-3.5 py-1.5 text-xs font-semibold hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Tambah Langganan</span>
+              <span>{t.subscriptions.addSubscription}</span>
             </button>
           </div>
         ) : (
@@ -561,7 +561,7 @@ export default function SubscriptionsClient({
                         </h2>
                         {isPaused && (
                           <span className="text-[10px] bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-semibold px-1.5 py-0.5 rounded-md">
-                            Jeda
+                            {t.subscriptions.pausedBadge}
                           </span>
                         )}
                       </div>
@@ -588,7 +588,7 @@ export default function SubscriptionsClient({
                       {formatCurrency(sub.price)}
                     </p>
                     <p className="text-[10px] text-zinc-400 dark:text-zinc-500 capitalize">
-                      /{sub.billing_cycle === "monthly" ? "bulan" : sub.billing_cycle === "yearly" ? "tahun" : "minggu"}
+                      /{sub.billing_cycle === "monthly" ? t.subscriptions.perMonth : sub.billing_cycle === "yearly" ? t.subscriptions.perYear : t.subscriptions.perWeek}
                     </p>
                   </div>
                 </div>
@@ -599,10 +599,10 @@ export default function SubscriptionsClient({
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5 font-semibold text-[11px]">
                         <Users className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                        <span>Patungan {splitCount} Orang ({sub.split_config?.friends?.map((f) => f.name).join(", ")})</span>
+                        <span>{t.subscriptions.splitBadge.replace("{count}", String(splitCount)).replace("{friends}", sub.split_config?.friends?.map((f) => f.name).join(", ") || "")}</span>
                       </span>
                       <span className="font-bold text-[11px] text-purple-700 dark:text-purple-300">
-                        {formatCurrency(myShare)}/org
+                        {formatCurrency(myShare)}{t.subscriptions.perPersonShort}
                       </span>
                     </div>
                   </div>
@@ -624,9 +624,9 @@ export default function SubscriptionsClient({
                       }`}
                     >
                       {isToday
-                        ? "Perpanjangan hari ini"
+                        ? t.subscriptions.renewalToday
                         : isUpcoming
-                        ? `${daysDiff} hari lagi (${sub.next_renewal_date})`
+                        ? t.subscriptions.renewalInDays.replace("{days}", String(daysDiff)).replace("{date}", sub.next_renewal_date)
                         : sub.next_renewal_date}
                     </span>
                   </div>
@@ -638,18 +638,18 @@ export default function SubscriptionsClient({
                         type="button"
                         onClick={() => handleManualSplitBillCreation(sub)}
                         disabled={processingSubId === sub.id}
-                        title="Buat Split Bill Sekarang"
+                        title={t.subscriptions.splitBillBtn}
                         className="flex items-center gap-1 rounded-lg bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 px-2 py-1 text-[11px] font-semibold transition-all cursor-pointer"
                       >
                         <Receipt className="w-3 h-3" />
-                        <span>Split Bill</span>
+                        <span>{t.subscriptions.splitBillBtn}</span>
                       </button>
                     )}
 
                     {sub.last_split_bill_id && (
                       <Link
                         href={`/split/${sub.last_split_bill_id}`}
-                        title="Lihat Split Bill Terakhir"
+                        title={t.subscriptions.viewLastSplitBill}
                         className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -659,7 +659,7 @@ export default function SubscriptionsClient({
                     <button
                       type="button"
                       onClick={() => handleToggleStatus(sub.id, sub.status)}
-                      title={isPaused ? "Lanjutkan Langganan" : "Jeda Langganan"}
+                      title={isPaused ? t.subscriptions.resumeTitle : t.subscriptions.pauseTitle}
                       className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
                     >
                       {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -668,7 +668,7 @@ export default function SubscriptionsClient({
                     <button
                       type="button"
                       onClick={() => openEditModal(sub)}
-                      title="Edit"
+                      title={t.subscriptions.editTitle}
                       className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
@@ -677,7 +677,7 @@ export default function SubscriptionsClient({
                     <button
                       type="button"
                       onClick={() => handleDelete(sub.id, sub.name)}
-                      title="Hapus"
+                      title={t.subscriptions.deleteTitle}
                       className="p-1.5 text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -696,11 +696,12 @@ export default function SubscriptionsClient({
           <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl p-5 border border-zinc-200 dark:border-zinc-800 max-h-[90vh] overflow-y-auto shadow-2xl animate-modal-in">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                {editingSub ? "Edit Langganan" : "Tambah Langganan Baru"}
+                {editingSub ? t.subscriptions.editModalTitle : t.subscriptions.createModalTitle}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
+                aria-label={t.subscriptions.cancelBtn}
                 className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -711,7 +712,7 @@ export default function SubscriptionsClient({
             {!editingSub && (
               <div className="my-3.5">
                 <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 mb-2">
-                  Pilih Cepat Preset Aplikasi
+                  {t.subscriptions.quickPresetsTitle}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {POPULAR_PRESETS.map((preset) => (
@@ -736,12 +737,12 @@ export default function SubscriptionsClient({
               {/* Name */}
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Nama Layanan
+                  {t.subscriptions.serviceNameLabel}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Spotify Family, ChatGPT Plus"
+                  placeholder={t.subscriptions.serviceNamePlaceholder}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
@@ -752,7 +753,7 @@ export default function SubscriptionsClient({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Harga ({currencySymbol})
+                    {t.subscriptions.priceLabel} ({currencySymbol})
                   </label>
                   <input
                     type="number"
@@ -767,16 +768,16 @@ export default function SubscriptionsClient({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Siklus Tagihan
+                    {t.subscriptions.billingCycleLabel}
                   </label>
                   <select
                     value={billingCycle}
                     onChange={(e) => setBillingCycle(e.target.value as BillingCycle)}
                     className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                   >
-                    <option value="monthly">Bulanan</option>
-                    <option value="yearly">Tahunan</option>
-                    <option value="weekly">Mingguan</option>
+                    <option value="monthly">{t.subscriptions.cycleMonthly}</option>
+                    <option value="yearly">{t.subscriptions.cycleYearly}</option>
+                    <option value="weekly">{t.subscriptions.cycleWeekly}</option>
                   </select>
                 </div>
               </div>
@@ -785,7 +786,7 @@ export default function SubscriptionsClient({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Tgl Perpanjangan
+                    {t.subscriptions.renewalDateLabel}
                   </label>
                   <input
                     type="date"
@@ -797,7 +798,7 @@ export default function SubscriptionsClient({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Platform Pembayaran
+                    {t.subscriptions.paymentPlatformLabel}
                   </label>
                   <select
                     value={paymentPlatform}
@@ -816,7 +817,7 @@ export default function SubscriptionsClient({
                 {multiSakuEnabled && wallets.length > 0 && (
                   <div>
                     <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Bayar dari Saku
+                      {t.subscriptions.payFromWalletLabel}
                     </label>
                     <select
                       value={payFromWalletId}
@@ -825,7 +826,7 @@ export default function SubscriptionsClient({
                     >
                       {wallets.map((w) => (
                         <option key={w.id} value={w.id}>
-                          {w.emoji} {w.name} {w.is_primary ? "(Utama)" : ""}
+                          {w.emoji} {w.name} {w.is_primary ? t.subscriptions.primaryBadge : ""}
                         </option>
                       ))}
                     </select>
@@ -836,7 +837,7 @@ export default function SubscriptionsClient({
               {/* Reminder days in advance */}
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Ingatkan Sebelum Jatuh Tempo
+                  {t.subscriptions.remindBeforeLabel}
                 </label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 7].map((days) => (
@@ -850,7 +851,7 @@ export default function SubscriptionsClient({
                           : "bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700"
                       }`}
                     >
-                      {days} Hari
+                      {t.subscriptions.daysCount.replace("{days}", String(days))}
                     </button>
                   ))}
                 </div>
@@ -861,10 +862,10 @@ export default function SubscriptionsClient({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                      Patungan Akun dengan Teman?
+                      {t.subscriptions.splitAccountTitle}
                     </p>
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                      Bagi tagihan dan jadwalkan Split Bill otomatis
+                      {t.subscriptions.splitAccountDesc}
                     </p>
                   </div>
                   <input
@@ -880,12 +881,12 @@ export default function SubscriptionsClient({
                     {/* Add Friend Input */}
                     <div>
                       <label className="block text-[11px] font-semibold text-purple-900 dark:text-purple-200 mb-1">
-                        Tambah Teman Patungan
+                        {t.subscriptions.addFriendLabel}
                       </label>
                       <div className="flex gap-1.5">
                         <input
                           type="text"
-                          placeholder="Nama teman (e.g. Budi, Citra)"
+                          placeholder={t.subscriptions.addFriendPlaceholder}
                           value={friendInput}
                           onChange={(e) => setFriendInput(e.target.value)}
                           onKeyDown={(e) => {
@@ -901,7 +902,7 @@ export default function SubscriptionsClient({
                           onClick={handleAddFriend}
                           className="rounded-xl bg-purple-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-purple-700 cursor-pointer"
                         >
-                          Tambah
+                          {t.subscriptions.addFriendBtn}
                         </button>
                       </div>
                     </div>
@@ -910,7 +911,7 @@ export default function SubscriptionsClient({
                     {friends.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
                         <span className="text-[11px] bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 px-2 py-0.5 rounded-lg font-semibold">
-                          Saya (Pemilik)
+                          {t.subscriptions.hostBadge}
                         </span>
                         {friends.map((f) => (
                           <span
@@ -933,7 +934,7 @@ export default function SubscriptionsClient({
                     {/* Breakdown Preview */}
                     <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800 border border-purple-200 dark:border-purple-800 text-[11px]">
                       <div className="flex justify-between font-semibold text-purple-950 dark:text-purple-100">
-                        <span>Porsi Per Orang:</span>
+                        <span>{t.subscriptions.portionPerPerson}</span>
                         <span>
                           {formatCurrency(
                             (Number(price) || 0) / Math.max(1, friends.length + 1)
@@ -941,7 +942,7 @@ export default function SubscriptionsClient({
                         </span>
                       </div>
                       <p className="text-[10px] text-purple-700/80 dark:text-purple-300/80 mt-0.5">
-                        Total {formatCurrency(Number(price) || 0)} dibagi {friends.length + 1} orang
+                        {t.subscriptions.totalSplitDesc.replace("{total}", formatCurrency(Number(price) || 0)).replace("{count}", String(friends.length + 1))}
                       </p>
                     </div>
 
@@ -954,7 +955,7 @@ export default function SubscriptionsClient({
                           onChange={(e) => setAutoCreateSplit(e.target.checked)}
                           className="w-3.5 h-3.5 rounded text-purple-600 focus:ring-purple-500"
                         />
-                        <span>Otomatis buat Split Bill saat tiba tanggal perpanjangan</span>
+                        <span>{t.subscriptions.autoCreateSplit}</span>
                       </label>
                       <label className="flex items-center gap-2 text-[11px] text-purple-950 dark:text-purple-200 cursor-pointer">
                         <input
@@ -963,7 +964,7 @@ export default function SubscriptionsClient({
                           onChange={(e) => setAutoLogExpenses(e.target.checked)}
                           className="w-3.5 h-3.5 rounded text-purple-600 focus:ring-purple-500"
                         />
-                        <span>Otomatis catat porsi pribadi ke pengeluaran bulanan</span>
+                        <span>{t.subscriptions.autoLogExpenses}</span>
                       </label>
                     </div>
                   </div>
@@ -977,14 +978,14 @@ export default function SubscriptionsClient({
                   onClick={() => setIsModalOpen(false)}
                   className="flex-1 rounded-xl border border-zinc-200 dark:border-zinc-700 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
-                  Batal
+                  {t.subscriptions.cancelBtn}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className="flex-1 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 py-2 text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
                 >
-                  {isSubmitting ? "Menyimpan..." : editingSub ? "Simpan Perubahan" : "Tambah Langganan"}
+                  {isSubmitting ? t.subscriptions.savingBtn : editingSub ? t.subscriptions.saveChanges : t.subscriptions.addSubscription}
                 </button>
               </div>
             </form>

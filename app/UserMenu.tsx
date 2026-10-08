@@ -203,10 +203,10 @@ export default function UserMenu({
               >
                 <div className="flex items-center gap-2.5">
                   <Receipt className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
-                  <span>Split Bill</span>
+                  <span>{t.nav.splitBill}</span>
                 </div>
                 <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-md">
-                  Login
+                  {t.nav.loginBadge}
                 </span>
               </button>
             ) : (
@@ -216,7 +216,7 @@ export default function UserMenu({
                 className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
               >
                 <Receipt className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
-                <span>Split Bill</span>
+                <span>{t.nav.splitBill}</span>
               </Link>
             )}
 
@@ -236,10 +236,10 @@ export default function UserMenu({
               >
                 <div className="flex items-center gap-2.5">
                   <CreditCard className="w-3.5 h-3.5 text-pink-500 dark:text-pink-400" />
-                  <span>Langganan</span>
+                  <span>{t.nav.subscriptions}</span>
                 </div>
                 <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-md">
-                  Login
+                  {t.nav.loginBadge}
                 </span>
               </button>
             ) : (
@@ -249,7 +249,7 @@ export default function UserMenu({
                 className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
               >
                 <CreditCard className="w-3.5 h-3.5 text-pink-500 dark:text-pink-400" />
-                <span>Langganan</span>
+                <span>{t.nav.subscriptions}</span>
               </Link>
             )}
 
@@ -263,7 +263,7 @@ export default function UserMenu({
               className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer w-full text-left"
             >
               <Bell className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400" />
-              <span>Notifikasi & Pengingat</span>
+              <span>{t.nav.notifications}</span>
             </button>
 
             <div className="my-1 border-t border-zinc-200/80 dark:border-zinc-800/80" />

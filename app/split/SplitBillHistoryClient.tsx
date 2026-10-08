@@ -71,7 +71,7 @@ export default function SplitBillHistoryClient({
   splitSubscriptions = [],
 }: SplitBillHistoryClientProps) {
   const router = useRouter();
-  const { formatCurrency } = useTranslation();
+  const { formatCurrency, formatDate, t } = useTranslation();
   const [bills, setBills] = useState<HistoryBillRecord[]>(initialBills);
   const [filterTab, setFilterTab] = useState<"all" | "active" | "settled">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,7 +80,7 @@ export default function SplitBillHistoryClient({
   const [triggeringSubId, setTriggeringSubId] = useState<string | null>(null);
 
   const handleGenerateSplitFromSub = async (sub: SubscriptionRecord) => {
-    if (!confirm(`Buat Split Bill sekarang untuk "${sub.name}"?`)) return;
+    if (!confirm(t.splitBill.createBillConfirm.replace("{name}", sub.name))) return;
     setTriggeringSubId(sub.id);
     try {
       const res = await createSplitBillFromSubscription(sub.id);
@@ -171,7 +171,7 @@ export default function SplitBillHistoryClient({
       setDeletingBillId(null);
     } catch (err) {
       console.error("Error deleting split bill:", err);
-      alert("Gagal menghapus split bill.");
+      alert(t.splitBill.deleteFailedAlert);
     } finally {
       setIsDeleting(false);
     }
@@ -190,7 +190,7 @@ export default function SplitBillHistoryClient({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Kembali ke Beranda</span>
+          <span>{t.splitBill.backToHome}</span>
         </Link>
 
         <Link
@@ -198,17 +198,17 @@ export default function SplitBillHistoryClient({
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>Split Baru</span>
+          <span>{t.splitBill.newSplit}</span>
         </Link>
       </div>
 
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
-          Riwayat Split Bill
+          {t.splitBill.historyTitle}
         </h1>
         <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          Pantau status tagihan yang Anda buat, siapa yang sudah bayar, dan kelola arsip patungan Anda.
+          {t.splitBill.historySubtitle}
         </p>
       </div>
 
@@ -216,7 +216,7 @@ export default function SplitBillHistoryClient({
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="p-3.5 sm:p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
           <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">
-            Total Tagihan
+            {t.splitBill.totalBills}
           </span>
           <span className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 mt-0.5 block">
             {totalBillsCount}
@@ -225,7 +225,7 @@ export default function SplitBillHistoryClient({
 
         <div className="p-3.5 sm:p-4 rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/20 shadow-2xs">
           <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider block">
-            Belum Lunas
+            {t.splitBill.unpaid}
           </span>
           <span className="text-lg sm:text-xl font-black text-amber-900 dark:text-amber-200 mt-0.5 block">
             {activeCount}
@@ -234,7 +234,7 @@ export default function SplitBillHistoryClient({
 
         <div className="p-3.5 sm:p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/20 shadow-2xs">
           <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">
-            Sudah Lunas
+            {t.splitBill.paid}
           </span>
           <span className="text-lg sm:text-xl font-black text-emerald-900 dark:text-emerald-200 mt-0.5 block">
             {settledCount}
@@ -249,14 +249,14 @@ export default function SplitBillHistoryClient({
             <div className="flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                Langganan Patungan Berulang ({splitSubscriptions.length})
+                {t.splitBill.recurringTitle} ({splitSubscriptions.length})
               </h3>
             </div>
             <Link
               href="/subscriptions"
               className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
             >
-              Kelola &rarr;
+              {t.splitBill.manageLink} &rarr;
             </Link>
           </div>
 
@@ -274,7 +274,7 @@ export default function SplitBillHistoryClient({
                       {sub.name}
                     </p>
                     <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      {formatCurrency(perPerson)}/org • Jadwal: {sub.next_renewal_date}
+                      {formatCurrency(perPerson)}{t.splitBill.perPersonShort} • {t.splitBill.scheduleLabel}: {sub.next_renewal_date}
                     </p>
                   </div>
                   <button
@@ -284,7 +284,7 @@ export default function SplitBillHistoryClient({
                     className="shrink-0 flex items-center gap-1 rounded-xl bg-purple-600 text-white hover:bg-purple-500 dark:bg-purple-500 dark:hover:bg-purple-400 dark:text-zinc-950 px-2.5 py-1.5 text-[11px] font-semibold transition-all cursor-pointer shadow-xs disabled:opacity-50"
                   >
                     <Sparkles className="w-3 h-3" />
-                    <span>{triggeringSubId === sub.id ? "Membuat..." : "Buat Bill"}</span>
+                    <span>{triggeringSubId === sub.id ? t.splitBill.creatingBillBtn : t.splitBill.createBillBtn}</span>
                   </button>
                 </div>
               );
@@ -302,7 +302,7 @@ export default function SplitBillHistoryClient({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari nama tagihan, kategori, atau teman..."
+            placeholder={t.splitBill.searchPlaceholder}
             className="w-full pl-9 pr-3.5 py-2.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
           />
         </div>
@@ -310,9 +310,9 @@ export default function SplitBillHistoryClient({
         {/* Filter Tabs */}
         <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-2xl">
           {[
-            { id: "all", label: `Semua (${totalBillsCount})` },
-            { id: "active", label: `Belum Lunas (${activeCount})` },
-            { id: "settled", label: `Lunas (${settledCount})` },
+            { id: "all", label: `${t.splitBill.tabAll} (${totalBillsCount})` },
+            { id: "active", label: `${t.splitBill.tabUnpaid} (${activeCount})` },
+            { id: "settled", label: `${t.splitBill.tabPaid} (${settledCount})` },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -339,12 +339,12 @@ export default function SplitBillHistoryClient({
             </div>
             <div>
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                Tidak ada Split Bill ditemukan
+                {t.splitBill.emptyTitle}
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                 {searchQuery
-                  ? "Coba ubah kata kunci pencarian Anda."
-                  : "Anda belum memiliki tagihan split pada kategori ini."}
+                  ? t.splitBill.emptySearchDesc
+                  : t.splitBill.emptyDefaultDesc}
               </p>
             </div>
             {!searchQuery && (
@@ -353,7 +353,7 @@ export default function SplitBillHistoryClient({
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-semibold cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Buat Split Bill Baru</span>
+                <span>{t.splitBill.createSplitBillBtn}</span>
               </Link>
             )}
           </div>
@@ -375,11 +375,7 @@ export default function SplitBillHistoryClient({
                     </span>
                   </div>
                   <p className="text-[11px] text-zinc-400 mt-0.5">
-                    {new Date(b.created_at).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })} · {b.split_participants?.length || 0} orang
+                    {formatDate(b.created_at, "d MMM yyyy")} · {b.split_participants?.length || 0} {t.splitBill.peopleCount}
                   </p>
                 </div>
 
@@ -391,7 +387,7 @@ export default function SplitBillHistoryClient({
                       : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
                   }`}
                 >
-                  {b.isSettled ? "Lunas" : `${b.paidCount}/${b.totalCount} Bayar`}
+                  {b.isSettled ? t.splitBill.paidBadge : t.splitBill.paidRatio.replace("{paid}", String(b.paidCount)).replace("{total}", String(b.totalCount))}
                 </span>
               </div>
 
@@ -399,7 +395,7 @@ export default function SplitBillHistoryClient({
               <div className="flex items-baseline justify-between pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
                 <div>
                   <span className="text-[10px] text-zinc-400 block font-medium">
-                    Total Tagihan
+                    {t.splitBill.totalBill}
                   </span>
                   <span className="text-base font-black text-zinc-900 dark:text-zinc-50">
                     {formatRupiah(b.grandTotal)}
@@ -408,7 +404,7 @@ export default function SplitBillHistoryClient({
 
                 <div className="text-right">
                   <span className="text-[10px] text-zinc-400 block font-medium">
-                    Porsi Anda (Host)
+                    {t.splitBill.yourShareHost}
                   </span>
                   <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                     {formatRupiah(b.creatorShare)}
@@ -429,7 +425,7 @@ export default function SplitBillHistoryClient({
 
                 {!b.isSettled && b.unpaidParticipants.length > 0 && (
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    Menunggu:{" "}
+                    {t.splitBill.waitingFor}:{" "}
                     <span className="font-semibold text-amber-700 dark:text-amber-400">
                       {b.unpaidParticipants.map((p) => p.name).join(", ")}
                     </span>
@@ -443,7 +439,7 @@ export default function SplitBillHistoryClient({
                 <button
                   type="button"
                   onClick={() => setDeletingBillId(b.id)}
-                  aria-label="Hapus tagihan"
+                  aria-label={t.splitBill.deleteBillAria}
                   className="p-2 rounded-xl text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -454,7 +450,7 @@ export default function SplitBillHistoryClient({
                   href={`/split/${b.id}`}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold transition-all cursor-pointer"
                 >
-                  <span>Buka & Bagikan</span>
+                  <span>{t.splitBill.openAndShare}</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -477,13 +473,13 @@ export default function SplitBillHistoryClient({
               </div>
               <div>
                 <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                  Hapus Split Bill?
+                  {t.splitBill.deleteModalTitle}
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  Tagihan <b>&quot;{billToDelete.title}&quot;</b> dan seluruh rincian teman akan dihapus secara permanen.
+                  {t.splitBill.deleteModalDesc.replace("{title}", billToDelete.title)}
                   {billToDelete.logged_expense_id && (
                     <span className="block mt-1 text-rose-600 dark:text-rose-400 font-medium">
-                      Catatan pengeluaran terkait di pelacak pribadi juga akan ikut dihapus.
+                      {t.splitBill.deleteExpenseWarning}
                     </span>
                   )}
                 </p>
@@ -497,7 +493,7 @@ export default function SplitBillHistoryClient({
                 disabled={isDeleting}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
               >
-                Batal
+                {t.splitBill.cancelBtn}
               </button>
               <button
                 type="button"
@@ -505,7 +501,7 @@ export default function SplitBillHistoryClient({
                 disabled={isDeleting}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer shadow-xs disabled:opacity-50"
               >
-                {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+                {isDeleting ? t.splitBill.deletingBtn : t.splitBill.deleteConfirmBtn}
               </button>
             </div>
           </div>

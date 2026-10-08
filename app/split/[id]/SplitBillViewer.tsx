@@ -42,7 +42,7 @@ export default function SplitBillViewer({
   isHost,
 }: SplitBillViewerProps) {
   const router = useRouter();
-  const { formatCurrency } = useTranslation();
+  const { formatCurrency, formatDate, t } = useTranslation();
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -60,7 +60,7 @@ export default function SplitBillViewer({
       router.push("/split");
     } catch (err) {
       console.error(err);
-      alert("Gagal menghapus tagihan.");
+      alert(t.splitBill.deleteFailedAlert);
       setIsDeleting(false);
     }
   };
@@ -141,10 +141,10 @@ export default function SplitBillViewer({
     const currentUrl = window.location.href;
 
     const lines: string[] = [];
-    lines.push(`🍽️ *Split Bill: ${bill.title}*`);
-    lines.push(`Total Tagihan: ${formatRupiah(calculation.grandTotal)}`);
+    lines.push(t.splitBill.waSplitBillTitle.replace("{title}", bill.title));
+    lines.push(t.splitBill.waTotalBill.replace("{amount}", formatRupiah(calculation.grandTotal)));
     lines.push("");
-    lines.push("*Rincian per Orang:*");
+    lines.push(t.splitBill.waBreakdownTitle);
 
     calculation.participants.forEach((p) => {
       const statusIcon = p.isPaid ? "✅" : "⏳";
@@ -153,15 +153,15 @@ export default function SplitBillViewer({
 
     if (bill.payment_info?.account_number) {
       lines.push("");
-      lines.push(`💳 *Transfer ke ${bill.payment_info.method || "Bank"}:*`);
-      lines.push(`No: ${bill.payment_info.account_number}`);
+      lines.push(t.splitBill.waTransferTo.replace("{method}", bill.payment_info.method || "Bank"));
+      lines.push(t.splitBill.waAccountNo.replace("{number}", bill.payment_info.account_number));
       if (bill.payment_info.account_name) {
-        lines.push(`a/n: ${bill.payment_info.account_name}`);
+        lines.push(t.splitBill.waAccountName.replace("{name}", bill.payment_info.account_name));
       }
     }
 
     lines.push("");
-    lines.push("🔗 *Cek rincian menu lengkap & status di browser:*");
+    lines.push(t.splitBill.waCheckLink);
     lines.push(currentUrl);
 
     const waUrl = `https://wa.me/?text=${encodeURIComponent(lines.join("\n"))}`;
@@ -177,13 +177,13 @@ export default function SplitBillViewer({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{isHost ? "Riwayat Split" : "Kembali"}</span>
+          <span>{isHost ? t.splitBill.historyBack : t.splitBill.back}</span>
         </Link>
 
         {isHost && (
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800">
-              Host
+              {t.splitBill.hostBadge}
             </span>
             <button
               type="button"
@@ -191,7 +191,7 @@ export default function SplitBillViewer({
               className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Hapus</span>
+              <span>{t.splitBill.deleteBillBtn}</span>
             </button>
           </div>
         )}
@@ -202,24 +202,19 @@ export default function SplitBillViewer({
         <div className="flex items-start justify-between">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              Rincian Split Bill
+              {t.splitBill.billDetails}
             </span>
             <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-50 mt-0.5">
               {bill.title}
             </h1>
             <p suppressHydrationWarning className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              {new Date(bill.created_at).toLocaleDateString("id-ID", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
+              {formatDate(bill.created_at, "EEEE, d MMMM yyyy")}
             </p>
           </div>
 
           <div className="text-right">
             <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider block">
-              Total Tagihan
+              {t.splitBill.totalBill}
             </span>
             <span className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-50">
               {formatRupiah(calculation.grandTotal)}
@@ -231,10 +226,13 @@ export default function SplitBillViewer({
         <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1.5">
           <div className="flex justify-between items-center text-xs">
             <span className="font-semibold text-zinc-600 dark:text-zinc-400">
-              Status Pembayaran:
+              {t.splitBill.paymentStatus}:
             </span>
             <span className="font-bold text-zinc-900 dark:text-zinc-100">
-              {paidCount} dari {participants.length} orang lunas ({Math.round((paidCount / Math.max(1, participants.length)) * 100)}%)
+              {t.splitBill.paidSummary
+                .replace("{paid}", String(paidCount))
+                .replace("{total}", String(participants.length))
+                .replace("{percent}", String(Math.round((paidCount / Math.max(1, participants.length)) * 100)))}
             </span>
           </div>
           <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
@@ -256,7 +254,7 @@ export default function SplitBillViewer({
             className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 text-xs font-semibold active:scale-95 transition-all cursor-pointer"
           >
             {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedLink ? "Disalin!" : "Salin Link"}</span>
+            <span>{copiedLink ? t.splitBill.copied : t.splitBill.copyLink}</span>
           </button>
 
           {/* Show QR Code */}
@@ -266,7 +264,7 @@ export default function SplitBillViewer({
             className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 text-xs font-semibold active:scale-95 transition-all cursor-pointer"
           >
             <QrCode className="w-3.5 h-3.5 text-blue-500" />
-            <span>Kode QR</span>
+            <span>{t.splitBill.qrCode}</span>
           </button>
 
           {/* Share to WhatsApp */}
@@ -276,7 +274,7 @@ export default function SplitBillViewer({
             className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer shadow-xs"
           >
             <Share2 className="w-3.5 h-3.5" />
-            <span>WhatsApp</span>
+            <span>{t.splitBill.whatsapp}</span>
           </button>
         </div>
       </div>
@@ -288,11 +286,11 @@ export default function SplitBillViewer({
             <div className="flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-amber-400" />
               <span className="text-xs font-bold text-zinc-200">
-                Transfer ke {bill.payment_info.method || "Bank"}
+                {t.splitBill.transferToMethod.replace("{method}", bill.payment_info.method || "Bank")}
               </span>
             </div>
             <span className="text-[10px] font-semibold bg-zinc-800 text-amber-400 px-2 py-0.5 rounded-md">
-              Tujuan Transfer
+              {t.splitBill.transferDestination}
             </span>
           </div>
 
@@ -303,7 +301,7 @@ export default function SplitBillViewer({
               </p>
               {bill.payment_info.account_name && (
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  a/n {bill.payment_info.account_name}
+                  {t.splitBill.accountHolder.replace("{name}", bill.payment_info.account_name)}
                 </p>
               )}
             </div>
@@ -314,7 +312,7 @@ export default function SplitBillViewer({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer"
             >
               {copiedAccount ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedAccount ? "Disalin!" : "Salin No"}</span>
+              <span>{copiedAccount ? t.splitBill.copied : t.splitBill.copyAccountNo}</span>
             </button>
           </div>
         </div>
@@ -323,7 +321,7 @@ export default function SplitBillViewer({
       {/* Participants Breakdown Accordion */}
       <div className="space-y-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400 px-1">
-          Rincian Pembayaran Masing-Masing ({participants.length} Orang)
+          {t.splitBill.participantBreakdown.replace("{count}", String(participants.length))}
         </h2>
 
         {calculation.participants.map((p) => {
@@ -361,7 +359,7 @@ export default function SplitBillViewer({
                       <span>{p.name}</span>
                       {p.isCreator && (
                         <span className="text-[10px] text-zinc-400 font-normal">
-                          (Host)
+                          ({t.splitBill.hostBadge})
                         </span>
                       )}
                     </h3>
@@ -380,7 +378,7 @@ export default function SplitBillViewer({
                         : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
                     }`}
                   >
-                    {p.isPaid ? "Lunas" : "Belum Bayar"}
+                    {p.isPaid ? t.splitBill.paidBadgeText : t.splitBill.unpaidBadge}
                   </span>
 
                   <button
@@ -398,7 +396,7 @@ export default function SplitBillViewer({
                 <div className="px-4 pb-4 pt-1 border-t border-zinc-100 dark:border-zinc-800/80 space-y-3 text-xs">
                   <div className="space-y-1.5 pt-2">
                     <p className="font-semibold text-zinc-500 text-[11px]">
-                      Menu & Porsi Pesanan:
+                      {t.splitBill.menuOrdered}
                     </p>
                     {p.items.map((item, idx) => (
                       <div
@@ -409,7 +407,7 @@ export default function SplitBillViewer({
                           {item.name}
                           {item.splitBetweenCount > 1 && (
                             <span className="text-[10px] text-zinc-400 ml-1">
-                              (patungan {item.splitBetweenCount} org)
+                              ({t.splitBill.splitBetweenCount.replace("{count}", String(item.splitBetweenCount))})
                             </span>
                           )}
                         </span>
@@ -423,30 +421,30 @@ export default function SplitBillViewer({
                   {/* Proportional breakdown items */}
                   <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1 text-[11px] text-zinc-500 dark:text-zinc-400">
                     <div className="flex justify-between">
-                      <span>Subtotal Menu</span>
+                      <span>{t.splitBill.subtotalMenu}</span>
                       <span>{formatRupiah(p.itemsSubtotal)}</span>
                     </div>
                     {p.taxShare > 0 && (
                       <div className="flex justify-between">
-                        <span>Pajak (Proporsional)</span>
+                        <span>{t.splitBill.taxProportional}</span>
                         <span>+{formatRupiah(p.taxShare)}</span>
                       </div>
                     )}
                     {p.serviceShare > 0 && (
                       <div className="flex justify-between">
-                        <span>Service Charge</span>
+                        <span>{t.splitBill.serviceCharge}</span>
                         <span>+{formatRupiah(p.serviceShare)}</span>
                       </div>
                     )}
                     {p.feeShare > 0 && (
                       <div className="flex justify-between">
-                        <span>Ongkir / Biaya Tambahan</span>
+                        <span>{t.splitBill.deliveryFee}</span>
                         <span>+{formatRupiah(p.feeShare)}</span>
                       </div>
                     )}
                     {p.discountShare > 0 && (
                       <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                        <span>Diskon / Potongan</span>
+                        <span>{t.splitBill.discountReduction}</span>
                         <span>-{formatRupiah(p.discountShare)}</span>
                       </div>
                     )}
@@ -469,10 +467,10 @@ export default function SplitBillViewer({
                         }`}
                       >
                         {isUpdating
-                          ? "Menyimpan..."
+                          ? t.splitBill.savingStatus
                           : p.isPaid
-                          ? "Tandai Belum Bayar"
-                          : "Tandai Sudah Bayar"}
+                          ? t.splitBill.markUnpaid
+                          : t.splitBill.markPaid}
                       </button>
                     </div>
                   )}
@@ -493,10 +491,10 @@ export default function SplitBillViewer({
           <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 text-center space-y-4">
             <div>
               <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                Pindai Kode QR
+                {t.splitBill.scanQrTitle}
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                Arahkan kamera HP teman ke kode QR ini untuk langsung membuka rincian tagihan
+                {t.splitBill.scanQrDesc}
               </p>
             </div>
 
@@ -511,7 +509,7 @@ export default function SplitBillViewer({
                 />
               ) : (
                 <div className="w-56 h-56 flex items-center justify-center text-xs text-zinc-400">
-                  Membuat QR Code...
+                  {t.splitBill.generatingQr}
                 </div>
               )}
             </div>
@@ -521,7 +519,7 @@ export default function SplitBillViewer({
               onClick={() => setShowQrModal(false)}
               className="w-full py-2.5 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold text-xs active:scale-95 transition-all cursor-pointer"
             >
-              Tutup
+              {t.splitBill.closeModal}
             </button>
           </div>
         </div>
@@ -541,13 +539,13 @@ export default function SplitBillViewer({
               </div>
               <div>
                 <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                  Hapus Split Bill Ini?
+                  {t.splitBill.deleteBillModalTitle}
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  Tagihan <b>&quot;{bill.title}&quot;</b> dan seluruh rincian teman akan dihapus secara permanen.
+                  {t.splitBill.deleteBillModalDesc.replace("{title}", bill.title)}
                   {bill.logged_expense_id && (
                     <span className="block mt-1 text-rose-600 dark:text-rose-400 font-medium">
-                      Catatan pengeluaran terkait di pelacak pribadi juga akan ikut dihapus.
+                      {t.splitBill.deleteBillExpenseWarning}
                     </span>
                   )}
                 </p>
@@ -561,7 +559,7 @@ export default function SplitBillViewer({
                 disabled={isDeleting}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
               >
-                Batal
+                {t.splitBill.cancelBtn}
               </button>
               <button
                 type="button"
@@ -569,7 +567,7 @@ export default function SplitBillViewer({
                 disabled={isDeleting}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer shadow-xs disabled:opacity-50"
               >
-                {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+                {isDeleting ? t.splitBill.deletingBtn : t.splitBill.deleteConfirmBtn}
               </button>
             </div>
           </div>
