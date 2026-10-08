@@ -19,6 +19,11 @@ import {
   getCurrencyServer,
   formatCurrencyServer,
 } from "@/utils/i18n/server";
+import {
+  getMultiSakuEnabledServer,
+  getSelectedSakuServer,
+  getWallets,
+} from "@/utils/wallets/server";
 
 export default async function ArchivePage() {
   const cookieStore = await cookies();
@@ -36,17 +41,31 @@ export default async function ArchivePage() {
 
   const isGuest = Boolean(user.is_anonymous);
 
+  const multiSakuEnabled = await getMultiSakuEnabledServer(cookieStore, supabase, user.id);
+  const selectedSaku = await getSelectedSakuServer(cookieStore);
+  const wallets = multiSakuEnabled ? await getWallets(supabase, user.id) : [];
+  const activeWallet =
+    multiSakuEnabled && selectedSaku !== "all"
+      ? wallets.find((w) => w.id === selectedSaku) || null
+      : null;
+
   // Current week boundary (Monday 00:00)
   const now = getNowInTimezone();
   const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 });
   const thisWeekStartStr = format(thisWeekStart, "yyyy-MM-dd");
 
-  // Fetch all user expenses ordered by date descending
-  const { data: allExpenses } = await supabase
+  // Fetch user expenses ordered by date descending (respecting selected Saku if active)
+  let expensesQuery = supabase
     .from("expenses")
     .select("*")
     .eq("user_id", user.id)
     .order("spent_at", { ascending: false });
+
+  if (activeWallet) {
+    expensesQuery = expensesQuery.eq("wallet_id", activeWallet.id);
+  }
+
+  const { data: allExpenses } = await expensesQuery;
 
   // Group past expenses by week (strictly before the current active week)
   const weekMap = new Map<string, ExpenseItem[]>();
@@ -143,6 +162,12 @@ export default async function ArchivePage() {
               {t.archive.title}
             </h1>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{t.archive.subtitle}</p>
+            {activeWallet && (
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 mt-1">
+                <span>{activeWallet.emoji}</span>
+                <span>{activeWallet.name}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -183,7 +208,7 @@ export default async function ArchivePage() {
       )}
 
       {/* Accordion List of Past Weeks */}
-      <ArchiveWeekList weeks={archivedWeeks} />
+      <ArchiveWeekList weeks={archivedWeeks} wallets={wallets} />
 
       {/* Bottom spacer for clearance above floating navbar and gradient */}
       <div className="h-8 shrink-0" aria-hidden="true" />

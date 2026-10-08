@@ -17,9 +17,10 @@ export interface ArchivedWeek {
 
 interface ArchiveWeekListProps {
   weeks: ArchivedWeek[];
+  wallets?: Array<{ id: string; name: string; emoji?: string }>;
 }
 
-export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
+export default function ArchiveWeekList({ weeks, wallets = [] }: ArchiveWeekListProps) {
   const { t, getCategoryLabel, formatCurrency } = useTranslation();
 
   // Default open the most recent past week
@@ -193,6 +194,7 @@ export default function ArchiveWeekList({ weeks }: ArchiveWeekListProps) {
                     expenses={week.expenses}
                     startDateStr={week.startDateStr}
                     endDateStr={week.endDateStr}
+                    wallets={wallets}
                   />
                 </div>
               )}

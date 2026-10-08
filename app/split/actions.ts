@@ -27,6 +27,7 @@ export interface CreateSplitBillPayload {
   };
   saveAsDefaultPayment?: boolean;
   autoLogToTracker?: boolean;
+  walletId?: string | null;
   category?: string;
   participants: Array<{
     name: string;
@@ -195,6 +196,7 @@ export async function createSplitBill(payload: CreateSplitBillPayload) {
             note: `[Split Bill] Porsi pribadi dari total ${formatCurrencyServer(calculation.grandTotal, currency)}`,
             amount: creatorShare,
             spent_at: getTodayString(),
+            wallet_id: payload.walletId || null,
           })
           .select("id")
           .single();

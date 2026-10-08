@@ -194,6 +194,36 @@ const tests = [
     currency: "MYR",
     expected: { name: "Nasi lemak", amount: 15, category: "Food & Dining", spentAt: TODAY },
   },
+  // 26. Saku wallet token matching: "Kopi 25rb @jajan"
+  {
+    input: "Kopi 25rb @jajan",
+    wallets: [
+      { id: "w-main", name: "Dompet Utama" },
+      { id: "w-jajan", name: "Jajan" },
+      { id: "w-savings", name: "Tabungan" },
+    ],
+    expected: { name: "Kopi", amount: 25000, category: "Food & Dining", spentAt: TODAY, walletId: "w-jajan" },
+  },
+  // 27. Saku token at front: "@tabungan investasi 500k"
+  {
+    input: "@tabungan investasi 500k",
+    wallets: [
+      { id: "w-main", name: "Dompet Utama" },
+      { id: "w-jajan", name: "Jajan" },
+      { id: "w-savings", name: "Tabungan" },
+    ],
+    expected: { amount: 500000, walletId: "w-savings" },
+  },
+  // 28. Normalized multi-word saku: "bensin 30k @dompet-utama"
+  {
+    input: "bensin 30k @dompet-utama",
+    wallets: [
+      { id: "w-main", name: "Dompet Utama" },
+      { id: "w-jajan", name: "Jajan" },
+      { id: "w-savings", name: "Tabungan" },
+    ],
+    expected: { name: "Bensin", amount: 30000, category: "Transportation", walletId: "w-main" },
+  },
 ];
 
 let passed = 0;
@@ -201,7 +231,7 @@ let failed = 0;
 
 for (const t of tests) {
   try {
-    const res = parseQuickExpenseInput(t.input, t.today || TODAY, [], t.currency || "IDR");
+    const res = parseQuickExpenseInput(t.input, t.today || TODAY, [], t.currency || "IDR", t.wallets || []);
     if (t.expected.name !== undefined) {
       assert.equal(res.name, t.expected.name, `Name mismatch for "${t.input}": got "${res.name}", expected "${t.expected.name}"`);
     }
@@ -217,7 +247,10 @@ for (const t of tests) {
     if (t.expected.isExempt !== undefined) {
       assert.equal(res.isExempt, t.expected.isExempt, `isExempt mismatch for "${t.input}": got ${res.isExempt}, expected ${t.expected.isExempt}`);
     }
-    console.log(`✓ PASS: "${t.input}" -> [${res.name}, Rp ${res.amount}, ${res.category}, ${res.spentAt}, exempt: ${res.isExempt}]`);
+    if (t.expected.walletId !== undefined) {
+      assert.equal(res.walletId, t.expected.walletId, `walletId mismatch for "${t.input}": got "${res.walletId}", expected "${t.expected.walletId}"`);
+    }
+    console.log(`✓ PASS: "${t.input}" -> [${res.name}, Rp ${res.amount}, ${res.category}, ${res.spentAt}, wallet: ${res.walletId || "none"}]`);
     passed++;
   } catch (err) {
     console.error(`✗ FAIL: "${t.input}": ${err.message}`);

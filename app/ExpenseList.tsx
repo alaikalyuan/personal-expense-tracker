@@ -18,6 +18,7 @@ export interface ExpenseItem {
   note?: string | null;
   spent_at: string;
   is_exempt?: boolean | null;
+  wallet_id?: string | null;
 }
 
 const categoryColors: Record<string, string> = {
@@ -37,6 +38,7 @@ interface ExpenseListProps {
   startDateStr?: string;
   endDateStr?: string;
   dashboardPeriod?: "week" | "month";
+  wallets?: Array<{ id: string; name: string; emoji?: string }>;
 }
 
 export default function ExpenseList({
@@ -47,6 +49,7 @@ export default function ExpenseList({
   startDateStr,
   endDateStr,
   dashboardPeriod = "week",
+  wallets = [],
 }: ExpenseListProps) {
   const { t, formatDate, getCategoryLabel, formatCurrency, currencySymbol, currency } = useTranslation();
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
@@ -750,6 +753,7 @@ export default function ExpenseList({
         weeklyBudget={weeklyBudget}
         startDateStr={startDateStr}
         endDateStr={endDateStr}
+        wallets={wallets}
       />
     </>
   );

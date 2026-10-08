@@ -42,7 +42,7 @@ async function handleCron(req: NextRequest) {
   // 1. Process Due & Approaching Subscriptions
   try {
     const { data: subs, error: subsError } = await supabase.rpc(
-      "get_due_subscriptions_for_cron"
+      "get_due_subscriptions_for_cron_v2"
     );
 
     if (!subsError && subs && subs.length > 0) {
@@ -63,6 +63,23 @@ async function handleCron(req: NextRequest) {
         // CASE A: Renewal Day Has Arrived (daysDiff <= 0)
         if (daysDiff <= 0 && sub.last_processed_date !== sub.next_renewal_date) {
           const nextDate = computeNextRenewalDate(sub.next_renewal_date, sub.billing_cycle);
+
+          // Auto-log expense for non-split subscriptions if auto_log_to_expenses is true (default true)
+          if (!sub.is_split && Number(sub.price) > 0 && sub.split_config?.auto_log_to_expenses !== false) {
+            try {
+              await supabase.from("expenses").insert({
+                user_id: sub.user_id,
+                category: sub.category || "Entertainment",
+                name: `Langganan: ${sub.name}`,
+                note: `[Perpanjangan Otomatis] Pembayaran via ${sub.payment_platform || "Langganan"}`,
+                amount: Number(sub.price) || 0,
+                spent_at: sub.next_renewal_date,
+                wallet_id: sub.pay_from_wallet_id || null,
+              });
+            } catch (expErr) {
+              console.error("Cron failed to log renewal expense:", expErr);
+            }
+          }
 
           // Update subscription cycle
           await supabase

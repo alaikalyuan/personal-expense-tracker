@@ -27,6 +27,11 @@ import {
   getCurrencyServer,
   formatCurrencyServer,
 } from "@/utils/i18n/server";
+import {
+  getMultiSakuEnabledServer,
+  getSelectedSakuServer,
+  getWallets,
+} from "@/utils/wallets/server";
 
 const categoryColors: Record<string, string> = {
   "Food & Dining": "bg-green-500",
@@ -53,6 +58,14 @@ export default async function ComparePage() {
 
   const isGuest = Boolean(user.is_anonymous);
 
+  const multiSakuEnabled = await getMultiSakuEnabledServer(cookieStore, supabase, user.id);
+  const selectedSaku = await getSelectedSakuServer(cookieStore);
+  const wallets = multiSakuEnabled ? await getWallets(supabase, user.id) : [];
+  const activeWallet =
+    multiSakuEnabled && selectedSaku !== "all"
+      ? wallets.find((w) => w.id === selectedSaku) || null
+      : null;
+
   const now = getNowInTimezone();
 
   // 1. Current Week (Monday - Sunday)
@@ -69,23 +82,29 @@ export default async function ComparePage() {
   const lastWeekEndStr = format(lastWeekEnd, "yyyy-MM-dd");
 
   // Query this week and last week expenses concurrently
+  let thisWeekQuery = supabase
+    .from("expenses")
+    .select("*")
+    .eq("user_id", user.id)
+    .gte("spent_at", thisWeekStartStr)
+    .lte("spent_at", thisWeekEndStr)
+    .order("spent_at", { ascending: false });
+
+  let lastWeekQuery = supabase
+    .from("expenses")
+    .select("*")
+    .eq("user_id", user.id)
+    .gte("spent_at", lastWeekStartStr)
+    .lte("spent_at", lastWeekEndStr)
+    .order("spent_at", { ascending: false });
+
+  if (activeWallet) {
+    thisWeekQuery = thisWeekQuery.eq("wallet_id", activeWallet.id);
+    lastWeekQuery = lastWeekQuery.eq("wallet_id", activeWallet.id);
+  }
+
   const [{ data: thisWeekExpenses }, { data: lastWeekExpenses }] =
-    await Promise.all([
-      supabase
-        .from("expenses")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("spent_at", thisWeekStartStr)
-        .lte("spent_at", thisWeekEndStr)
-        .order("spent_at", { ascending: false }),
-      supabase
-        .from("expenses")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("spent_at", lastWeekStartStr)
-        .lte("spent_at", lastWeekEndStr)
-        .order("spent_at", { ascending: false }),
-    ]);
+    await Promise.all([thisWeekQuery, lastWeekQuery]);
 
   // Total calculations
   const thisTotal = (thisWeekExpenses || []).reduce(
@@ -223,6 +242,12 @@ export default async function ComparePage() {
             {formatDateServer(thisWeekStart, "MMM d", locale)} – {formatDateServer(thisWeekEnd, "MMM d", locale)} {t.common.vs}{" "}
             {formatDateServer(lastWeekStart, "MMM d", locale)} – {formatDateServer(lastWeekEnd, "MMM d", locale)}
           </p>
+          {activeWallet && (
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 mt-1">
+              <span>{activeWallet.emoji}</span>
+              <span>{activeWallet.name}</span>
+            </div>
+          )}
         </div>
         <UserMenu isGuest={isGuest} />
       </div>

@@ -41,7 +41,12 @@ export const viewport: Viewport = {
   maximumScale: 1, // Prevents unwanted auto-zoom on mobile text inputs
 };
 
+import { cookies } from "next/headers";
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const multiSakuEnabled = cookieStore.get("MULTI_SAKU_ENABLED")?.value === "true";
+
   const [locale, theme, currency] = await Promise.all([
     getLocaleServer(),
     getThemeServer(),
@@ -67,7 +72,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <LanguageProvider initialLocale={locale} initialCurrency={currency}>
             <ServiceWorkerRegister />
             {children}
-            <BottomNav />
+            <BottomNav initialMultiSaku={multiSakuEnabled} />
           </LanguageProvider>
         </ThemeProvider>
       </body>

@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import {
   Zap,
   SlidersHorizontal,
   TrendingUp,
-  AlertTriangle,
   ArrowRight,
   LogIn,
   ShieldAlert,
-  CheckCircle2,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 
@@ -26,27 +24,18 @@ export default function WelcomeGuestModal({
   onOpenUpgrade,
 }: WelcomeGuestModalProps) {
   const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    // If controlled, obey prop
-    if (typeof controlledIsOpen === "boolean") {
-      setIsOpen(controlledIsOpen);
-      return;
-    }
-
-    // Otherwise, check localStorage and URL param
+  const [internalIsOpen, setInternalIsOpen] = useState(() => {
+    if (typeof controlledIsOpen === "boolean") return controlledIsOpen;
     if (typeof window !== "undefined") {
       const welcomed = localStorage.getItem("sakutrack_guest_welcomed");
       const urlParams = new URLSearchParams(window.location.search);
       const isWelcomeParam = urlParams.get("welcome") === "true";
       const hasAuthParam = urlParams.has("auth");
-
-      if (!hasAuthParam && (!welcomed || isWelcomeParam)) {
-        setIsOpen(true);
-      }
+      return !hasAuthParam && (!welcomed || isWelcomeParam);
     }
-  }, [controlledIsOpen]);
+    return false;
+  });
+  const isOpen = typeof controlledIsOpen === "boolean" ? controlledIsOpen : internalIsOpen;
 
   const handleContinue = () => {
     if (typeof window !== "undefined") {
@@ -58,7 +47,7 @@ export default function WelcomeGuestModal({
         window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
       }
     }
-    setIsOpen(false);
+    setInternalIsOpen(false);
     if (controlledOnClose) {
       controlledOnClose();
     }

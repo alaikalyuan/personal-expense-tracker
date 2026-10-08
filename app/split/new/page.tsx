@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import SplitBillCreator from "./SplitBillCreator";
+import { getWallets, getUserSettings } from "@/utils/wallets/server";
 
 export default async function NewSplitBillPage() {
   const cookieStore = await cookies();
@@ -16,6 +17,9 @@ export default async function NewSplitBillPage() {
     redirect("/login?next=/split/new");
   }
 
+  const userSettings = await getUserSettings(supabase, user.id);
+  const wallets = await getWallets(supabase, user.id);
+
   const defaultPayment = user.user_metadata?.default_split_payment || null;
   const creatorName =
     user.user_metadata?.name ||
@@ -28,6 +32,9 @@ export default async function NewSplitBillPage() {
       <SplitBillCreator
         creatorName={creatorName}
         defaultPayment={defaultPayment}
+        wallets={wallets}
+        multiSakuEnabled={userSettings.multi_saku_enabled}
+        defaultWalletId={userSettings.default_wallet_id}
       />
     </main>
   );

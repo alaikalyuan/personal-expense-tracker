@@ -22,6 +22,7 @@ interface ExportShareModalProps {
   weeklyBudget?: number;
   startDateStr?: string;
   endDateStr?: string;
+  wallets?: Array<{ id: string; name: string; emoji?: string }>;
 }
 
 export default function ExportShareModal({
@@ -31,10 +32,16 @@ export default function ExportShareModal({
   weeklyBudget = 500000,
   startDateStr,
   endDateStr,
+  wallets = [],
 }: ExportShareModalProps) {
   const { t, locale, formatDate, getCategoryLabel, formatCurrency } = useTranslation();
   const [activeTab, setActiveTab] = useState<"whatsapp" | "csv">("whatsapp");
   const [copied, setCopied] = useState(false);
+
+  const walletsMap = useMemo(
+    () => new Map((wallets || []).map((w) => [w.id, w])),
+    [wallets]
+  );
 
   // Compute summary stats for the recap
   const summary = useMemo(() => {
@@ -58,6 +65,25 @@ export default function ExportShareModal({
         amount: amt,
         percentage: total > 0 ? Math.round((amt / total) * 100) : 0,
       }));
+
+    // Saku aggregations
+    const walletTotals: Record<string, number> = {};
+    expenses.forEach((item) => {
+      if (item.wallet_id) {
+        walletTotals[item.wallet_id] = (walletTotals[item.wallet_id] || 0) + Number(item.amount);
+      }
+    });
+
+    const walletBreakdown = Object.entries(walletTotals)
+      .map(([wId, amt]) => {
+        const w = walletsMap.get(wId);
+        return {
+          id: wId,
+          label: w ? `${w.emoji ? w.emoji + " " : ""}${w.name}`.trim() : "Saku",
+          amount: amt,
+        };
+      })
+      .sort((a, b) => b.amount - a.amount);
 
     // Largest single spend
     const largestExpense =
@@ -89,10 +115,11 @@ export default function ExportShareModal({
       isOver,
       dailyAvg: Math.round(total / 7),
       topCategories,
+      walletBreakdown,
       largestExpense,
       dateRangeText,
     };
-  }, [expenses, weeklyBudget, startDateStr, endDateStr, formatDate, getCategoryLabel]);
+  }, [expenses, weeklyBudget, startDateStr, endDateStr, formatDate, getCategoryLabel, walletsMap]);
 
   // Generate plain text recap for WhatsApp
   const recapText = useMemo(() => {
@@ -138,6 +165,14 @@ export default function ExportShareModal({
             item.percentage
           }%)`
         );
+      });
+    }
+
+    if (summary.walletBreakdown && summary.walletBreakdown.length > 1) {
+      lines.push("");
+      lines.push(`👛 *${locale === "id" ? "Pengeluaran per Saku:" : "Spend per Saku:"}*`);
+      summary.walletBreakdown.forEach((w) => {
+        lines.push(` • ${w.label}: ${formatCurrency(w.amount)}`);
       });
     }
 
@@ -192,6 +227,8 @@ export default function ExportShareModal({
   const handleDownloadCsv = () => {
     if (expenses.length === 0) return;
 
+    const hasWallets = (wallets && wallets.length > 0) || expenses.some((e) => Boolean(e.wallet_id));
+
     const headers = [
       t.exportShare.csvColDate,
       t.exportShare.csvColName,
@@ -199,6 +236,10 @@ export default function ExportShareModal({
       t.exportShare.csvColAmount,
       t.exportShare.csvColNote,
     ];
+
+    if (hasWallets) {
+      headers.push(locale === "id" ? "Saku" : "Wallet");
+    }
 
     const escapeCsv = (val: string | number) => {
       const str = String(val ?? "").replace(/"/g, '""');
@@ -209,13 +250,19 @@ export default function ExportShareModal({
       const dateStr = item.spent_at.includes("T")
         ? item.spent_at.split("T")[0]
         : item.spent_at;
-      return [
+      const baseRow = [
         escapeCsv(dateStr),
         escapeCsv(item.name),
         escapeCsv(getCategoryLabel(item.category)),
         Number(item.amount),
         escapeCsv(item.note || ""),
-      ].join(",");
+      ];
+      if (hasWallets) {
+        const wallet = item.wallet_id ? walletsMap.get(item.wallet_id) : undefined;
+        const walletLabel = wallet ? `${wallet.emoji ? wallet.emoji + " " : ""}${wallet.name}`.trim() : "-";
+        baseRow.push(escapeCsv(walletLabel));
+      }
+      return baseRow.join(",");
     });
 
     const csvContent = [headers.map(escapeCsv).join(","), ...rows].join("\r\n");

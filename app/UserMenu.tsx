@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { logout } from "@/app/actions";
+import { setMultiSakuEnabled } from "@/app/saku/actions";
 import {
   MoreVertical,
   Archive,
@@ -19,6 +20,7 @@ import {
   CreditCard,
   Bell,
   Coins,
+  Layers,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { useTheme } from "@/utils/theme/context";
@@ -32,9 +34,14 @@ import NotificationSettingsModal from "./NotificationSettingsModal";
 interface UserMenuProps {
   isGuest?: boolean;
   onOpenUpgrade?: (mode?: "signup" | "login") => void;
+  multiSakuEnabled?: boolean;
 }
 
-export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuProps) {
+export default function UserMenu({
+  isGuest = false,
+  onOpenUpgrade,
+  multiSakuEnabled,
+}: UserMenuProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
@@ -42,6 +49,40 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuPro
   const pathname = usePathname();
   const { locale, setLocale, currency, setCurrency, t } = useTranslation();
   const { theme, setTheme } = useTheme();
+  const [isPending, startTransition] = useTransition();
+  const [localOverride, setLocalOverride] = useState<boolean | null>(null);
+
+  const isMultiSaku =
+    localOverride !== null
+      ? localOverride
+      : multiSakuEnabled !== undefined
+      ? multiSakuEnabled
+      : typeof document !== "undefined"
+      ? document.cookie.includes("MULTI_SAKU_ENABLED=true")
+      : false;
+
+  const handleToggleMultiSaku = () => {
+    if (isGuest) {
+      setIsOpen(false);
+      if (onOpenUpgrade) {
+        onOpenUpgrade("signup");
+      } else {
+        router.push("/?auth=signup");
+      }
+      return;
+    }
+
+    const nextVal = !isMultiSaku;
+    setLocalOverride(nextVal);
+    startTransition(async () => {
+      try {
+        await setMultiSakuEnabled(nextVal);
+      } catch (err) {
+        console.error("Failed to toggle multi saku:", err);
+        setLocalOverride(null);
+      }
+    });
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -99,6 +140,17 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuPro
               >
                 <Wallet className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                 <span>{t.nav.tracker}</span>
+              </Link>
+            )}
+
+            {isMultiSaku && !pathname.startsWith("/saku") && (
+              <Link
+                href="/saku"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
+              >
+                <Layers className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
+                <span>{t.saku.title}</span>
               </Link>
             )}
 
@@ -307,6 +359,30 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade }: UserMenuPro
                   );
                 })}
               </select>
+            </div>
+
+            {/* Multi-Saku Toggle */}
+            <div className="flex items-center justify-between px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+              <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+                <Layers className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
+                <span className="text-[11px]">{t.saku.multiSakuMode}</span>
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isMultiSaku}
+                disabled={isPending}
+                onClick={handleToggleMultiSaku}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-50 ${
+                  isMultiSaku ? "bg-emerald-600" : "bg-zinc-200 dark:bg-zinc-800"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                    isMultiSaku ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
             </div>
 
             <div className="my-1 border-t border-zinc-200/80 dark:border-zinc-800/80" />

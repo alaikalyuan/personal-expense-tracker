@@ -3,14 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Wallet, ArrowLeftRight, Plus, PiggyBank } from "lucide-react";
+import { Wallet, ArrowLeftRight, Plus, PiggyBank, Layers } from "lucide-react";
 import { QuickAddModal } from "./QuickAddExpense";
 import { getTodayString } from "@/utils/date";
 import { useTranslation } from "@/utils/i18n/context";
 
-export default function BottomNav() {
+interface BottomNavProps {
+  initialMultiSaku?: boolean;
+}
+
+export default function BottomNav({ initialMultiSaku = false }: BottomNavProps) {
   const pathname = usePathname();
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const multiSaku = initialMultiSaku;
   const today = getTodayString();
   const { t } = useTranslation();
 
@@ -22,6 +27,7 @@ export default function BottomNav() {
   const isTracker = pathname === "/";
   const isCompare = pathname.startsWith("/compare");
   const isSavings = pathname.startsWith("/savings");
+  const isSaku = pathname.startsWith("/saku");
 
   return (
     <>
@@ -63,18 +69,32 @@ export default function BottomNav() {
             <span className="truncate">{t.nav.tracker}</span>
           </Link>
 
-          {/* Savings Link */}
-          <Link
-            href="/savings"
-            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 rounded-full py-2 px-2.5 sm:px-3 text-xs font-semibold transition-all ${
-              isSavings
-                ? "bg-zinc-900 text-white shadow-xs dark:bg-zinc-800 dark:text-white"
-                : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"
-            }`}
-          >
-            <PiggyBank className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${isSavings ? "text-teal-500 dark:text-teal-400" : ""}`} />
-            <span className="truncate">{t.nav.savings}</span>
-          </Link>
+          {/* Saku (if multi-saku enabled) or Savings (if single wallet) Link */}
+          {multiSaku ? (
+            <Link
+              href="/saku"
+              className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 rounded-full py-2 px-2.5 sm:px-3 text-xs font-semibold transition-all ${
+                isSaku || isSavings
+                  ? "bg-zinc-900 text-white shadow-xs dark:bg-zinc-800 dark:text-white"
+                  : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"
+              }`}
+            >
+              <Layers className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${isSaku || isSavings ? "text-teal-500 dark:text-teal-400" : ""}`} />
+              <span className="truncate">{t.saku.title}</span>
+            </Link>
+          ) : (
+            <Link
+              href="/savings"
+              className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 rounded-full py-2 px-2.5 sm:px-3 text-xs font-semibold transition-all ${
+                isSavings
+                  ? "bg-zinc-900 text-white shadow-xs dark:bg-zinc-800 dark:text-white"
+                  : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50"
+              }`}
+            >
+              <PiggyBank className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${isSavings ? "text-teal-500 dark:text-teal-400" : ""}`} />
+              <span className="truncate">{t.nav.savings}</span>
+            </Link>
+          )}
 
           {/* Compare Link */}
           <Link
@@ -96,6 +116,7 @@ export default function BottomNav() {
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         today={today}
+        multiSakuEnabled={multiSaku}
       />
     </>
   );

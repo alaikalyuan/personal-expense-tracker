@@ -28,6 +28,8 @@ import { useTranslation } from "@/utils/i18n/context";
 import { calculateExemptTotals, isExpenseExempt } from "@/utils/exemptions";
 import WelcomeGuestModal from "./WelcomeGuestModal";
 import UpgradeAccountModal from "./UpgradeAccountModal";
+import SakuSwitcher from "./SakuSwitcher";
+import { WalletBalance } from "@/utils/wallets/server";
 
 interface DashboardClientProps {
   initialCadence: "week" | "month";
@@ -50,6 +52,9 @@ interface DashboardClientProps {
     is_split: boolean;
     payment_platform: string;
   }>;
+  wallets?: WalletBalance[];
+  selectedSakuId?: string;
+  multiSakuEnabled?: boolean;
 }
 
 export default function DashboardClient({
@@ -65,6 +70,9 @@ export default function DashboardClient({
   initialAuthMode,
   initialAuthError,
   upcomingSubscriptions = [],
+  wallets = [],
+  selectedSakuId = "all",
+  multiSakuEnabled = false,
 }: DashboardClientProps) {
   const [cadence, setCadence] = useState<"week" | "month">(initialCadence);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(Boolean(initialAuthMode));
@@ -267,7 +275,7 @@ export default function DashboardClient({
     <main className="max-w-md mx-auto p-4 pb-48 flex flex-col gap-6">
       {/* Header */}
       <div className="flex justify-between items-center pt-2">
-        <div>
+        <div className="flex flex-col gap-0.5">
           <h1 className="font-bold tracking-tight text-lg">{t.dashboard.title}</h1>
           <p className="text-[11px] text-zinc-500">
             {isMonth
@@ -298,6 +306,7 @@ export default function DashboardClient({
           )}
           <UserMenu
             isGuest={isGuest}
+            multiSakuEnabled={multiSakuEnabled}
             onOpenUpgrade={(mode = "signup") => {
               setAuthModalMode(mode);
               setAuthModalError(null);
@@ -307,8 +316,17 @@ export default function DashboardClient({
         </div>
       </div>
 
-      {/* Instant Cadence Switcher (Week / Month) */}
-      <div className="flex justify-center -mt-2">
+      {/* Saku Switcher & Cadence Switcher (Side by Side) */}
+      <div className="flex items-center justify-between gap-2 -mt-2">
+        <div>
+          {multiSakuEnabled && wallets.length > 1 && (
+            <SakuSwitcher
+              wallets={wallets}
+              selectedSakuId={selectedSakuId}
+              multiSakuEnabled={multiSakuEnabled}
+            />
+          )}
+        </div>
         <CadenceToggle currentCadence={cadence} onChange={setCadence} />
       </div>
 
@@ -455,6 +473,7 @@ export default function DashboardClient({
         weeklyBudget={activeBudget}
         startDateStr={activeStartStr}
         endDateStr={activeEndStr}
+        wallets={wallets}
       />
 
       {/* Guest Onboarding & Upgrade Modals */}

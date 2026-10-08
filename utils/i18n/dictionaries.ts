@@ -457,6 +457,48 @@ export interface Dictionary {
     goalMovement: string;
     closeHistory: string;
   };
+  saku: {
+    title: string;
+    subtitle: string;
+    netWorth: string;
+    allSakus: string;
+    spendingSakus: string;
+    stashSakus: string;
+    addSaku: string;
+    editSaku: string;
+    transfer: string;
+    recordIncome: string;
+    multiSakuMode: string;
+    enableMultiSaku: string;
+    disableMultiSaku: string;
+    multiSakuDesc: string;
+    spendingKind: string;
+    stashKind: string;
+    trackBalance: string;
+    trackBalanceDesc: string;
+    weeklyBudget: string;
+    monthlyBudget: string;
+    openingBalance: string;
+    fromSaku: string;
+    toSaku: string;
+    amount: string;
+    note: string;
+    date: string;
+    archive: string;
+    unarchive: string;
+    primaryBadge: string;
+    budgetProgress: string;
+    noSakus: string;
+    switchToSaku: string;
+    cannotArchivePrimary: string;
+    color: string;
+    emoji: string;
+    name: string;
+    details: string;
+    currentBalance: string;
+    remainingBudget: string;
+    spentThisWeek: string;
+  };
 }
 
 export const dictionaries: Record<Locale, Dictionary> = {
@@ -925,6 +967,48 @@ export const dictionaries: Record<Locale, Dictionary> = {
       goalMovement: "Pergerakan Target",
       closeHistory: "Tutup Riwayat",
     },
+    saku: {
+      title: "Saku Saya",
+      subtitle: "Kelola dompet belanja harian & pos tabungan fleksibel",
+      netWorth: "Total Saldo & Simpanan",
+      allSakus: "Semua Saku",
+      spendingSakus: "Saku Belanja",
+      stashSakus: "Saku Tabungan",
+      addSaku: "Tambah Saku",
+      editSaku: "Ubah Saku",
+      transfer: "Transfer Saku",
+      recordIncome: "Catat Pemasukan",
+      multiSakuMode: "Sistem Multi-Saku",
+      enableMultiSaku: "Aktifkan Multi-Saku",
+      disableMultiSaku: "Nonaktifkan Multi-Saku",
+      multiSakuDesc: "Kelola banyak dompet sekaligus seperti pos jajan, dana darurat, dan tabungan khusus.",
+      spendingKind: "Saku Belanja (Budget Harian / Mingguan)",
+      stashKind: "Saku Tabungan (Simpanan & Target)",
+      trackBalance: "Pantau Saldo Riil",
+      trackBalanceDesc: "Kurangi saldo setiap kali ada pengeluaran dicatat",
+      weeklyBudget: "Anggaran Mingguan",
+      monthlyBudget: "Anggaran Bulanan",
+      openingBalance: "Saldo Awal",
+      fromSaku: "Dari Saku",
+      toSaku: "Ke Saku",
+      amount: "Nominal",
+      note: "Catatan (Opsional)",
+      date: "Tanggal",
+      archive: "Arsipkan Saku",
+      unarchive: "Pulihkan Saku",
+      primaryBadge: "Utama",
+      budgetProgress: "Progres Anggaran",
+      noSakus: "Belum ada saku tambahan",
+      switchToSaku: "Pilih Saku",
+      cannotArchivePrimary: "Saku utama tidak dapat diarsipkan.",
+      color: "Warna",
+      emoji: "Emoji",
+      name: "Nama Saku",
+      details: "Detail Saku",
+      currentBalance: "Saldo Sekarang",
+      remainingBudget: "Sisa Anggaran",
+      spentThisWeek: "Terpakai Minggu Ini",
+    },
   },
   en: {
     common: {
@@ -1390,6 +1474,48 @@ export const dictionaries: Record<Locale, Dictionary> = {
       initialBalanceLabel: "Initial Balance",
       goalMovement: "Goal Movement",
       closeHistory: "Close History",
+    },
+    saku: {
+      title: "My Sakus",
+      subtitle: "Manage daily spending wallets & flexible stash vaults",
+      netWorth: "Total Balance & Savings",
+      allSakus: "All Sakus",
+      spendingSakus: "Spending Sakus",
+      stashSakus: "Stash Sakus",
+      addSaku: "Add Saku",
+      editSaku: "Edit Saku",
+      transfer: "Transfer Saku",
+      recordIncome: "Record Income",
+      multiSakuMode: "Multi-Saku System",
+      enableMultiSaku: "Enable Multi-Saku",
+      disableMultiSaku: "Disable Multi-Saku",
+      multiSakuDesc: "Manage multiple wallets simultaneously, such as daily spending, emergency funds, and custom savings.",
+      spendingKind: "Spending Saku (Daily / Weekly Budget)",
+      stashKind: "Stash Saku (Savings & Goals)",
+      trackBalance: "Track Live Balance",
+      trackBalanceDesc: "Deduct wallet balance on every expense recorded",
+      weeklyBudget: "Weekly Budget",
+      monthlyBudget: "Monthly Budget",
+      openingBalance: "Opening Balance",
+      fromSaku: "From Saku",
+      toSaku: "To Saku",
+      amount: "Amount",
+      note: "Note (Optional)",
+      date: "Date",
+      archive: "Archive Saku",
+      unarchive: "Restore Saku",
+      primaryBadge: "Primary",
+      budgetProgress: "Budget Progress",
+      noSakus: "No extra sakus yet",
+      switchToSaku: "Select Saku",
+      cannotArchivePrimary: "Primary saku cannot be archived.",
+      color: "Color",
+      emoji: "Emoji",
+      name: "Saku Name",
+      details: "Saku Details",
+      currentBalance: "Current Balance",
+      remainingBudget: "Remaining Budget",
+      spentThisWeek: "Spent This Week",
     },
   },
 };

@@ -44,6 +44,7 @@ export interface SubscriptionRecord {
   split_config: SubscriptionSplitConfig;
   last_split_bill_id?: string | null;
   last_processed_date?: string | null;
+  pay_from_wallet_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +59,7 @@ export interface CreateSubscriptionPayload {
   notes?: string;
   reminderDaysBefore?: number;
   isSplit: boolean;
+  payFromWalletId?: string | null;
   splitConfig?: {
     splitMode: "equal" | "custom";
     friends: Array<{ name: string; share?: number }>;

@@ -458,3 +458,49 @@ export async function getSavingsHistory(
   }
   return [];
 }
+
+interface CookieStoreLike {
+  get(name: string): { value: string } | undefined;
+}
+
+/**
+ * Read the active multi-saku enabled state from cookies or database
+ */
+export async function getMultiSakuEnabledServer(
+  cookieStore: CookieStoreLike,
+  supabase?: SupabaseClient,
+  userId?: string
+): Promise<boolean> {
+  const cookieVal = cookieStore.get("MULTI_SAKU_ENABLED")?.value;
+  if (cookieVal !== undefined) {
+    return cookieVal === "true";
+  }
+
+  if (supabase && userId) {
+    try {
+      const { data } = await supabase
+        .from("user_settings")
+        .select("multi_saku_enabled")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (data) {
+        return Boolean(data.multi_saku_enabled);
+      }
+    } catch (e) {
+      console.error("getMultiSakuEnabledServer error:", e);
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Read the selected saku ID from cookie ("all" or wallet_id)
+ */
+export async function getSelectedSakuServer(
+  cookieStore: CookieStoreLike
+): Promise<string> {
+  const cookieVal = cookieStore.get("SELECTED_SAKU")?.value;
+  return cookieVal || "all";
+}
+

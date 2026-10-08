@@ -44,15 +44,22 @@ import {
 } from "./actions";
 import { useTranslation } from "@/utils/i18n/context";
 import { getTodayString } from "@/utils/date";
+import type { Wallet } from "@/utils/wallets/server";
 
 interface SubscriptionsClientProps {
   initialSubscriptions: SubscriptionRecord[];
   isGuest?: boolean;
+  wallets?: Wallet[];
+  multiSakuEnabled?: boolean;
+  defaultWalletId?: string | null;
 }
 
 export default function SubscriptionsClient({
   initialSubscriptions,
   isGuest = false,
+  wallets = [],
+  multiSakuEnabled = false,
+  defaultWalletId = null,
 }: SubscriptionsClientProps) {
   const router = useRouter();
   const { formatCurrency, currencySymbol } = useTranslation();
@@ -68,6 +75,7 @@ export default function SubscriptionsClient({
   const [nextRenewalDate, setNextRenewalDate] = useState(getTodayString());
   const [paymentPlatform, setPaymentPlatform] = useState("Google Play");
   const [category, setCategory] = useState("Entertainment");
+  const [payFromWalletId, setPayFromWalletId] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [reminderDaysBefore, setReminderDaysBefore] = useState(2);
   const [isSplit, setIsSplit] = useState(false);
@@ -75,6 +83,8 @@ export default function SubscriptionsClient({
   const [friendInput, setFriendInput] = useState("");
   const [autoCreateSplit, setAutoCreateSplit] = useState(true);
   const [autoLogExpenses, setAutoLogExpenses] = useState(true);
+
+  const walletsMap = useMemo(() => new Map(wallets.map((w) => [w.id, w])), [wallets]);
 
   // Action status states
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -141,6 +151,8 @@ export default function SubscriptionsClient({
     setNextRenewalDate(getTodayString());
     setPaymentPlatform("Google Play");
     setCategory("Entertainment");
+    const initialWallet = defaultWalletId || wallets.find((w) => w.is_primary)?.id || wallets[0]?.id || "";
+    setPayFromWalletId(initialWallet);
     setNotes("");
     setReminderDaysBefore(2);
     setIsSplit(false);
@@ -160,7 +172,9 @@ export default function SubscriptionsClient({
     setNextRenewalDate(sub.next_renewal_date);
     setPaymentPlatform(sub.payment_platform);
     setCategory(sub.category);
-    setNotes(sub.notes || "");
+    const initialWallet = sub.pay_from_wallet_id || defaultWalletId || wallets.find((w) => w.is_primary)?.id || wallets[0]?.id || "";
+    setPayFromWalletId(initialWallet);
+    setNotes("");
     setReminderDaysBefore(sub.reminder_days_before);
     setIsSplit(sub.is_split);
     setFriends(sub.split_config?.friends?.map((f) => f.name) || []);
@@ -210,6 +224,7 @@ export default function SubscriptionsClient({
         notes,
         reminderDaysBefore,
         isSplit,
+        payFromWalletId: payFromWalletId || null,
         splitConfig: {
           splitMode: "equal" as const,
           friends: friends.map((f) => ({ name: f })),
@@ -241,6 +256,7 @@ export default function SubscriptionsClient({
                   notes: payload.notes,
                   reminder_days_before: payload.reminderDaysBefore,
                   is_split: payload.isSplit,
+                  pay_from_wallet_id: payload.payFromWalletId,
                   split_config: dbSplitConfig,
                   updated_at: new Date().toISOString(),
                 }
@@ -263,6 +279,7 @@ export default function SubscriptionsClient({
           status: "active",
           reminder_days_before: payload.reminderDaysBefore,
           is_split: payload.isSplit,
+          pay_from_wallet_id: payload.payFromWalletId,
           split_config: dbSplitConfig,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -548,10 +565,19 @@ export default function SubscriptionsClient({
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 flex-wrap">
                         <span>{sub.payment_platform}</span>
                         <span>•</span>
                         <span>{sub.category}</span>
+                        {sub.pay_from_wallet_id && walletsMap.get(sub.pay_from_wallet_id) && (
+                          <>
+                            <span>•</span>
+                            <span className="inline-flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                              <span>{walletsMap.get(sub.pay_from_wallet_id)?.emoji}</span>
+                              <span>{walletsMap.get(sub.pay_from_wallet_id)?.name}</span>
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -785,6 +811,26 @@ export default function SubscriptionsClient({
                     ))}
                   </select>
                 </div>
+
+                {/* Saku Selector (Multi-Saku Enabled) */}
+                {multiSakuEnabled && wallets.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Bayar dari Saku
+                    </label>
+                    <select
+                      value={payFromWalletId}
+                      onChange={(e) => setPayFromWalletId(e.target.value)}
+                      className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 cursor-pointer"
+                    >
+                      {wallets.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.emoji} {w.name} {w.is_primary ? "(Utama)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* Reminder days in advance */}

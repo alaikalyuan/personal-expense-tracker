@@ -38,11 +38,14 @@ import {
 } from "@/utils/quickChips";
 import { parseQuickExpenseInput } from "@/utils/expenseParser";
 import { subDays, format, parseISO } from "date-fns";
+import { getActiveWallets } from "@/app/saku/actions";
+import { Wallet } from "@/utils/wallets/server";
 
 interface QuickAddModalProps {
   isOpen: boolean;
   onClose: () => void;
   today: string;
+  multiSakuEnabled?: boolean;
 }
 
 const CATEGORY_ICONS: Record<CategoryKey, typeof Utensils> = {
@@ -108,13 +111,55 @@ const CATEGORY_STYLES: Record<
   },
 };
 
-function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: string }) {
+function QuickAddModalContent({
+  onClose,
+  today,
+  multiSakuEnabled = false,
+}: {
+  onClose: () => void;
+  today: string;
+  multiSakuEnabled?: boolean;
+}) {
   const { t, getCategoryLabel, formatDate, currency, currencySymbol, formatCurrency } = useTranslation();
 
   // Mode: "standard" vs "quick_type" (lazy initialization from localStorage)
   const [inputMode, setInputMode] = useState<"standard" | "quick_type">(() => getStoredInputMode());
   const [chips, setChips] = useState<QuickChip[]>(() => getStoredQuickChips());
   const [keepBatch, setKeepBatch] = useState<boolean>(() => getStoredKeepBatch());
+
+  // Multi-saku wallets state
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [selectedWalletId, setSelectedWalletId] = useState<string>("");
+
+  useEffect(() => {
+    if (!multiSakuEnabled) return;
+    let isMounted = true;
+    getActiveWallets().then((loadedWallets) => {
+      if (!isMounted) return;
+      const active = loadedWallets.filter((w) => !w.archived_at);
+      setWallets(active);
+
+      let preselected = "";
+      if (typeof document !== "undefined") {
+        const match = document.cookie.match(/(?:^|;\s*)SELECTED_SAKU=([^;]+)/);
+        if (match && match[1] && match[1] !== "all") {
+          preselected = match[1];
+        }
+      }
+      if (preselected && active.some((w) => w.id === preselected)) {
+        setSelectedWalletId(preselected);
+      } else {
+        const primary =
+          active.find((w) => w.is_primary && w.kind === "spending") ||
+          active.find((w) => w.kind === "spending") ||
+          active[0];
+        if (primary) setSelectedWalletId(primary.id);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [multiSakuEnabled]);
 
   // Form states (Standard mode)
   const [amount, setAmount] = useState<number>(0);
@@ -176,8 +221,8 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
 
   // Live parsed expense for Quick Type mode
   const parsedExpense = useMemo(() => {
-    return parseQuickExpenseInput(quickInput, today, chips, currency);
-  }, [quickInput, today, chips, currency]);
+    return parseQuickExpenseInput(quickInput, today, chips, currency, wallets);
+  }, [quickInput, today, chips, currency, wallets]);
 
   // Effective values for Quick Type mode (respecting manual 1-tap overrides)
   const effectiveCategory = overrideCategory ?? parsedExpense.category;
@@ -189,7 +234,7 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
     if (dismissedAnomalySuggestion || effectiveIsExempt) return false;
     if (!parsedExpense.isValid || !parsedExpense.amount) return false;
     return detectOneOffAnomaly(parsedExpense.name, parsedExpense.amount);
-  }, [parsedExpense.name, parsedExpense.amount, effectiveIsExempt, dismissedAnomalySuggestion]);
+  }, [parsedExpense.name, parsedExpense.amount, parsedExpense.isValid, effectiveIsExempt, dismissedAnomalySuggestion]);
 
   // Handle mode switch with bidirectional state synchronization
   const handleModeChange = (mode: "standard" | "quick_type") => {
@@ -210,6 +255,9 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
           setCustomDate(effectiveSpentAt);
         }
         setIsExempt(effectiveIsExempt);
+        if (parsedExpense.walletId) {
+          setSelectedWalletId(parsedExpense.walletId);
+        }
       }
     } else {
       // Sync standard form inputs into quick input bar if bar is empty
@@ -339,6 +387,9 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
       if (finalNote) {
         formData.set("note", finalNote);
       }
+      if (selectedWalletId) {
+        formData.set("wallet_id", selectedWalletId);
+      }
 
       await addExpense(formData);
       onClose();
@@ -373,6 +424,10 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
       const finalNote = attachExemptTag("", effectiveIsExempt);
       if (finalNote) {
         formData.set("note", finalNote);
+      }
+      const activeWallet = parsedExpense.walletId || selectedWalletId;
+      if (activeWallet) {
+        formData.set("wallet_id", activeWallet);
       }
 
       await addExpense(formData);
@@ -592,6 +647,35 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                 })}
               </div>
             </div>
+
+            {/* Multi-Saku Selector in Standard Mode */}
+            {multiSakuEnabled && wallets.length > 1 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
+                  {t.saku.switchToSaku}
+                </span>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar -mx-1 px-1">
+                  {wallets.map((w) => {
+                    const isSelected = selectedWalletId === w.id;
+                    return (
+                      <button
+                        key={w.id}
+                        type="button"
+                        onClick={() => setSelectedWalletId(w.id)}
+                        className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer active:scale-95 ${
+                          isSelected
+                            ? "border-zinc-900 bg-zinc-900 text-white shadow-xs dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
+                            : "border-zinc-200/90 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        }`}
+                      >
+                        <span className="text-sm">{w.emoji || "👛"}</span>
+                        <span>{w.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Hero Amount Input with live currency display */}
             <div className="flex flex-col gap-1.5">
@@ -935,6 +1019,35 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
               </div>
             </div>
 
+            {/* Multi-Saku Selector in Quick Type Mode */}
+            {multiSakuEnabled && wallets.length > 1 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
+                  {t.saku.switchToSaku}
+                </span>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar -mx-1 px-1">
+                  {wallets.map((w) => {
+                    const isSelected = selectedWalletId === w.id;
+                    return (
+                      <button
+                        key={w.id}
+                        type="button"
+                        onClick={() => setSelectedWalletId(w.id)}
+                        className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer active:scale-95 ${
+                          isSelected
+                            ? "border-zinc-900 bg-zinc-900 text-white shadow-xs dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
+                            : "border-zinc-200/90 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        }`}
+                      >
+                        <span className="text-sm">{w.emoji || "👛"}</span>
+                        <span>{w.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Command Input Bar */}
             <div className="flex flex-col gap-1.5">
               <div className="relative flex items-center rounded-2xl border-2 border-zinc-200 bg-zinc-50/70 p-3.5 focus-within:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:focus-within:border-zinc-200 transition-all">
@@ -1049,6 +1162,14 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
                       </span>
                       <span className="text-[9px] opacity-70 ml-0.5">▾</span>
                     </button>
+
+                    {/* Saku Badge (Multi-Saku Enabled) */}
+                    {multiSakuEnabled && wallets.length > 0 && (
+                      <div className="flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-50/50 dark:border-emerald-500/20 dark:bg-emerald-950/30 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                        <span>{wallets.find((w) => w.id === (parsedExpense.walletId || selectedWalletId))?.emoji || "👛"}</span>
+                        <span>{wallets.find((w) => w.id === (parsedExpense.walletId || selectedWalletId))?.name || "Dompet"}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Inline Category Picker Drawer */}
@@ -1341,9 +1462,20 @@ function QuickAddModalContent({ onClose, today }: { onClose: () => void; today: 
   );
 }
 
-export function QuickAddModal({ isOpen, onClose, today }: QuickAddModalProps) {
+export function QuickAddModal({
+  isOpen,
+  onClose,
+  today,
+  multiSakuEnabled = false,
+}: QuickAddModalProps) {
   if (!isOpen) return null;
-  return <QuickAddModalContent onClose={onClose} today={today} />;
+  return (
+    <QuickAddModalContent
+      onClose={onClose}
+      today={today}
+      multiSakuEnabled={multiSakuEnabled}
+    />
+  );
 }
 
 export default function QuickAddExpense({ today }: { today: string }) {

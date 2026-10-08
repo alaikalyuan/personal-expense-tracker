@@ -41,14 +41,19 @@ interface FormItem {
   assignedParticipantIds: string[];
 }
 
+import type { Wallet } from "@/utils/wallets/server";
+
 interface SplitBillCreatorProps {
   creatorName: string;
-  defaultPayment?: {
+  defaultPayment: {
     method?: string;
     account_number?: string;
     account_name?: string;
     note?: string;
   } | null;
+  wallets?: Wallet[];
+  multiSakuEnabled?: boolean;
+  defaultWalletId?: string | null;
 }
 
 const PAYMENT_METHODS = [
@@ -76,6 +81,9 @@ const CATEGORIES = [
 export default function SplitBillCreator({
   creatorName,
   defaultPayment,
+  wallets = [],
+  multiSakuEnabled = false,
+  defaultWalletId = null,
 }: SplitBillCreatorProps) {
   const router = useRouter();
   const { formatCurrency, currencySymbol, currency } = useTranslation();
@@ -84,6 +92,9 @@ export default function SplitBillCreator({
   const [title, setTitle] = useState("");
   const [splitMode, setSplitMode] = useState<"itemized" | "equal">("itemized");
   const [category, setCategory] = useState("Food & Dining");
+  const [selectedWalletId, setSelectedWalletId] = useState<string>(
+    () => defaultWalletId || wallets.find((w) => w.is_primary)?.id || wallets[0]?.id || ""
+  );
 
   // Participants
   const [participants, setParticipants] = useState<FormParticipant[]>([
@@ -371,6 +382,7 @@ export default function SplitBillCreator({
         },
         saveAsDefaultPayment: saveAsDefault,
         autoLogToTracker,
+        walletId: selectedWalletId || null,
         category,
         participants: participants.map((p) => ({
           name: p.name,
@@ -1071,7 +1083,7 @@ export default function SplitBillCreator({
                 Integrasi Otomatis ke Catatan Pengeluaran
               </h2>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Otomatis catat porsi pribadi Anda (<b>{formatRupiah(creatorShare)}</b>) ke anggaran minggu ini agar burn rate tetap akurat.
+                Otomatis catat porsi pribadi Anda (<b>{formatCurrency(creatorShare)}</b>) ke anggaran minggu ini agar burn rate tetap akurat.
               </p>
             </div>
           </div>
@@ -1085,19 +1097,38 @@ export default function SplitBillCreator({
         </div>
 
         {autoLogToTracker && (
-          <div className="pt-2 border-t border-emerald-500/20 flex items-center justify-between text-xs">
-            <span className="text-zinc-600 dark:text-zinc-400 font-medium">Kategori Pengeluaran:</span>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="px-2.5 py-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-semibold text-zinc-900 dark:text-zinc-100 cursor-pointer"
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+          <div className="pt-2 border-t border-emerald-500/20 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-600 dark:text-zinc-400 font-medium">Kategori Pengeluaran:</span>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="px-2.5 py-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-semibold text-zinc-900 dark:text-zinc-100 cursor-pointer"
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {multiSakuEnabled && wallets.length > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-600 dark:text-zinc-400 font-medium">Catat ke Saku:</span>
+                <select
+                  value={selectedWalletId}
+                  onChange={(e) => setSelectedWalletId(e.target.value)}
+                  className="px-2.5 py-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-semibold text-zinc-900 dark:text-zinc-100 cursor-pointer"
+                >
+                  {wallets.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.emoji} {w.name} {w.is_primary ? "(Utama)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         )}
       </section>

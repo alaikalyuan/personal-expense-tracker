@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import SubscriptionsClient from "./SubscriptionsClient";
 import { SubscriptionRecord } from "./types";
 import { processSubscriptionRenewals } from "./actions";
+import { getWallets, getUserSettings } from "@/utils/wallets/server";
 
 export const metadata = {
   title: "Langganan Digital : SakuTrack",
@@ -33,6 +34,10 @@ export default async function SubscriptionsPage() {
     }
   }
 
+  const userSettings = !isGuest ? await getUserSettings(supabase, user.id) : null;
+  const wallets = !isGuest ? await getWallets(supabase, user.id) : [];
+  const multiSakuEnabled = userSettings?.multi_saku_enabled || false;
+
   // Fetch all subscriptions for user
   const { data: subscriptions } = await supabase
     .from("subscriptions")
@@ -44,6 +49,9 @@ export default async function SubscriptionsPage() {
     <SubscriptionsClient
       initialSubscriptions={(subscriptions || []) as SubscriptionRecord[]}
       isGuest={isGuest}
+      wallets={wallets}
+      multiSakuEnabled={multiSakuEnabled}
+      defaultWalletId={userSettings?.default_wallet_id || null}
     />
   );
 }

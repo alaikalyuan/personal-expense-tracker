@@ -47,6 +47,7 @@ export async function createSubscription(payload: CreateSubscriptionPayload) {
       status: "active",
       reminder_days_before: Number(payload.reminderDaysBefore) || 2,
       is_split: Boolean(payload.isSplit),
+      pay_from_wallet_id: payload.payFromWalletId || null,
       split_config: payload.splitConfig || {
         split_mode: "equal",
         friends: [],
@@ -100,6 +101,8 @@ export async function updateSubscription(
   if (payload.reminderDaysBefore !== undefined)
     updateData.reminder_days_before = Number(payload.reminderDaysBefore) || 2;
   if (payload.isSplit !== undefined) updateData.is_split = Boolean(payload.isSplit);
+  if (payload.payFromWalletId !== undefined)
+    updateData.pay_from_wallet_id = payload.payFromWalletId || null;
   if (payload.splitConfig !== undefined) updateData.split_config = payload.splitConfig;
 
   const { error } = await supabase
@@ -222,6 +225,7 @@ export async function createSplitBillFromSubscription(subscriptionId: string) {
     paymentInfo: defaultPayment,
     category: sub.category || "Entertainment",
     autoLogToTracker: splitConfig.auto_log_to_expenses !== false,
+    walletId: sub.pay_from_wallet_id || undefined,
     participants,
     items,
   });
@@ -294,6 +298,23 @@ export async function processSubscriptionRenewals(targetUserId?: string) {
         console.error(`Failed to auto-create split bill for subscription ${sub.id}:`, err);
       }
     } else {
+      // Auto-log expense for non-split subscriptions if auto_log_to_expenses is true (default true)
+      if (Number(sub.price) > 0 && sub.split_config?.auto_log_to_expenses !== false) {
+        try {
+          await supabase.from("expenses").insert({
+            user_id: sub.user_id,
+            category: sub.category || "Entertainment",
+            name: `Langganan: ${sub.name}`,
+            note: `[Perpanjangan Otomatis] Pembayaran via ${sub.payment_platform || "Langganan"}`,
+            amount: Number(sub.price) || 0,
+            spent_at: sub.next_renewal_date,
+            wallet_id: sub.pay_from_wallet_id || null,
+          });
+        } catch (expErr) {
+          console.error(`Failed to auto-log renewal expense for subscription ${sub.id}:`, expErr);
+        }
+      }
+
       // Just advance renewal date for non-split or non-auto-split subscriptions
       const nextDate = computeNextRenewalDate(sub.next_renewal_date, sub.billing_cycle);
       await supabase

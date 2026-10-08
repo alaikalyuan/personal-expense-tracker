@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   X,
   ShieldCheck,
@@ -10,7 +10,6 @@ import {
   Sparkles,
   CheckCircle2,
   LogIn,
-  UserPlus,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { upgradeGuestAccount, modalLogin } from "@/app/actions";
@@ -31,6 +30,30 @@ export default function UpgradeAccountModal({
   initialMode = "signup",
   initialError = null,
 }: UpgradeAccountModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <UpgradeAccountModalContent
+      key={`${initialMode}-${initialError || ""}`}
+      onClose={onClose}
+      onSuccess={onSuccess}
+      initialMode={initialMode}
+      initialError={initialError}
+    />
+  );
+}
+
+function UpgradeAccountModalContent({
+  onClose,
+  onSuccess,
+  initialMode = "signup",
+  initialError = null,
+}: {
+  onClose: () => void;
+  onSuccess?: (mergedCount?: number) => void;
+  initialMode?: "signup" | "login";
+  initialError?: string | null;
+}) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<"signup" | "login">(initialMode);
   const [email, setEmail] = useState("");
@@ -40,16 +63,6 @@ export default function UpgradeAccountModal({
   const [error, setError] = useState<string | null>(initialError);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-
-  useEffect(() => {
-    if (isOpen) {
-      setMode(initialMode);
-      setError(initialError || null);
-      setIsSuccess(false);
-    }
-  }, [isOpen, initialMode, initialError]);
-
-  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

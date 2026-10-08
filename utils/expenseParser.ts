@@ -3,6 +3,11 @@ import type { QuickChip } from "./quickChips";
 import type { SupportedCurrency } from "./money";
 import { addDays, subDays, addWeeks, subWeeks, startOfWeek, format, parseISO, getDate, getMonth, setDate, setMonth } from "date-fns";
 
+export interface WalletOption {
+  id: string;
+  name: string;
+}
+
 export interface ParsedExpense {
   isValid: boolean;
   name: string;
@@ -11,6 +16,8 @@ export interface ParsedExpense {
   spentAt: string;
   isExempt?: boolean;
   matchedAmountText?: string;
+  walletId?: string | null;
+  matchedWalletName?: string;
 }
 
 const DAY_NAME_TO_INDEX: Record<string, number> = {
@@ -123,7 +130,8 @@ export function parseQuickExpenseInput(
   input: string,
   todayStr: string,
   customChips: QuickChip[] = [],
-  currency: SupportedCurrency = "IDR"
+  currency: SupportedCurrency = "IDR",
+  wallets: WalletOption[] = []
 ): ParsedExpense {
   const trimmed = input.trim();
   if (!trimmed) {
@@ -134,21 +142,65 @@ export function parseQuickExpenseInput(
       category: "Others",
       spentAt: todayStr,
       isExempt: false,
+      walletId: null,
     };
   }
 
   let text = trimmed;
   let spentAt = todayStr;
   let isExempt = false;
+  let matchedWalletId: string | null = null;
+  let matchedWalletName: string | undefined;
 
-  // 1. Detect and Extract Hashtags / One-off Splurge markers
+  // 1a. Detect and Extract @wallet tokens (e.g. "@jajan", "@tabungan", "@harian")
+  if (wallets && wallets.length > 0) {
+    const mentionRegex = /(?:^|\s)@([a-zA-Z0-9_\u00C0-\u024F-]+)/g;
+    const mentions = [...text.matchAll(mentionRegex)];
+
+    for (const match of mentions) {
+      const rawTag = match[1];
+      const tagLower = rawTag.toLowerCase().replace(/[-_]/g, " ").trim();
+      const tagNoSpace = rawTag.toLowerCase().replace(/[-_\s]/g, "");
+
+      // Match against available wallets:
+      // Priority 1: Exact match on name (normalized or without spaces)
+      let found = wallets.find((w) => {
+        const wNorm = w.name.toLowerCase().trim();
+        const wNoSpace = wNorm.replace(/[\s-_]/g, "");
+        return wNorm === tagLower || wNoSpace === tagNoSpace;
+      });
+
+      // Priority 2: Substring / contains match
+      if (!found) {
+        found = wallets.find((w) => {
+          const wNorm = w.name.toLowerCase().trim();
+          const wNoSpace = wNorm.replace(/[\s-_]/g, "");
+          return (
+            wNorm.includes(tagLower) ||
+            tagLower.includes(wNorm) ||
+            wNoSpace.includes(tagNoSpace) ||
+            tagNoSpace.includes(wNoSpace)
+          );
+        });
+      }
+
+      if (found) {
+        matchedWalletId = found.id;
+        matchedWalletName = found.name;
+        text = text.replace(match[0], " ");
+        break;
+      }
+    }
+  }
+
+  // 1b. Detect and Extract Hashtags / One-off Splurge markers
   const exemptRegex = /(?:^|\s)#(?:one-off|oneoff|splurge|exempt)\b/i;
   if (exemptRegex.test(text)) {
     isExempt = true;
     text = text.replace(exemptRegex, " ");
   }
 
-  // 1b. Detect Quantity prefix multiplier (e.g. "2x kopi 15k" or "3 * bakso 20k")
+  // 1c. Detect Quantity prefix multiplier (e.g. "2x kopi 15k" or "3 * bakso 20k")
   let quantityMultiplier: number | null = null;
   const qtyPrefixRegex = /(?:^|\s)(\d{1,2})\s*(?:x|\*)\s+/i;
   const qtyMatch = text.match(qtyPrefixRegex);
@@ -566,6 +618,8 @@ export function parseQuickExpenseInput(
     spentAt,
     isExempt,
     matchedAmountText,
+    walletId: matchedWalletId,
+    matchedWalletName,
   };
 }
 

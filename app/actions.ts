@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { getTodayString } from "@/utils/date";
 import { attachExemptTag } from "@/utils/exemptions";
+import { getPrimaryWallets } from "@/utils/wallets/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function login(formData: FormData) {
@@ -247,14 +248,25 @@ export async function addExpense(formData: FormData) {
     throw new Error("Expense name is required");
   }
 
-  const { error: insertError } = await supabase.from("expenses").insert({
+  let walletId = (formData.get("wallet_id") as string)?.trim() || null;
+  if (!walletId || walletId === "all") {
+    const { spendingWallet } = await getPrimaryWallets(supabase, user.id, user.user_metadata);
+    walletId = spendingWallet?.id && spendingWallet.id !== "fallback-spending" ? spendingWallet.id : null;
+  }
+
+  const insertData: Record<string, unknown> = {
     user_id: user.id,
     category,
     name,
     note,
     amount,
     spent_at: spentAt,
-  });
+  };
+  if (walletId) {
+    insertData.wallet_id = walletId;
+  }
+
+  const { error: insertError } = await supabase.from("expenses").insert(insertData);
 
   if (insertError) {
     throw new Error(insertError.message);
@@ -264,6 +276,10 @@ export async function addExpense(formData: FormData) {
   revalidatePath("/compare");
   revalidatePath("/archive");
   revalidatePath("/savings");
+  revalidatePath("/saku");
+  if (walletId) {
+    revalidatePath(`/saku/${walletId}`);
+  }
 }
 
 export async function logNoSpendDay(customDate?: string, locale: "id" | "en" = "id") {
@@ -330,15 +346,24 @@ export async function updateExpense(formData: FormData) {
     throw new Error("Expense name is required");
   }
 
+  const rawWalletId = formData.get("wallet_id");
+  const updatePayload: Record<string, unknown> = {
+    category,
+    name,
+    note,
+    amount,
+    spent_at: spentAt,
+  };
+  if (rawWalletId !== null && rawWalletId !== undefined) {
+    const val = String(rawWalletId).trim();
+    if (val && val !== "all") {
+      updatePayload.wallet_id = val;
+    }
+  }
+
   const { data: updatedRows, error: updateError } = await supabase
     .from("expenses")
-    .update({
-      category,
-      name,
-      note,
-      amount,
-      spent_at: spentAt,
-    })
+    .update(updatePayload)
     .eq("id", id)
     .eq("user_id", user.id)
     .select();
@@ -357,6 +382,11 @@ export async function updateExpense(formData: FormData) {
   revalidatePath("/compare");
   revalidatePath("/archive");
   revalidatePath("/savings");
+  revalidatePath("/saku");
+  const finalWalletId = updatedRows[0]?.wallet_id;
+  if (finalWalletId) {
+    revalidatePath(`/saku/${finalWalletId}`);
+  }
 }
 
 export async function deleteExpense(id: string) {

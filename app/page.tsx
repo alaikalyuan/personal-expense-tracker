@@ -16,7 +16,12 @@ import DashboardClient from "./DashboardClient";
 import { getNowInTimezone } from "@/utils/date";
 import { calculateStreak } from "@/utils/streak";
 import { getDictionaryServer } from "@/utils/i18n/server";
-import { getPrimaryWallets } from "@/utils/wallets/server";
+import {
+  getPrimaryWallets,
+  getWalletBalances,
+  getMultiSakuEnabledServer,
+  getSelectedSakuServer,
+} from "@/utils/wallets/server";
 
 export default async function DashboardPage(props: {
   searchParams?: Promise<{
@@ -50,6 +55,16 @@ export default async function DashboardPage(props: {
 
   const isGuest = Boolean(user.is_anonymous);
 
+  const multiSakuEnabled = isGuest
+    ? false
+    : await getMultiSakuEnabledServer(cookieStore, supabase, user.id);
+  const selectedSakuId = isGuest ? "all" : await getSelectedSakuServer(cookieStore);
+  const wallets = isGuest ? [] : await getWalletBalances(supabase, user.id);
+  const selectedWallet =
+    !isGuest && selectedSakuId !== "all"
+      ? wallets.find((w) => w.id === selectedSakuId) || null
+      : null;
+
   const now = getNowInTimezone();
 
   // Weekly boundaries (Monday 00:00 to Sunday 23:59)
@@ -79,30 +94,38 @@ export default async function DashboardPage(props: {
   const startOfLastMonthStr = format(startOfLastMonth, "yyyy-MM-dd");
   const priorMtdEndStr = format(priorMtdEndDate, "yyyy-MM-dd");
 
+  let expensesQuery = supabase
+    .from("expenses")
+    .select("*")
+    .eq("user_id", user.id)
+    .gte("spent_at", rangeStartStr)
+    .lte("spent_at", rangeEndStr);
+
+  let priorMtdQuery = supabase
+    .from("expenses")
+    .select("amount")
+    .eq("user_id", user.id)
+    .gte("spent_at", startOfLastMonthStr)
+    .lte("spent_at", priorMtdEndStr);
+
+  if (multiSakuEnabled && selectedWallet) {
+    expensesQuery = expensesQuery.eq("wallet_id", selectedWallet.id);
+    priorMtdQuery = priorMtdQuery.eq("wallet_id", selectedWallet.id);
+  }
+
   const [
     { data: unifiedExpenses },
     { data: allUserExpenseDates },
     { data: priorMtdExpenses },
     { data: upcomingSubscriptions },
   ] = await Promise.all([
-    supabase
-      .from("expenses")
-      .select("*")
-      .eq("user_id", user.id)
-      .gte("spent_at", rangeStartStr)
-      .lte("spent_at", rangeEndStr)
-      .order("spent_at", { ascending: false }),
+    expensesQuery.order("spent_at", { ascending: false }),
     supabase
       .from("expenses")
       .select("spent_at")
       .eq("user_id", user.id)
       .order("spent_at", { ascending: false }),
-    supabase
-      .from("expenses")
-      .select("amount")
-      .eq("user_id", user.id)
-      .gte("spent_at", startOfLastMonthStr)
-      .lte("spent_at", priorMtdEndStr),
+    priorMtdQuery,
     !isGuest
       ? supabase
           .from("subscriptions")
@@ -122,23 +145,68 @@ export default async function DashboardPage(props: {
     0
   );
 
-  const { spendingWallet } = await getPrimaryWallets(
-    supabase,
-    user.id,
-    user.user_metadata
-  );
+  let weeklyBudget: number;
+  let monthlyBudget: number;
 
-  const weeklyBudget =
-    spendingWallet?.weekly_budget !== null && spendingWallet?.weekly_budget !== undefined
-      ? Number(spendingWallet.weekly_budget)
-      : Number(user.user_metadata?.weekly_budget || 500000);
+  if (multiSakuEnabled && selectedWallet) {
+    weeklyBudget =
+      selectedWallet.weekly_budget !== null && selectedWallet.weekly_budget !== undefined
+        ? Number(selectedWallet.weekly_budget)
+        : Number(user.user_metadata?.weekly_budget || 500000);
 
-  const monthlyBudget =
-    spendingWallet?.monthly_budget !== null && spendingWallet?.monthly_budget !== undefined
-      ? Number(spendingWallet.monthly_budget)
-      : Number(
-          user.user_metadata?.monthly_budget || Math.round((weeklyBudget / 7) * totalDaysInMonth)
-        );
+    monthlyBudget =
+      selectedWallet.monthly_budget !== null && selectedWallet.monthly_budget !== undefined
+        ? Number(selectedWallet.monthly_budget)
+        : Number(
+            user.user_metadata?.monthly_budget || Math.round((weeklyBudget / 7) * totalDaysInMonth)
+          );
+  } else if (multiSakuEnabled && selectedSakuId === "all" && wallets.length > 0) {
+    const spendingWallets = wallets.filter((w) => w.kind === "spending");
+    const totalWeeklyBudget = spendingWallets.reduce(
+      (sum, w) => sum + (w.weekly_budget !== null ? Number(w.weekly_budget) : 0),
+      0
+    );
+    const totalMonthlyBudget = spendingWallets.reduce(
+      (sum, w) =>
+        sum +
+        (w.monthly_budget !== null
+          ? Number(w.monthly_budget)
+          : w.weekly_budget !== null
+          ? Math.round((Number(w.weekly_budget) / 7) * totalDaysInMonth)
+          : 0),
+      0
+    );
+
+    weeklyBudget =
+      totalWeeklyBudget > 0
+        ? totalWeeklyBudget
+        : Number(user.user_metadata?.weekly_budget || 500000);
+
+    monthlyBudget =
+      totalMonthlyBudget > 0
+        ? totalMonthlyBudget
+        : Number(
+            user.user_metadata?.monthly_budget || Math.round((weeklyBudget / 7) * totalDaysInMonth)
+          );
+  } else {
+    const { spendingWallet } = await getPrimaryWallets(
+      supabase,
+      user.id,
+      user.user_metadata
+    );
+
+    weeklyBudget =
+      spendingWallet?.weekly_budget !== null && spendingWallet?.weekly_budget !== undefined
+        ? Number(spendingWallet.weekly_budget)
+        : Number(user.user_metadata?.weekly_budget || 500000);
+
+    monthlyBudget =
+      spendingWallet?.monthly_budget !== null && spendingWallet?.monthly_budget !== undefined
+        ? Number(spendingWallet.monthly_budget)
+        : Number(
+            user.user_metadata?.monthly_budget || Math.round((weeklyBudget / 7) * totalDaysInMonth)
+          );
+  }
 
   return (
     <DashboardClient
@@ -154,6 +222,9 @@ export default async function DashboardPage(props: {
       initialAuthMode={initialAuthMode}
       initialAuthError={initialAuthError}
       upcomingSubscriptions={upcomingSubscriptions || []}
+      wallets={wallets}
+      selectedSakuId={selectedSakuId}
+      multiSakuEnabled={multiSakuEnabled}
     />
   );
 }
