@@ -15,6 +15,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useTranslation } from "@/utils/i18n/context";
 
 interface Message {
@@ -224,9 +225,17 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
     }
   };
 
-  // Pre-process markdown: normalize unicode bullets to standard markdown hyphens
+  // Pre-process markdown: normalize unicode bullets and repair inline/merged tables
   const preprocessMarkdown = (content: string) => {
-    return content.replace(/^([ \t]*)•\s+/gm, "$1- ");
+    let res = content.replace(/^([ \t]*)•\s+/gm, "$1- ");
+
+    // Separate table start from preceding text if inline: "Heading: | Col 1 | Col 2 |"
+    res = res.replace(/([^\n|]+:?)[ \t]+(\|(?:\s*[^|\n]+\s*\|){2,})/g, "$1\n\n$2");
+
+    // Separate rows merged on one line with "| |"
+    res = res.replace(/\|[ \t]+\|/g, "|\n|");
+
+    return res;
   };
 
   const promptChips = [
@@ -389,7 +398,40 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
                 ) : (
                   <div className="space-y-1.5 leading-relaxed text-xs sm:text-sm text-zinc-800 dark:text-zinc-200">
                     <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
                       components={{
+                        table: ({ children }) => (
+                          <div className="my-2.5 w-full overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-700/80 bg-white/70 dark:bg-zinc-900/70 shadow-2xs">
+                            <table className="w-full text-left text-xs border-collapse">
+                              {children}
+                            </table>
+                          </div>
+                        ),
+                        thead: ({ children }) => (
+                          <thead className="bg-zinc-200/60 dark:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-700">
+                            {children}
+                          </thead>
+                        ),
+                        tbody: ({ children }) => (
+                          <tbody className="divide-y divide-zinc-200/60 dark:divide-zinc-850">
+                            {children}
+                          </tbody>
+                        ),
+                        tr: ({ children }) => (
+                          <tr className="transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40">
+                            {children}
+                          </tr>
+                        ),
+                        th: ({ children }) => (
+                          <th className="px-3 py-2 font-semibold text-zinc-900 dark:text-zinc-100 text-[11px] uppercase tracking-wider whitespace-nowrap">
+                            {children}
+                          </th>
+                        ),
+                        td: ({ children }) => (
+                          <td className="px-3 py-2 text-zinc-700 dark:text-zinc-300 text-xs whitespace-nowrap">
+                            {children}
+                          </td>
+                        ),
                         h1: ({ children }) => (
                           <h1 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white mt-3 mb-1.5 first:mt-0">
                             {children}
