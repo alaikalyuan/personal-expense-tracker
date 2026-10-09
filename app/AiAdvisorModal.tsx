@@ -11,7 +11,6 @@ import {
   User,
   AlertCircle,
   Check,
-  ChevronDown,
   ChevronUp,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -35,43 +34,35 @@ const STORAGE_KEY = "sakutrack_deepseek_key";
 export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps) {
   const { t, locale } = useTranslation();
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => [
+    {
+      id: "welcome",
+      role: "assistant",
+      content: t.aiAdvisor.welcomeMessage,
+    },
+  ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Custom API key configuration drawer
   const [showKeyConfig, setShowKeyConfig] = useState(false);
-  const [customApiKey, setCustomApiKey] = useState("");
-  const [savedApiKey, setSavedApiKey] = useState<string | null>(null);
+  const [customApiKey, setCustomApiKey] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(STORAGE_KEY) || "";
+    }
+    return "";
+  });
+  const [savedApiKey, setSavedApiKey] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(STORAGE_KEY);
+    }
+    return null;
+  });
   const [keyToast, setKeyToast] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Initialize stored API key & welcome message
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setSavedApiKey(stored);
-        setCustomApiKey(stored);
-      }
-    }
-  }, []);
-
-  // Set initial welcome message when opened
-  useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      setMessages([
-        {
-          id: "welcome",
-          role: "assistant",
-          content: t.aiAdvisor.welcomeMessage,
-        },
-      ]);
-    }
-  }, [isOpen, messages.length, t.aiAdvisor.welcomeMessage]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -110,7 +101,7 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
   const handleResetChat = () => {
     setMessages([
       {
-        id: "welcome-" + Date.now(),
+        id: "welcome-" + (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "1"),
         role: "assistant",
         content: t.aiAdvisor.welcomeMessage,
       },
@@ -123,8 +114,8 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
     if (!trimmed || isLoading) return;
 
     setErrorMessage(null);
-    const userMsgId = "user-" + Date.now();
-    const assistantMsgId = "assistant-" + Date.now();
+    const userMsgId = "user-" + (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "msg");
+    const assistantMsgId = "assistant-" + (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "res");
 
     const newMessages: Message[] = [
       ...messages,
@@ -170,7 +161,7 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
       }
 
       const decoder = new TextDecoder();
-      let accumulatedText = "";
+      const streamAcc = { text: "" };
       let buffer = "";
 
       while (true) {
@@ -195,11 +186,12 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
               const parsed = JSON.parse(jsonStr);
               const deltaContent = parsed.choices?.[0]?.delta?.content;
               if (deltaContent) {
-                accumulatedText += deltaContent;
+                streamAcc.text += deltaContent;
+                const nextContent = streamAcc.text;
                 setMessages((prev) =>
                   prev.map((msg) =>
                     msg.id === assistantMsgId
-                      ? { ...msg, content: accumulatedText }
+                      ? { ...msg, content: nextContent }
                       : msg
                   )
                 );

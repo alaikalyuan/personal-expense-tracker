@@ -231,9 +231,12 @@ RESPONSE GUIDELINES:
         Connection: "keep-alive",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: "INTERNAL_ERROR", message: error?.message || "Failed to process AI request" },
+      {
+        error: "INTERNAL_ERROR",
+        message: error instanceof Error ? error.message : "Failed to process AI request",
+      },
       { status: 500 }
     );
   }

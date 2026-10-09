@@ -42,10 +42,12 @@ export const viewport: Viewport = {
 };
 
 import { cookies } from "next/headers";
+import { FEATURE_MULTI_SAKU_ENABLED } from "@/utils/wallets/config";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
-  const multiSakuEnabled = cookieStore.get("MULTI_SAKU_ENABLED")?.value === "true";
+  const multiSakuEnabled =
+    FEATURE_MULTI_SAKU_ENABLED && cookieStore.get("MULTI_SAKU_ENABLED")?.value === "true";
 
   const [locale, theme, currency] = await Promise.all([
     getLocaleServer(),

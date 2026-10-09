@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   addDays,
   format,
@@ -14,10 +14,11 @@ import {
   setDate,
 } from "date-fns";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import UserMenu from "./UserMenu";
 import TrackingStreak from "./TrackingStreak";
 import { StreakData } from "@/utils/streak";
-import { ShieldAlert, Sparkles, CreditCard } from "lucide-react";
+import { ShieldAlert, Sparkles, CreditCard, CheckCircle2 } from "lucide-react";
 import InstallPrompt from "./InstallPrompt";
 import CadenceToggle from "./CadenceToggle";
 import ProjectedBurnCard from "./ProjectedBurnCard";
@@ -32,6 +33,7 @@ import SakuSwitcher from "./SakuSwitcher";
 import { WalletBalance } from "@/utils/wallets/server";
 import AiAdvisorCard from "./AiAdvisorCard";
 import AiAdvisorModal from "./AiAdvisorModal";
+import { paySubscription } from "@/app/subscriptions/actions";
 
 interface DashboardClientProps {
   initialCadence: "week" | "month";
@@ -53,6 +55,14 @@ interface DashboardClientProps {
     next_renewal_date: string;
     is_split: boolean;
     payment_platform: string;
+    category?: string;
+    pay_from_wallet_id?: string | null;
+    split_config?: {
+      split_mode?: "equal" | "custom";
+      friends?: Array<{ name: string; share?: number }>;
+      auto_create_split_bill?: boolean;
+      auto_log_to_expenses?: boolean;
+    };
   }>;
   wallets?: WalletBalance[];
   selectedSakuId?: string;
@@ -76,11 +86,13 @@ export default function DashboardClient({
   selectedSakuId = "all",
   multiSakuEnabled = false,
 }: DashboardClientProps) {
+  const router = useRouter();
   const [cadence, setCadence] = useState<"week" | "month">(initialCadence);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(Boolean(initialAuthMode));
   const [authModalMode, setAuthModalMode] = useState<"signup" | "login">(initialAuthMode || "signup");
   const [authModalError, setAuthModalError] = useState<string | null>(initialAuthError || null);
   const [mergedToastCount, setMergedToastCount] = useState<number>(initialMergedCount);
+  const [subToastMessage, setSubToastMessage] = useState<string | null>(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const { t, formatDate, getCategoryLabel, formatCurrency } = useTranslation();
 
@@ -274,6 +286,102 @@ export default function DashboardClient({
     );
   }, [activePeriodTotal, activeBudget, activeExpenses]);
 
+  // Selected wallet object
+  const selectedWalletObj = useMemo(() => {
+    if (!multiSakuEnabled || selectedSakuId === "all") return null;
+    return wallets.find((w) => w.id === selectedSakuId) || null;
+  }, [wallets, selectedSakuId, multiSakuEnabled]);
+
+  // Check if subscription matches active wallet view
+  const isSubForSelectedWallet = useCallback(
+    (sub: { pay_from_wallet_id?: string | null }): boolean => {
+      if (!multiSakuEnabled || selectedSakuId === "all" || !selectedWalletObj) {
+        return true;
+      }
+      if (sub.pay_from_wallet_id) {
+        return sub.pay_from_wallet_id === selectedWalletObj.id;
+      }
+      return selectedWalletObj.is_primary;
+    },
+    [multiSakuEnabled, selectedSakuId, selectedWalletObj]
+  );
+
+  // Helper to compute user share of subscription cost
+  const getSubscriptionShare = (sub: {
+    price: number;
+    is_split: boolean;
+    split_config?: {
+      split_mode?: "equal" | "custom";
+      friends?: Array<{ name: string; share?: number }>;
+    };
+  }): number => {
+    const rawPrice = Number(sub.price) || 0;
+    if (!sub.is_split || !sub.split_config?.friends || sub.split_config.friends.length === 0) {
+      return rawPrice;
+    }
+    if (sub.split_config.split_mode === "custom") {
+      const friendShare = sub.split_config.friends.reduce(
+        (sum, f) => sum + (Number(f.share) || 0),
+        0
+      );
+      return Math.max(0, rawPrice - friendShare);
+    }
+    const totalCount = sub.split_config.friends.length + 1;
+    return Math.round(rawPrice / totalCount);
+  };
+
+  // Subscriptions due in the active period (on or before activeEndStr)
+  const dueSubscriptions = useMemo(() => {
+    return (upcomingSubscriptions || [])
+      .filter((sub) => {
+        if (!isSubForSelectedWallet(sub)) return false;
+        // Check if next_renewal_date falls on or before end of current period
+        return sub.next_renewal_date <= activeEndStr;
+      })
+      .map((sub) => ({
+        id: sub.id,
+        name: sub.name,
+        userShare: getSubscriptionShare(sub),
+        price: Number(sub.price) || 0,
+        next_renewal_date: sub.next_renewal_date,
+        billing_cycle: sub.billing_cycle,
+        is_split: sub.is_split,
+        payment_platform: sub.payment_platform,
+      }));
+  }, [upcomingSubscriptions, activeEndStr, isSubForSelectedWallet]);
+
+  const projectedSubscriptionsTotal = useMemo(() => {
+    return dueSubscriptions.reduce((acc, curr) => acc + curr.userShare, 0);
+  }, [dueSubscriptions]);
+
+  // Subscriptions renewing soon (<= 4 days) for the top alert banner
+  const soonDueSubscriptions = useMemo(() => {
+    return (upcomingSubscriptions || []).filter((sub) => {
+      const daysDiff = Math.ceil(
+        (new Date(sub.next_renewal_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return daysDiff >= -1 && daysDiff <= 4;
+    });
+  }, [upcomingSubscriptions, now]);
+
+  // Handle paying subscription (logs expense and advances renewal date)
+  const handlePaySubscription = async (id: string, name: string) => {
+    try {
+      await paySubscription(id);
+      setSubToastMessage(
+        t.budget.paidSuccessToast
+          ? t.budget.paidSuccessToast.replace("{name}", name)
+          : `Langganan ${name} berhasil dicatat ke pengeluaran`
+      );
+      router.refresh();
+      setTimeout(() => {
+        setSubToastMessage(null);
+      }, 4500);
+    } catch (err: unknown) {
+      alert((err as Error).message);
+    }
+  };
+
   return (
     <main className="max-w-md mx-auto p-4 pb-48 flex flex-col gap-6">
       {/* Header */}
@@ -336,8 +444,8 @@ export default function DashboardClient({
       {/* PWA Install Banner */}
       <InstallPrompt />
 
-      {/* Upcoming Subscriptions Renewal Banner */}
-      {upcomingSubscriptions.length > 0 && (
+      {/* Upcoming Subscriptions Renewal Banner (for subscriptions due soon) */}
+      {soonDueSubscriptions.length > 0 && (
         <Link
           href="/subscriptions"
           className="rounded-2xl border border-pink-500/30 bg-pink-500/10 p-3.5 dark:border-pink-500/20 dark:bg-pink-500/10 flex items-center justify-between gap-3 transition-all hover:bg-pink-500/15"
@@ -348,10 +456,10 @@ export default function DashboardClient({
             </div>
             <div className="min-w-0">
               <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                {upcomingSubscriptions.length} {t.subscriptions.upcomingDueBanner}
+                {soonDueSubscriptions.length} {t.subscriptions.upcomingDueBanner}
               </p>
               <p className="text-[11px] text-zinc-600 dark:text-zinc-400 truncate">
-                {upcomingSubscriptions.map((s) => s.name).join(", ")}
+                {soonDueSubscriptions.map((s) => s.name).join(", ")}
               </p>
             </div>
           </div>
@@ -392,6 +500,9 @@ export default function DashboardClient({
                 }
               : null
           }
+          projectedSubscriptionsTotal={projectedSubscriptionsTotal}
+          dueSubscriptions={dueSubscriptions}
+          onPaySubscription={handlePaySubscription}
         />
 
         {/* Micro-Stats Shelf */}
@@ -520,6 +631,14 @@ export default function DashboardClient({
           <span>
             {t.guest.mergedToast.replace("{count}", String(mergedToastCount))}
           </span>
+        </div>
+      )}
+
+      {/* Subscription paid toast */}
+      {subToastMessage && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-2xl animate-fade-in flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-100 shrink-0" />
+          <span>{subToastMessage}</span>
         </div>
       )}
 

@@ -9,6 +9,7 @@ import {
   getWalletBalances,
   getSavingsGoals,
   getSavingsHistory,
+  FEATURE_MULTI_SAKU_ENABLED,
 } from "@/utils/wallets/server";
 import ExpenseList, { ExpenseItem } from "@/app/ExpenseList";
 import SavingsClient from "@/app/savings/SavingsClient";
@@ -21,6 +22,10 @@ interface SakuDetailPageProps {
 }
 
 export default async function SakuDetailPage(props: SakuDetailPageProps) {
+  if (!FEATURE_MULTI_SAKU_ENABLED) {
+    redirect("/savings");
+  }
+
   const { id } = await props.params;
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);

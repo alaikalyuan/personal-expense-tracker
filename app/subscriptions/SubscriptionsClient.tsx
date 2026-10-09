@@ -26,6 +26,7 @@ import {
   Layers,
   HeartHandshake,
   Receipt,
+  CheckCircle2,
 } from "lucide-react";
 import {
   SubscriptionRecord,
@@ -41,6 +42,7 @@ import {
   deleteSubscription,
   toggleSubscriptionStatus,
   createSplitBillFromSubscription,
+  paySubscription,
 } from "./actions";
 import { useTranslation } from "@/utils/i18n/context";
 import { getTodayString } from "@/utils/date";
@@ -346,6 +348,54 @@ export default function SubscriptionsClient({
     }
   };
 
+  const handlePaySubscription = async (sub: SubscriptionRecord) => {
+    const confirmText = t.subscriptions.markPaidConfirm
+      ? t.subscriptions.markPaidConfirm
+          .replace("{name}", sub.name)
+          .replace("{amount}", formatCurrency(sub.price))
+      : `Catat pembayaran untuk ${sub.name} ke pengeluaran sekarang?`;
+    if (!confirm(confirmText)) return;
+
+    setProcessingSubId(sub.id);
+    try {
+      const res = await paySubscription(sub.id);
+      if (res.mode === "split" && res.billId) {
+        setSubscriptions((prev) =>
+          prev.map((s) =>
+            s.id === sub.id
+              ? {
+                  ...s,
+                  last_split_bill_id: res.billId,
+                  next_renewal_date: res.nextRenewalDate || s.next_renewal_date,
+                }
+              : s
+          )
+        );
+        router.push(`/split/${res.billId}`);
+      } else {
+        setSubscriptions((prev) =>
+          prev.map((s) =>
+            s.id === sub.id
+              ? {
+                  ...s,
+                  next_renewal_date: res.nextRenewalDate || s.next_renewal_date,
+                }
+              : s
+          )
+        );
+        setActionMessage({
+          type: "success",
+          text: t.subscriptions.paySuccess || "Pembayaran berhasil dicatat ke pengeluaran.",
+        });
+        router.refresh();
+      }
+    } catch (err: unknown) {
+      alert((err as Error).message);
+    } finally {
+      setProcessingSubId(null);
+    }
+  };
+
   // Helper to render icon by name/type
   const getPresetIcon = (subName: string) => {
     const lower = subName.toLowerCase();
@@ -632,6 +682,20 @@ export default function SubscriptionsClient({
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
+                    {/* Pay / Record Payment Now */}
+                    {!isPaused && (
+                      <button
+                        type="button"
+                        onClick={() => handlePaySubscription(sub)}
+                        disabled={processingSubId === sub.id}
+                        title={t.subscriptions.payNowBtn}
+                        className="flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 px-2 py-1 text-[11px] font-semibold transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>{processingSubId === sub.id ? "..." : t.subscriptions.payNowBtn}</span>
+                      </button>
+                    )}
+
                     {/* If Split and Active: Button to generate Split Bill immediately */}
                     {sub.is_split && (
                       <button

@@ -2,6 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { SupportedCurrency, DEFAULT_CURRENCY, isSupportedCurrency } from "@/utils/money";
 import { SavingsGoalItem } from "@/app/savings/SavingsClient";
 import { SavingsHistoryItem } from "@/app/actions";
+import { FEATURE_MULTI_SAKU_ENABLED } from "./config";
+
+export { FEATURE_MULTI_SAKU_ENABLED };
 
 export interface UserSettings {
   user_id: string;
@@ -131,7 +134,7 @@ export async function getUserSettings(
       return {
         user_id: data.user_id,
         base_currency: baseCur,
-        multi_saku_enabled: Boolean(data.multi_saku_enabled),
+        multi_saku_enabled: FEATURE_MULTI_SAKU_ENABLED ? Boolean(data.multi_saku_enabled) : false,
         default_wallet_id: data.default_wallet_id || null,
         created_at: data.created_at,
         updated_at: data.updated_at,
@@ -471,6 +474,10 @@ export async function getMultiSakuEnabledServer(
   supabase?: SupabaseClient,
   userId?: string
 ): Promise<boolean> {
+  if (!FEATURE_MULTI_SAKU_ENABLED) {
+    return false;
+  }
+
   const cookieVal = cookieStore.get("MULTI_SAKU_ENABLED")?.value;
   if (cookieVal !== undefined) {
     return cookieVal === "true";

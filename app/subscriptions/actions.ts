@@ -376,3 +376,92 @@ export async function updateNotificationSettings(settings: {
   revalidatePath("/");
   return { success: true, settings: newSettings };
 }
+
+export async function paySubscription(
+  subscriptionId: string,
+  options?: { paidDate?: string; walletId?: string }
+) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || user.is_anonymous) {
+    throw new Error("Unauthorized");
+  }
+
+  const { data: sub, error } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("id", subscriptionId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (error || !sub) {
+    throw new Error("Langganan tidak ditemukan");
+  }
+
+  const paidDate = options?.paidDate || getTodayString();
+  const walletId = options?.walletId !== undefined ? options.walletId : (sub.pay_from_wallet_id || null);
+
+  // If split with auto_create_split_bill, route through split bill creation
+  if (sub.is_split && sub.split_config?.auto_create_split_bill) {
+    const res = await createSplitBillFromSubscription(sub.id);
+    return { success: true, mode: "split" as const, billId: res.billId, nextRenewalDate: res.nextRenewalDate };
+  }
+
+  // Calculate personal portion to log
+  let amountToLog = Number(sub.price) || 0;
+  if (sub.is_split && sub.split_config?.friends?.length > 0) {
+    if (sub.split_config.split_mode === "custom") {
+      const friendTotal = sub.split_config.friends.reduce(
+        (sum: number, f: { share?: number }) => sum + (Number(f.share) || 0),
+        0
+      );
+      amountToLog = Math.max(0, amountToLog - friendTotal);
+    } else {
+      const count = sub.split_config.friends.length + 1;
+      amountToLog = Math.round(amountToLog / count);
+    }
+  }
+
+  // Insert into expenses log if enabled
+  if (amountToLog > 0 && sub.split_config?.auto_log_to_expenses !== false) {
+    const { error: expError } = await supabase.from("expenses").insert({
+      user_id: user.id,
+      category: sub.category || "Entertainment",
+      name: `Langganan: ${sub.name}`,
+      note: `Pembayaran via ${sub.payment_platform || "Langganan"}`,
+      amount: amountToLog,
+      spent_at: paidDate,
+      wallet_id: walletId,
+    });
+
+    if (expError) {
+      throw new Error(`Gagal mencatat pengeluaran: ${expError.message}`);
+    }
+  }
+
+  // Advance next renewal date
+  const nextRenewalDate = computeNextRenewalDate(sub.next_renewal_date, sub.billing_cycle);
+  const { error: updateError } = await supabase
+    .from("subscriptions")
+    .update({
+      next_renewal_date: nextRenewalDate,
+      last_processed_date: paidDate,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", sub.id);
+
+  if (updateError) {
+    throw new Error(`Gagal memperbarui tanggal langganan: ${updateError.message}`);
+  }
+
+  revalidatePath("/subscriptions");
+  revalidatePath("/split");
+  revalidatePath("/");
+
+  return { success: true, mode: "expense" as const, nextRenewalDate };
+}

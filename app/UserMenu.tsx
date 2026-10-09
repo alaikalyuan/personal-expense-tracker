@@ -29,6 +29,7 @@ import {
   SUPPORTED_CURRENCIES,
   SupportedCurrency,
 } from "@/utils/money";
+import { FEATURE_MULTI_SAKU_ENABLED } from "@/utils/wallets/config";
 import NotificationSettingsModal from "./NotificationSettingsModal";
 
 interface UserMenuProps {
@@ -53,13 +54,14 @@ export default function UserMenu({
   const [localOverride, setLocalOverride] = useState<boolean | null>(null);
 
   const isMultiSaku =
-    localOverride !== null
+    FEATURE_MULTI_SAKU_ENABLED &&
+    (localOverride !== null
       ? localOverride
       : multiSakuEnabled !== undefined
       ? multiSakuEnabled
       : typeof document !== "undefined"
       ? document.cookie.includes("MULTI_SAKU_ENABLED=true")
-      : false;
+      : false);
 
   const handleToggleMultiSaku = () => {
     if (isGuest) {
@@ -362,28 +364,30 @@ export default function UserMenu({
             </div>
 
             {/* Multi-Saku Toggle */}
-            <div className="flex items-center justify-between px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-              <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                <Layers className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
-                <span className="text-[11px]">{t.saku.multiSakuMode}</span>
-              </span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isMultiSaku}
-                disabled={isPending}
-                onClick={handleToggleMultiSaku}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-50 ${
-                  isMultiSaku ? "bg-emerald-600" : "bg-zinc-200 dark:bg-zinc-800"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                    isMultiSaku ? "translate-x-4" : "translate-x-0"
+            {FEATURE_MULTI_SAKU_ENABLED && (
+              <div className="flex items-center justify-between px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+                  <Layers className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
+                  <span className="text-[11px]">{t.saku.multiSakuMode}</span>
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isMultiSaku}
+                  disabled={isPending}
+                  onClick={handleToggleMultiSaku}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-50 ${
+                    isMultiSaku ? "bg-emerald-600" : "bg-zinc-200 dark:bg-zinc-800"
                   }`}
-                />
-              </button>
-            </div>
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                      isMultiSaku ? "translate-x-4" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
 
             <div className="my-1 border-t border-zinc-200/80 dark:border-zinc-800/80" />
 

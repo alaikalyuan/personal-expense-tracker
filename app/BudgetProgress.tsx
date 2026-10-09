@@ -5,6 +5,17 @@ import { Pencil, X, Sparkles, CheckCircle2, Tag } from "lucide-react";
 import { setWeeklyBudget, setMonthlyBudget, toggleExpenseExemption } from "@/app/actions";
 import { useTranslation } from "@/utils/i18n/context";
 
+export interface DueSubscriptionItem {
+  id: string;
+  name: string;
+  userShare: number;
+  price: number;
+  next_renewal_date: string;
+  billing_cycle: string;
+  is_split: boolean;
+  payment_platform: string;
+}
+
 interface BudgetProgressProps {
   period?: "week" | "month";
   weeklyTotal: number;
@@ -14,6 +25,9 @@ interface BudgetProgressProps {
   exemptTotal?: number;
   exemptCount?: number;
   unexemptAnomaly?: { id: string; name: string; amount: number } | null;
+  projectedSubscriptionsTotal?: number;
+  dueSubscriptions?: DueSubscriptionItem[];
+  onPaySubscription?: (id: string, name: string) => Promise<void>;
 }
 
 export default function BudgetProgress({
@@ -25,12 +39,17 @@ export default function BudgetProgress({
   exemptTotal,
   exemptCount,
   unexemptAnomaly,
+  projectedSubscriptionsTotal,
+  dueSubscriptions,
+  onPaySubscription,
 }: BudgetProgressProps) {
   const { t, locale, formatCurrency, currency, currencySymbol } = useTranslation();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [budgetInput, setBudgetInput] = useState(String(weeklyBudget));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExempting, setIsExempting] = useState(false);
+  const [payingSubId, setPayingSubId] = useState<string | null>(null);
+  const [isDueSubsOpen, setIsDueSubsOpen] = useState(true);
 
   const presetBudgets = currency === "IDR"
     ? (period === "month"
@@ -82,6 +101,20 @@ export default function BudgetProgress({
   const isOver = remaining < 0;
   const dailyAllowance = Math.max(Math.round(remaining / Math.max(daysRemaining, 1)), 0);
 
+  // Projected subscriptions metrics
+  const projectedSubSpend = Math.max(0, projectedSubscriptionsTotal || 0);
+  const totalWithProjected = activeSpend + projectedSubSpend;
+  const projectedPercent = weeklyBudget > 0 ? Math.round((projectedSubSpend / weeklyBudget) * 100) : 0;
+
+  // Calculate width of projected segment on progress bar (up to 100% total track)
+  const projectedBarWidth =
+    weeklyBudget > 0
+      ? Math.min(Math.round((projectedSubSpend / weeklyBudget) * 100), Math.max(0, 100 - barWidth))
+      : 0;
+
+  const projectedRemaining = weeklyBudget - totalWithProjected;
+  const willBeOverWithSubs = !isOver && projectedRemaining < 0;
+
   // Health status with calm, non-punitive tone
   const isWarning = !isOver && rawPercent >= 75;
 
@@ -115,7 +148,7 @@ export default function BudgetProgress({
     <div className="mt-4 flex flex-col gap-2">
       {/* Progress Track & Header */}
       <div className="flex items-center justify-between text-xs">
-        <span className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 font-medium">
+        <span className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 font-medium flex-wrap">
           {isOver ? (
             <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
           ) : (
@@ -127,6 +160,11 @@ export default function BudgetProgress({
               {formatCurrency(weeklyBudget)}
             </span>
           </span>
+          {projectedSubSpend > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/70 dark:border-indigo-800/50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300">
+              +{formatCurrency(projectedSubSpend)} ({projectedPercent}%)
+            </span>
+          )}
         </span>
 
         <button
@@ -143,12 +181,25 @@ export default function BudgetProgress({
         </button>
       </div>
 
-      {/* Visual Progress Bar */}
-      <div className="w-full bg-zinc-100 dark:bg-zinc-950 rounded-full h-2.5 overflow-hidden border border-zinc-200/80 dark:border-zinc-800/80">
+      {/* Visual Progress Bar (Multi-segment with projected subscriptions in distinct indigo) */}
+      <div
+        className="w-full bg-zinc-100 dark:bg-zinc-950 rounded-full h-2.5 overflow-hidden border border-zinc-200/80 dark:border-zinc-800/80 flex"
+        role="progressbar"
+        aria-valuenow={rawPercent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div
-          className={`h-full rounded-full transition-all duration-700 ease-out ${barColor}`}
+          className={`h-full transition-all duration-700 ease-out ${barColor}`}
           style={{ width: `${barWidth}%` }}
         />
+        {projectedBarWidth > 0 && (
+          <div
+            className="h-full bg-indigo-500 dark:bg-indigo-400 transition-all duration-700 ease-out border-l border-white/20 dark:border-black/30"
+            style={{ width: `${projectedBarWidth}%` }}
+            title={`${t.budget.projectedSubsLegend}: ${formatCurrency(projectedSubSpend)}`}
+          />
+        )}
       </div>
 
       {/* Remaining Allowance / Reframed Pace Line */}
@@ -164,19 +215,111 @@ export default function BudgetProgress({
           </>
         ) : (
           <>
-            <span className="text-zinc-500 dark:text-zinc-400">
-              <span className={`font-semibold ${textColor}`}>
-                {formatCurrency(remaining)}
-              </span>{" "}
-              {t.budget.left}
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+              <span className="text-zinc-500 dark:text-zinc-400">
+                <span className={`font-semibold ${textColor}`}>
+                  {formatCurrency(remaining)}
+                </span>{" "}
+                {t.budget.left}
+              </span>
+              {projectedSubSpend > 0 && (
+                <span className="text-[10px]">
+                  {willBeOverWithSubs ? (
+                    <span className="font-semibold text-rose-600 dark:text-rose-400">
+                      ({t.budget.projectedOverWarning.replace("{amount}", formatCurrency(Math.abs(projectedRemaining)))})
+                    </span>
+                  ) : (
+                    <span className="text-indigo-600 dark:text-indigo-400 font-medium">
+                      ({t.budget.projectedRemaining.replace("{amount}", formatCurrency(projectedRemaining))})
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
 
-            <span className="text-zinc-500">
+            <span className="text-zinc-500 shrink-0">
               ~{formatCurrency(dailyAllowance)}/{locale === "id" ? "hari" : "day"} ({locale === "id" ? `sisa ${daysRemaining} hari` : `${daysRemaining}d left`})
             </span>
           </>
         )}
       </div>
+
+      {/* Projected Due Subscriptions List & 1-Tap Pay Action */}
+      {projectedSubSpend > 0 && dueSubscriptions && dueSubscriptions.length > 0 && (
+        <div className="mt-1 flex flex-col gap-1.5 rounded-xl border border-indigo-200/70 bg-indigo-50/50 p-2.5 text-xs text-indigo-950 dark:border-indigo-900/40 dark:bg-indigo-950/20 dark:text-indigo-200 animate-fade-in">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setIsDueSubsOpen(!isDueSubsOpen)}
+              className="flex items-center gap-1.5 text-left min-w-0 cursor-pointer"
+            >
+              <span className="h-2 w-2 rounded-full bg-indigo-500 shrink-0 ring-2 ring-indigo-300 dark:ring-indigo-700" />
+              <span className="font-semibold text-[11px] text-indigo-900 dark:text-indigo-200 truncate">
+                {period === "month" ? t.budget.dueThisMonthTitle : t.budget.dueThisWeekTitle} ({dueSubscriptions.length})
+              </span>
+            </button>
+            <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 shrink-0">
+              +{formatCurrency(projectedSubSpend)}
+            </span>
+          </div>
+
+          {isDueSubsOpen && (
+            <div className="flex flex-col gap-1 pt-1.5 border-t border-indigo-100 dark:border-indigo-900/30">
+              {dueSubscriptions.map((sub) => {
+                const isPayingThis = payingSubId === sub.id;
+                return (
+                  <div
+                    key={sub.id}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-white/80 dark:bg-zinc-900/70 p-2 border border-indigo-100 dark:border-indigo-900/30 text-[11px]"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                          {sub.name}
+                        </span>
+                        {sub.is_split && (
+                          <span className="rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 px-1 py-0.2 text-[9px] font-semibold">
+                            Patungan
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        <span>{sub.next_renewal_date}</span>
+                        <span>•</span>
+                        <span>{sub.payment_platform}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100 text-[11px]">
+                        {formatCurrency(sub.userShare)}
+                      </span>
+                      {onPaySubscription && (
+                        <button
+                          type="button"
+                          disabled={isPayingThis}
+                          onClick={async () => {
+                            try {
+                              setPayingSubId(sub.id);
+                              await onPaySubscription(sub.id, sub.name);
+                            } finally {
+                              setPayingSubId(null);
+                            }
+                          }}
+                          className="rounded-lg bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-2.5 py-1 text-[10px] font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-2xs flex items-center justify-center min-h-[28px]"
+                          title={t.budget.markAsPaidAction}
+                        >
+                          {isPayingThis ? t.budget.payingAction : t.budget.markAsPaidAction}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Exemption summary pill if one-offs exist */}
       {exemptTotal && exemptTotal > 0 ? (

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getTodayString } from "@/utils/date";
-import { getUserSettings, getWallets, Wallet } from "@/utils/wallets/server";
+import { getUserSettings, getWallets, Wallet, FEATURE_MULTI_SAKU_ENABLED } from "@/utils/wallets/server";
 
 export async function getActiveWallets(): Promise<Wallet[]> {
   const cookieStore = await cookies();
@@ -21,6 +21,10 @@ export async function getActiveWallets(): Promise<Wallet[]> {
 }
 
 export async function setMultiSakuEnabled(enabled: boolean) {
+  if (enabled && !FEATURE_MULTI_SAKU_ENABLED) {
+    throw new Error("Multi-Saku feature is currently paused.");
+  }
+
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
 

@@ -6,6 +6,7 @@ import { getNowInTimezone } from "@/utils/date";
 import {
   getWalletBalances,
   getMultiSakuEnabledServer,
+  FEATURE_MULTI_SAKU_ENABLED,
 } from "@/utils/wallets/server";
 import SakuHubClient from "./SakuHubClient";
 import Link from "next/link";
@@ -13,6 +14,10 @@ import { Layers, Sparkles } from "lucide-react";
 import { setMultiSakuEnabled } from "./actions";
 
 export default async function SakuPage() {
+  if (!FEATURE_MULTI_SAKU_ENABLED) {
+    redirect("/savings");
+  }
+
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
 

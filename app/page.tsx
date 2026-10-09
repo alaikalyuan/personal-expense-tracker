@@ -22,6 +22,7 @@ import {
   getMultiSakuEnabledServer,
   getSelectedSakuServer,
 } from "@/utils/wallets/server";
+import { processSubscriptionRenewals } from "@/app/subscriptions/actions";
 
 export default async function DashboardPage(props: {
   searchParams?: Promise<{
@@ -54,6 +55,15 @@ export default async function DashboardPage(props: {
   }
 
   const isGuest = Boolean(user.is_anonymous);
+
+  // Proactive sync: check and process any overdue / due renewals right as user loads the dashboard
+  if (!isGuest) {
+    try {
+      await processSubscriptionRenewals(user.id);
+    } catch (e) {
+      console.warn("Proactive subscription renewal sync failed:", e);
+    }
+  }
 
   const multiSakuEnabled = isGuest
     ? false
@@ -129,10 +139,9 @@ export default async function DashboardPage(props: {
     !isGuest
       ? supabase
           .from("subscriptions")
-          .select("id, name, price, billing_cycle, next_renewal_date, is_split, payment_platform")
+          .select("id, name, price, billing_cycle, next_renewal_date, is_split, payment_platform, category, pay_from_wallet_id, split_config")
           .eq("user_id", user.id)
           .eq("status", "active")
-          .lte("next_renewal_date", format(addDays(now, 4), "yyyy-MM-dd"))
           .order("next_renewal_date", { ascending: true })
       : Promise.resolve({ data: [] }),
   ]);

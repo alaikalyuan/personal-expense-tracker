@@ -115,6 +115,16 @@ export interface Dictionary {
     exemptSummary: string;
     exemptSuggestTitle: string;
     exemptSuggestAction: string;
+    projectedSubsBadge: string;
+    projectedRemaining: string;
+    projectedOverWarning: string;
+    dueThisWeekTitle: string;
+    dueThisMonthTitle: string;
+    markAsPaidAction: string;
+    payingAction: string;
+    paidSuccessToast: string;
+    actualSpentLegend: string;
+    projectedSubsLegend: string;
   };
   burnRate: {
     cardTitle: string;
@@ -572,6 +582,9 @@ export interface Dictionary {
     createSuccess: string;
     upcomingDueBanner: string;
     viewDetails: string;
+    payNowBtn: string;
+    markPaidConfirm: string;
+    paySuccess: string;
   };
   splitBill: {
     backToHome: string;
@@ -921,6 +934,16 @@ export const dictionaries: Record<Locale, Dictionary> = {
       exemptSummary: "{amount} ({count} sekali pakai) dikecualikan",
       exemptSuggestTitle: "{name} ({amount}) membuatmu overbudget. Mau tandai sebagai One-Off?",
       exemptSuggestAction: "Kecualikan",
+      projectedSubsBadge: "+{percent}% langganan ({amount})",
+      projectedRemaining: "Sisa setelah langganan: {amount}",
+      projectedOverWarning: "Melebihi target sebesar {amount} setelah langganan",
+      dueThisWeekTitle: "Langganan Jatuh Tempo Minggu Ini",
+      dueThisMonthTitle: "Langganan Jatuh Tempo Bulan Ini",
+      markAsPaidAction: "Tandai Dibayar",
+      payingAction: "Mencatat...",
+      paidSuccessToast: "Langganan {name} berhasil dicatat ke pengeluaran",
+      actualSpentLegend: "Terpakai",
+      projectedSubsLegend: "Proyeksi Langganan",
     },
     burnRate: {
       cardTitle: "Proyeksi Pengeluaran Bulanan",
@@ -1390,6 +1413,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       createSuccess: "Langganan baru berhasil ditambahkan!",
       upcomingDueBanner: "Langganan Segera Jatuh Tempo",
       viewDetails: "Lihat",
+      payNowBtn: "Bayar",
+      markPaidConfirm: "Catat pembayaran untuk {name} ({amount}) ke pengeluaran sekarang?",
+      paySuccess: "Pembayaran berhasil dicatat ke pengeluaran.",
     },
     splitBill: {
       backToHome: "Kembali ke Beranda",
@@ -1737,6 +1763,16 @@ export const dictionaries: Record<Locale, Dictionary> = {
       exemptSummary: "{amount} ({count} one-off) excluded from routine budget",
       exemptSuggestTitle: "{name} ({amount}) caused you to go overbudget. Mark as One-Off?",
       exemptSuggestAction: "Exempt",
+      projectedSubsBadge: "+{percent}% subs ({amount})",
+      projectedRemaining: "Remaining after subscriptions: {amount}",
+      projectedOverWarning: "Over budget by {amount} after subscriptions",
+      dueThisWeekTitle: "Subscriptions Due This Week",
+      dueThisMonthTitle: "Subscriptions Due This Month",
+      markAsPaidAction: "Mark as Paid",
+      payingAction: "Recording...",
+      paidSuccessToast: "{name} subscription recorded to expenses",
+      actualSpentLegend: "Current Spend",
+      projectedSubsLegend: "Projected Subscriptions",
     },
     burnRate: {
       cardTitle: "Projected Monthly Burn",
@@ -2206,6 +2242,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       createSuccess: "New subscription added successfully!",
       upcomingDueBanner: "Subscriptions Renewing Soon",
       viewDetails: "View",
+      payNowBtn: "Pay",
+      markPaidConfirm: "Record payment for {name} ({amount}) to expenses now?",
+      paySuccess: "Payment recorded to expenses.",
     },
     splitBill: {
       backToHome: "Back to Home",

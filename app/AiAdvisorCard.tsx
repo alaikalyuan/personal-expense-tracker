@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, ArrowRight, MessageSquareCode } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 
 interface AiAdvisorCardProps {
