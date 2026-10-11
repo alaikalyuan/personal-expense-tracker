@@ -31,6 +31,7 @@ import {
 } from "@/utils/money";
 import { FEATURE_MULTI_SAKU_ENABLED } from "@/utils/wallets/config";
 import NotificationSettingsModal from "./NotificationSettingsModal";
+import { useAiAssistant } from "@/app/ai/AiAssistantProvider";
 
 interface UserMenuProps {
   isGuest?: boolean;
@@ -50,6 +51,7 @@ export default function UserMenu({
   const pathname = usePathname();
   const { locale, setLocale, currency, setCurrency, t } = useTranslation();
   const { theme, setTheme } = useTheme();
+  const { isAiEnabled, setIsAiEnabled } = useAiAssistant();
   const [isPending, startTransition] = useTransition();
   const [localOverride, setLocalOverride] = useState<boolean | null>(null);
 
@@ -388,6 +390,30 @@ export default function UserMenu({
                 </button>
               </div>
             )}
+
+            {/* AI Mode Toggle */}
+            <div className="flex items-center justify-between px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+              <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+                <Sparkles className="w-3.5 h-3.5 text-teal-500 dark:text-teal-400" />
+                <span className="text-[11px]">{t.aiAdvisor.aiModeSwitch}</span>
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isAiEnabled}
+                onClick={() => setIsAiEnabled(!isAiEnabled)}
+                aria-label={t.aiAdvisor.aiModeSwitch}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                  isAiEnabled ? "bg-teal-600" : "bg-zinc-200 dark:bg-zinc-800"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                    isAiEnabled ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
 
             <div className="my-1 border-t border-zinc-200/80 dark:border-zinc-800/80" />
 

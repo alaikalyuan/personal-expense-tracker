@@ -9,8 +9,10 @@ interface AiHeaderButtonProps {
 }
 
 export default function AiHeaderButton({ className = "" }: AiHeaderButtonProps) {
-  const { openAi } = useAiAssistant();
+  const { openAi, isAiEnabled } = useAiAssistant();
   const { t } = useTranslation();
+
+  if (!isAiEnabled) return null;
 
   return (
     <button

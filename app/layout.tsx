@@ -49,6 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const cookieStore = await cookies();
   const multiSakuEnabled =
     FEATURE_MULTI_SAKU_ENABLED && cookieStore.get("MULTI_SAKU_ENABLED")?.value === "true";
+  const aiModeEnabled = cookieStore.get("AI_MODE_ENABLED")?.value !== "false";
 
   const [locale, theme, currency] = await Promise.all([
     getLocaleServer(),
@@ -73,7 +74,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased min-h-screen relative`}>
         <ThemeProvider initialTheme={theme}>
           <LanguageProvider initialLocale={locale} initialCurrency={currency}>
-            <AiAssistantProvider>
+            <AiAssistantProvider initialAiEnabled={aiModeEnabled}>
               <ServiceWorkerRegister />
               {children}
               <BottomNav initialMultiSaku={multiSakuEnabled} />

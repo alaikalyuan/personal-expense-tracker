@@ -37,6 +37,7 @@ export default function AiAssistantSheet() {
     apiKey,
     setApiKey,
     updateProposal,
+    isAiEnabled,
   } = useAiAssistant();
 
   const [inputValue, setInputValue] = useState("");
@@ -69,7 +70,7 @@ export default function AiAssistantSheet() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, closeAi]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isAiEnabled) return null;
 
   const handleSaveKey = () => {
     const trimmed = keyInput.trim();

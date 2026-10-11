@@ -20,7 +20,9 @@ export default function AiAdvisorCard({
   isOverBudget = false,
 }: AiAdvisorCardProps) {
   const { t, locale } = useTranslation();
-  const { openAi } = useAiAssistant();
+  const { openAi, isAiEnabled } = useAiAssistant();
+
+  if (!isAiEnabled) return null;
 
   const handleOpen = (prompt?: string) => {
     if (onOpenChat && !prompt) {

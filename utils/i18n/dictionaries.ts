@@ -819,6 +819,7 @@ export interface Dictionary {
     apiKeyRequiredError: string;
     networkError: string;
     welcomeMessage: string;
+    aiModeSwitch: string;
   };
 }
 
@@ -965,8 +966,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     streak: {
       title: "Logging Streak",
-      dayStreak: "Hari Streak",
-      daysStreak: "Hari Streak",
+      dayStreak: "Hari",
+      daysStreak: "Hari",
       loggedToday: "Hari ini sudah dicatat!",
       logTodayNudge: "Catat pengeluaran hari ini untuk jaga streak 🔥",
       weekConsistency: "Konsistensi Minggu Ini",
@@ -1650,6 +1651,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       apiKeyRequiredError: "DeepSeek API key belum dikonfigurasi. Atur di .env.local atau masukkan kunci pribadi di pengaturan AI.",
       networkError: "Gagal terhubung ke layanan AI. Silakan coba sesaat lagi.",
       welcomeMessage: "Halo! Saya asisten keuangan pribadimu. Saya dapat menganalisis kebiasaan belanja, laju anggaran, dan langgananmu untuk memberikan tips finansial yang relevan. Ada yang ingin kamu ketahui?",
+      aiModeSwitch: "Fitur Asisten AI",
     },
   },
   en: {
@@ -1794,8 +1796,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     streak: {
       title: "Logging Streak",
-      dayStreak: "Day Streak",
-      daysStreak: "Days Streak",
+      dayStreak: "Day",
+      daysStreak: "Days",
       loggedToday: "Logged today!",
       logTodayNudge: "Log an expense today to keep your streak 🔥",
       weekConsistency: "This Week's Consistency",
@@ -2479,6 +2481,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       apiKeyRequiredError: "DeepSeek API key is not configured. Set DEEPSEEK_API_KEY in .env.local or add your personal key in AI settings.",
       networkError: "Failed to connect to the AI service. Please try again.",
       welcomeMessage: "Hello! I am your personal financial assistant. I can analyze your spending patterns, budget pace, and recurring subscriptions to provide actionable tips. What would you like to explore?",
+      aiModeSwitch: "AI Assistant",
     },
   },
 };

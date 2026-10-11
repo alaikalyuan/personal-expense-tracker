@@ -26,16 +26,43 @@ interface AiAssistantContextType {
   apiKey: string | null;
   setApiKey: (key: string | null) => void;
   updateProposal: (messageId: string, updatedProposal: AiProposal) => void;
+  isAiEnabled: boolean;
+  setIsAiEnabled: (enabled: boolean) => void;
 }
 
 const AiAssistantContext = createContext<AiAssistantContextType | null>(null);
 
 const STORAGE_KEY_API = "sakutrack_deepseek_key";
 const STORAGE_KEY_THREAD = "sakutrack_ai_thread";
+const STORAGE_KEY_AI_ENABLED = "sakutrack_ai_mode_enabled";
 
-export function AiAssistantProvider({ children }: { children: ReactNode }) {
+export function AiAssistantProvider({
+  children,
+  initialAiEnabled = true,
+}: {
+  children: ReactNode;
+  initialAiEnabled?: boolean;
+}) {
   const { t, locale } = useTranslation();
   const pathname = usePathname();
+
+  const [isAiEnabled, setIsAiEnabledState] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(STORAGE_KEY_AI_ENABLED);
+      if (stored !== null) return stored === "true";
+      const match = document.cookie.match(/(?:^|;\s*)AI_MODE_ENABLED=([^;]*)/);
+      if (match && match[1]) return match[1] === "true";
+    }
+    return initialAiEnabled;
+  });
+
+  const setIsAiEnabled = useCallback((enabled: boolean) => {
+    setIsAiEnabledState(enabled);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY_AI_ENABLED, String(enabled));
+      document.cookie = `AI_MODE_ENABLED=${enabled}; path=/; max-age=31536000; SameSite=Lax`;
+    }
+  }, []);
 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<AiMessage[]>(() => {
@@ -242,6 +269,7 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
 
   const openAi = useCallback(
     (initialPrompt?: string) => {
+      if (!isAiEnabled) return;
       setIsOpen(true);
       if (initialPrompt && initialPrompt.trim()) {
         setTimeout(() => {
@@ -249,7 +277,7 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
         }, 150);
       }
     },
-    [sendMessage]
+    [isAiEnabled, sendMessage]
   );
 
   const closeAi = useCallback(() => {
@@ -271,10 +299,12 @@ export function AiAssistantProvider({ children }: { children: ReactNode }) {
         apiKey,
         setApiKey,
         updateProposal,
+        isAiEnabled,
+        setIsAiEnabled,
       }}
     >
       {children}
-      <AiAssistantSheet />
+      {isAiEnabled && <AiAssistantSheet />}
     </AiAssistantContext.Provider>
   );
 }
