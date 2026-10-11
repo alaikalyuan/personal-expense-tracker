@@ -33,6 +33,7 @@ import { useTranslation } from "@/utils/i18n/context";
 import { useAiAssistant } from "@/app/ai/AiAssistantProvider";
 import { useImageExtract } from "@/utils/ai/useImageExtract";
 import { ExtractedDocument } from "@/utils/ai/vision";
+import { ImageUploadModal } from "@/app/ai/ImageUploadModal";
 
 interface FormParticipant {
   id: string;
@@ -156,6 +157,7 @@ export default function SplitBillCreator({
   const [scannedReceiptTotal, setScannedReceiptTotal] = useState<number | null>(null);
   const [pendingScannedDoc, setPendingScannedDoc] = useState<ExtractedDocument | null>(null);
   const [showReplaceDialog, setShowReplaceDialog] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const applyExtractedBill = (doc: ExtractedDocument, appendMode: boolean) => {
     if (!title.trim() && doc.merchant) {
@@ -227,30 +229,18 @@ export default function SplitBillCreator({
     setShowReplaceDialog(false);
   };
 
-  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleApplyScannedDoc = (doc: ExtractedDocument) => {
     clearExtractError();
     setErrorMsg("");
 
-    try {
-      const doc = await extract(file, "split");
-      if (!doc) return;
+    const hasExistingItems =
+      items.length > 1 || (items.length === 1 && (items[0].name.trim().length > 0 || items[0].price > 0));
 
-      const hasExistingItems =
-        items.length > 1 || (items.length === 1 && (items[0].name.trim().length > 0 || items[0].price > 0));
-
-      if (hasExistingItems) {
-        setPendingScannedDoc(doc);
-        setShowReplaceDialog(true);
-      } else {
-        applyExtractedBill(doc, false);
-      }
-    } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Gagal membaca struk.");
-    } finally {
-      e.target.value = "";
+    if (hasExistingItems) {
+      setPendingScannedDoc(doc);
+      setShowReplaceDialog(true);
+    } else {
+      applyExtractedBill(doc, false);
     }
   };
 
@@ -835,29 +825,15 @@ export default function SplitBillCreator({
 
           <div className="flex items-center gap-2">
             {isAiEnabled && (
-              <>
-                <input
-                  ref={scanInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleScanReceipt}
-                />
-                <button
-                  type="button"
-                  disabled={isExtracting}
-                  onClick={() => scanInputRef.current?.click()}
-                  className="flex items-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 px-2.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                  title="Pindai foto struk belanja untuk mengisi otomatis item, pajak, dan diskon"
-                >
-                  {isExtracting ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-600 dark:text-teal-400" />
-                  ) : (
-                    <Camera className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                  )}
-                  <span>{isExtracting ? (extractStatus || "Memindai...") : "Scan Struk"}</span>
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => setIsImageModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 px-2.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95 transition-all cursor-pointer"
+                title="Pindai foto struk belanja untuk mengisi otomatis item, pajak, dan diskon"
+              >
+                <Camera className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                <span>Scan Struk</span>
+              </button>
             )}
 
             {splitMode === "itemized" && (
@@ -1432,6 +1408,14 @@ export default function SplitBillCreator({
           </div>
         </div>
       </div>
+
+      {/* Interactive Image Upload & Editor Modal */}
+      <ImageUploadModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        context="split"
+        onApply={handleApplyScannedDoc}
+      />
 
       {/* Friend View Preview Modal */}
       <FriendViewPreviewModal

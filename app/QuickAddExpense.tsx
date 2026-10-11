@@ -36,6 +36,7 @@ import { useImageExtract } from "@/utils/ai/useImageExtract";
 import { checkDuplicatesAction } from "@/app/ai/duplicateActions";
 import { DuplicateMatch } from "@/utils/ai/duplicates";
 import { ExtractedDocument } from "@/utils/ai/vision";
+import { ImageUploadModal } from "@/app/ai/ImageUploadModal";
 import {
   QuickChip,
   getStoredQuickChips,
@@ -155,6 +156,7 @@ function QuickAddModalContent({
   const [scannedDoc, setScannedDoc] = useState<ExtractedDocument | null>(null);
   const [scannedRows, setScannedRows] = useState<ScannedRow[]>([]);
   const [receiptBreakdownMode, setReceiptBreakdownMode] = useState<"summary" | "itemized">("summary");
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   // Mode: "standard" vs "quick_type" (lazy initialization from localStorage)
   const [inputMode, setInputMode] = useState<"standard" | "quick_type">(() => getStoredInputMode());
@@ -357,91 +359,94 @@ function QuickAddModalContent({
     return () => clearTimeout(timer);
   }, [inputMode]);
 
-  const handleScanPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleApplyScannedDoc = async (doc: ExtractedDocument) => {
     clearExtractError();
     setError(null);
 
+    setScannedDoc(doc);
+    const docDate = doc.date || today;
+
+    // Build initial candidate rows
+    let initialRows: ScannedRow[] = [];
+
+    if (doc.kind === "receipt" && doc.items.length > 0) {
+      // Default summary: merchant name & grand total
+      const receiptTotal = doc.total || doc.items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
+      initialRows = [
+        {
+          id: `scan-${Date.now()}`,
+          name: doc.merchant || "Belanja Struk",
+          amount: receiptTotal,
+          category: doc.suggestedCategory,
+          spentAt: docDate,
+          selected: true,
+        },
+      ];
+      setReceiptBreakdownMode("summary");
+    } else if (doc.transactions.length > 0) {
+      // Bank statement / mutation screenshot
+      initialRows = doc.transactions
+        .filter((t) => t.direction === "out")
+        .map((t, idx) => ({
+          id: `scan-tx-${Date.now()}-${idx}`,
+          name: t.name,
+          amount: t.amount,
+          category: t.category || doc.suggestedCategory,
+          spentAt: t.date || docDate,
+          selected: true,
+        }));
+    } else {
+      // Single fallback row
+      initialRows = [
+        {
+          id: `scan-${Date.now()}`,
+          name: doc.merchant || "Pengeluaran",
+          amount: doc.total || 0,
+          category: doc.suggestedCategory,
+          spentAt: docDate,
+          selected: true,
+        },
+      ];
+    }
+
+    // Check duplicates try-catch
     try {
-      const doc = await extract(file, "receipt");
-      if (!doc) return;
+      const dupMatches = await checkDuplicatesAction(
+        initialRows.map((r) => ({
+          name: r.name,
+          amount: r.amount,
+          spentAt: r.spentAt,
+          category: r.category,
+        }))
+      );
 
-      setScannedDoc(doc);
-      const docDate = doc.date || today;
+      initialRows = initialRows.map((row, idx) => {
+        const dup = dupMatches[idx];
+        return {
+          ...row,
+          duplicate: dup,
+          selected: dup ? false : true, // Pre-uncheck duplicate rows (soft warning)
+        };
+      });
+    } catch (dupErr) {
+      console.warn("Try-catch duplicate detection failed:", dupErr);
+    }
 
-      // Build initial candidate rows
-      let initialRows: ScannedRow[] = [];
+    setScannedRows(initialRows);
 
-      if (doc.kind === "receipt" && doc.items.length > 0) {
-        // Default summary: merchant name & grand total
-        const receiptTotal = doc.total || doc.items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
-        initialRows = [
-          {
-            id: `scan-${Date.now()}`,
-            name: doc.merchant || "Belanja Struk",
-            amount: receiptTotal,
-            category: doc.suggestedCategory,
-            spentAt: docDate,
-            selected: true,
-          },
-        ];
-        setReceiptBreakdownMode("summary");
-      } else if (doc.transactions.length > 0) {
-        // Bank statement / mutation screenshot
-        initialRows = doc.transactions
-          .filter((t) => t.direction === "out")
-          .map((t, idx) => ({
-            id: `scan-tx-${Date.now()}-${idx}`,
-            name: t.name,
-            amount: t.amount,
-            category: t.category || doc.suggestedCategory,
-            spentAt: t.date || docDate,
-            selected: true,
-          }));
+    if (initialRows.length === 1) {
+      setName(initialRows[0].name);
+      setAmount(initialRows[0].amount);
+      setCategory(initialRows[0].category);
+      if (initialRows[0].spentAt === today) {
+        setDateMode("today");
+      } else if (initialRows[0].spentAt === yesterdayStr) {
+        setDateMode("yesterday");
       } else {
-        // Single fallback row
-        initialRows = [
-          {
-            id: `scan-${Date.now()}`,
-            name: doc.merchant || "Pengeluaran",
-            amount: doc.total || 0,
-            category: doc.suggestedCategory,
-            spentAt: docDate,
-            selected: true,
-          },
-        ];
+        setDateMode("custom");
+        setCustomDate(initialRows[0].spentAt);
       }
-
-      // Check duplicates try-catch
-      try {
-        const dupMatches = await checkDuplicatesAction(
-          initialRows.map((r) => ({
-            name: r.name,
-            amount: r.amount,
-            spentAt: r.spentAt,
-            category: r.category,
-          }))
-        );
-
-        initialRows = initialRows.map((row, idx) => {
-          const dup = dupMatches[idx];
-          return {
-            ...row,
-            duplicate: dup,
-            selected: dup ? false : true, // Pre-uncheck duplicate rows (soft warning)
-          };
-        });
-      } catch (dupErr) {
-        console.warn("Try-catch duplicate detection failed:", dupErr);
-      }
-
-      setScannedRows(initialRows);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal memproses gambar struk.");
-    } finally {
-      e.target.value = "";
+      setInputMode("standard");
     }
   };
 
@@ -818,29 +823,16 @@ function QuickAddModalContent({
 
             {/* AI Photo Scan Button (hidden if AI mode is disabled) */}
             {isAiEnabled && (
-              <>
-                <input
-                  ref={scanInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleScanPhoto}
-                />
-                <button
-                  type="button"
-                  disabled={isExtracting || isSubmitting}
-                  onClick={() => scanInputRef.current?.click()}
-                  className="flex items-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 px-2.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                  title="Pindai struk belanja atau tangkapan layar transfer"
-                >
-                  {isExtracting ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-600 dark:text-teal-400" />
-                  ) : (
-                    <Camera className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                  )}
-                  <span>{isExtracting ? (extractStatus || "Memindai...") : "Upload Foto"}</span>
-                </button>
-              </>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setIsImageModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 px-2.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                title="Pindai struk belanja atau tangkapan layar transfer"
+              >
+                <Camera className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                <span>Upload Foto</span>
+              </button>
             )}
           </div>
 
@@ -1907,6 +1899,14 @@ function QuickAddModalContent({
             </form>
           </div>
         )}
+
+        {/* Interactive Image Upload & Editor Modal */}
+        <ImageUploadModal
+          isOpen={isImageModalOpen}
+          onClose={() => setIsImageModalOpen(false)}
+          context="expense"
+          onApply={handleApplyScannedDoc}
+        />
       </div>
     </div>
   );

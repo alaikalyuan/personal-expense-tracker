@@ -820,6 +820,20 @@ export interface Dictionary {
     networkError: string;
     welcomeMessage: string;
     aiModeSwitch: string;
+    dailyLimitRemaining: string;
+    dailyLimitCount: string;
+    dailyLimitUnlimited: string;
+    dailyLimitReached: string;
+    dailyLimitTooltip: string;
+    usageStatsTitle: string;
+    usageRateLabel: string;
+    resetTimeLabel: string;
+    resetTimeDesc: string;
+    usedLabel: string;
+    remainingLabel: string;
+    tierFreeLabel: string;
+    tierUnlimitedLabel: string;
+    getKeyLink: string;
   };
 }
 
@@ -1652,6 +1666,20 @@ export const dictionaries: Record<Locale, Dictionary> = {
       networkError: "Gagal terhubung ke layanan AI. Silakan coba sesaat lagi.",
       welcomeMessage: "Halo! Saya asisten keuangan pribadimu. Saya dapat menganalisis kebiasaan belanja, laju anggaran, dan langgananmu untuk memberikan tips finansial yang relevan. Ada yang ingin kamu ketahui?",
       aiModeSwitch: "Fitur Asisten AI",
+      dailyLimitRemaining: "Sisa {remaining}/{limit} pesan hari ini",
+      dailyLimitCount: "{count}/{limit} pesan hari ini",
+      dailyLimitUnlimited: "Kunci Pribadi • Kuota Tanpa Batas",
+      dailyLimitReached: "Batas 20 kuota tercapai hari ini",
+      dailyLimitTooltip: "Setiap pengguna mendapatkan kuota 20 unit AI gratis per hari (pesan teks = 1 kuota, unggah foto = 5 kuota). Masukkan kunci DeepSeek pribadi untuk menikmati akses tanpa batas.",
+      usageStatsTitle: "Statistik Penggunaan & Kuota",
+      usageRateLabel: "Tingkat Penggunaan",
+      resetTimeLabel: "Reset Harian",
+      resetTimeDesc: "Kuota direset otomatis setiap 00:00 WIB",
+      usedLabel: "Terpakai",
+      remainingLabel: "Sisa Kuota",
+      tierFreeLabel: "Kuota Server Gratis (20 kuota/hari)",
+      tierUnlimitedLabel: "Kunci Pribadi Aktif (Tanpa Batas)",
+      getKeyLink: "Dapatkan API key di platform.deepseek.com",
     },
   },
   en: {
@@ -2482,6 +2510,20 @@ export const dictionaries: Record<Locale, Dictionary> = {
       networkError: "Failed to connect to the AI service. Please try again.",
       welcomeMessage: "Hello! I am your personal financial assistant. I can analyze your spending patterns, budget pace, and recurring subscriptions to provide actionable tips. What would you like to explore?",
       aiModeSwitch: "AI Assistant",
+      dailyLimitRemaining: "{remaining}/{limit} messages left today",
+      dailyLimitCount: "{count}/{limit} messages today",
+      dailyLimitUnlimited: "Personal Key • Unlimited Quota",
+      dailyLimitReached: "Daily limit of 20 units reached",
+      dailyLimitTooltip: "Users receive 20 free AI quota units per day (text chat = 1 unit, photo upload = 5 units). Add a personal DeepSeek API key for unlimited usage.",
+      usageStatsTitle: "Usage Statistics & Quota",
+      usageRateLabel: "Usage Rate",
+      resetTimeLabel: "Daily Reset",
+      resetTimeDesc: "Quota resets automatically at 00:00 WIB",
+      usedLabel: "Used",
+      remainingLabel: "Remaining",
+      tierFreeLabel: "Free Server Tier (20 quota/day)",
+      tierUnlimitedLabel: "Personal Key Active (Unlimited)",
+      getKeyLink: "Get an API key at platform.deepseek.com",
     },
   },
 };

@@ -4,23 +4,23 @@
  * Keeps payload lightweight (~150-300 KB) for DeepSeek vision API.
  */
 export async function compressImageToDataUrl(
-  file: File | Blob,
+  file: File | Blob | string,
   maxDimension: number = 1280,
   quality: number = 0.8
 ): Promise<{ dataUrl: string; sizeBytes: number; width: number; height: number }> {
-  if (!file.type.startsWith("image/")) {
-    throw new Error("File yang dipilih bukan gambar yang valid.");
-  }
+  if (typeof file !== "string") {
+    if (!file.type.startsWith("image/")) {
+      throw new Error("File yang dipilih bukan gambar yang valid.");
+    }
 
-  // Pre-filter: abort if raw file > 25MB to prevent memory exhaustion
-  if (file.size > 25 * 1024 * 1024) {
-    throw new Error("Ukuran file terlalu besar (maksimal 25MB).");
+    // Pre-filter: abort if raw file > 25MB to prevent memory exhaustion
+    if (file.size > 25 * 1024 * 1024) {
+      throw new Error("Ukuran file terlalu besar (maksimal 25MB).");
+    }
   }
 
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Gagal membaca file gambar."));
-    reader.onload = () => {
+    const processImageSource = (src: string) => {
       const img = new Image();
       img.onerror = () => reject(new Error("Gagal memproses format gambar."));
       img.onload = () => {
@@ -63,10 +63,18 @@ export async function compressImageToDataUrl(
           height,
         });
       };
-
-      img.src = reader.result as string;
+      img.src = src;
     };
 
-    reader.readAsDataURL(file);
+    if (typeof file === "string") {
+      processImageSource(file);
+    } else {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Gagal membaca file gambar."));
+      reader.onload = () => {
+        processImageSource(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   });
 }

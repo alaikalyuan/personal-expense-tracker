@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { buildFinancialSnapshot } from "@/utils/ai/snapshot";
 import { AI_TOOLS, executeReadTool, buildAiProposal, AiActionName } from "@/utils/ai/tools";
-import { checkAndIncrementAiUsage } from "@/utils/ai/rateLimit";
+import { checkAndIncrementAiUsage, getDailyAiUsage, DAILY_AI_LIMIT } from "@/utils/ai/rateLimit";
 
 interface ClientMessage {
   role: "user" | "assistant" | "system";
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       apiKeyOverride,
       language = "id",
       pageContext = {},
+      hasImageAttachment = false,
     } = body;
 
     const isUsingOverride = Boolean(
@@ -56,19 +57,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Rate Limit Check (bypassed if user provided personal API key)
+    let rateLimitResult: { allowed: boolean; remaining: number; limit: number; count: number } | null = null;
     if (!isUsingOverride) {
-      const rateLimitResult = await checkAndIncrementAiUsage(supabase, user);
-      if (!rateLimitResult.allowed) {
-        return NextResponse.json(
-          {
-            error: "DAILY_LIMIT_REACHED",
-            message:
-              language === "id"
-                ? "Batas penggunaan gratis 30 pesan per hari telah tercapai. Masukkan DeepSeek API Key pribadi Anda di menu pengaturan kunci AI untuk melanjutkan tanpa batas."
-                : "Daily free quota of 30 messages reached. Please add your personal DeepSeek API key in AI settings to continue without limits.",
-          },
-          { status: 429 }
-        );
+      if (hasImageAttachment) {
+        // Photo upload was already charged PHOTO_AI_COST (5) units in /api/ai/extract.
+        // Don't charge again or block the response to that photo.
+        rateLimitResult = getDailyAiUsage(user, DAILY_AI_LIMIT);
+      } else {
+        rateLimitResult = await checkAndIncrementAiUsage(supabase, user, 1, DAILY_AI_LIMIT, false);
+        if (!rateLimitResult.allowed) {
+          return NextResponse.json(
+            {
+              error: "DAILY_LIMIT_REACHED",
+              message:
+                language === "id"
+                  ? "Batas penggunaan gratis 20 pesan per hari telah tercapai. Masukkan DeepSeek API Key pribadi Anda di menu pengaturan kunci AI untuk melanjutkan tanpa batas."
+                  : "Daily free quota of 20 messages reached. Please add your personal DeepSeek API key in AI settings to continue without limits.",
+            },
+            { status: 429 }
+          );
+        }
       }
     }
 
@@ -127,6 +135,20 @@ RESPONSE GUIDELINES:
         const sendEvent = (event: Record<string, unknown>) => {
           controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
         };
+
+        if (isUsingOverride) {
+          sendEvent({ type: "usage", usage: { isPersonalKey: true } });
+        } else if (rateLimitResult) {
+          sendEvent({
+            type: "usage",
+            usage: {
+              count: rateLimitResult.count,
+              limit: rateLimitResult.limit,
+              remaining: rateLimitResult.remaining,
+              isPersonalKey: false,
+            },
+          });
+        }
 
         try {
           const currentMessages = [...apiMessages];

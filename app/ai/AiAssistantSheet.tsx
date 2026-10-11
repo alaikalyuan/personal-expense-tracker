@@ -14,6 +14,8 @@ import {
   ChevronUp,
   Loader2,
   Image as ImageIcon,
+  Clock,
+  ExternalLink,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -40,7 +42,28 @@ export default function AiAssistantSheet() {
     setApiKey,
     updateProposal,
     isAiEnabled,
+    usage,
   } = useAiAssistant();
+
+  const hasPersonalKey = Boolean(apiKey && apiKey.trim().length > 0) || Boolean(usage?.isPersonalKey);
+  const isDailyLimitReached = Boolean(!hasPersonalKey && usage && usage.remaining <= 0);
+
+  const displayCount = usage?.count ?? 0;
+  const displayLimit = usage?.limit ?? 20;
+  const displayRemaining = usage?.remaining ?? Math.max(0, displayLimit - displayCount);
+  const progressRatio = Math.min(1, Math.max(0, displayCount / displayLimit));
+  const usageRate = Math.round(progressRatio * 100);
+
+  const getResetCountdown = () => {
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const diffMs = Math.max(0, midnight.getTime() - now.getTime());
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return { hours, minutes };
+  };
+  const { hours: resetHours, minutes: resetMinutes } = getResetCountdown();
 
   const [inputValue, setInputValue] = useState("");
   const [showKeyConfig, setShowKeyConfig] = useState(false);
@@ -123,6 +146,10 @@ export default function AiAssistantSheet() {
   };
 
   const handleSend = async () => {
+    if (isDailyLimitReached) {
+      setShowKeyConfig(true);
+      return;
+    }
     const trimmed = inputValue.trim();
     if ((!trimmed && !attachedFile) || isLoading || isExtracting) return;
 
@@ -162,7 +189,7 @@ export default function AiAssistantSheet() {
 
       removeAttachment();
       setInputValue("");
-      sendMessage(finalMessage);
+      sendMessage(finalMessage, { hasImageAttachment: true });
     } else {
       sendMessage(trimmed);
       setInputValue("");
@@ -254,21 +281,72 @@ export default function AiAssistantSheet() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            {/* Key config toggle */}
-            <button
-              type="button"
-              onClick={() => setShowKeyConfig((prev) => !prev)}
-              aria-label={t.aiAdvisor.apiKeyModalTitle}
-              title={t.aiAdvisor.apiKeyModalTitle}
-              className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                showKeyConfig || apiKey
-                  ? "bg-teal-500/10 text-teal-600 dark:text-teal-400"
-                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              }`}
-            >
-              <KeyRound className="w-4 h-4" />
-            </button>
+          <div className="flex items-center gap-1.5">
+            {/* Key config / Limit indicator with circular progress */}
+            {hasPersonalKey ? (
+              <button
+                type="button"
+                onClick={() => setShowKeyConfig((prev) => !prev)}
+                aria-label={t.aiAdvisor.apiKeyModalTitle}
+                title={t.aiAdvisor.apiKeyModalTitle}
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                  showKeyConfig
+                    ? "bg-teal-500/15 text-teal-600 dark:text-teal-400 ring-1 ring-teal-500/30"
+                    : "text-teal-600 dark:text-teal-400 bg-teal-500/10 hover:bg-teal-500/20"
+                }`}
+              >
+                <KeyRound className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowKeyConfig((prev) => !prev)}
+                aria-label={t.aiAdvisor.apiKeyModalTitle}
+                title={t.aiAdvisor.dailyLimitTooltip}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer ${
+                  showKeyConfig
+                    ? "border-teal-500 bg-teal-500/10 text-teal-600 dark:text-teal-400"
+                    : isDailyLimitReached
+                    ? "border-rose-200 dark:border-rose-800/60 bg-rose-50/70 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
+                    : "border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/80 dark:hover:bg-zinc-750"
+                }`}
+              >
+                {/* Circular Progress Bar */}
+                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 18 18">
+                  <circle
+                    cx="9"
+                    cy="9"
+                    r="6.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    className="text-zinc-300 dark:text-zinc-700"
+                  />
+                  <circle
+                    cx="9"
+                    cy="9"
+                    r="6.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeDasharray={40.84}
+                    strokeDashoffset={40.84 - progressRatio * 40.84}
+                    transform="rotate(-90 9 9)"
+                    className={`transition-all duration-300 ${
+                      isDailyLimitReached
+                        ? "text-rose-500"
+                        : displayRemaining <= 5
+                        ? "text-amber-500"
+                        : "text-teal-500"
+                    }`}
+                  />
+                </svg>
+                <span className="text-[11px] font-semibold tabular-nums">
+                  {displayCount}/{displayLimit}
+                </span>
+              </button>
+            )}
 
             {/* Reset chat */}
             <button
@@ -293,55 +371,198 @@ export default function AiAssistantSheet() {
           </div>
         </div>
 
-        {/* Collapsible Key Config Drawer */}
+        {/* Collapsible Key Config & Elaborate Usage Stats Drawer */}
         {showKeyConfig && (
-          <div className="p-3.5 bg-zinc-100/90 dark:bg-zinc-950/80 border-b border-zinc-200 dark:border-zinc-800 text-xs animate-fade-in">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
-                <KeyRound className="w-3.5 h-3.5 text-teal-500" />
-                {t.aiAdvisor.apiKeyModalTitle}
+          <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-xs animate-fade-in max-h-[70vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-bold text-sm text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-teal-500" />
+                {t.aiAdvisor.usageStatsTitle}
               </span>
               <button
                 type="button"
                 onClick={() => setShowKeyConfig(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
-                <ChevronUp className="w-3.5 h-3.5" />
+                <ChevronUp className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-2">
-              {t.aiAdvisor.apiKeyHint}
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={keyInput}
-                onChange={(e) => setKeyInput(e.target.value)}
-                placeholder={t.aiAdvisor.apiKeyPlaceholder}
-                className="flex-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-teal-500/50"
-              />
-              <button
-                type="button"
-                onClick={handleSaveKey}
-                className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-medium text-xs cursor-pointer active:scale-95 transition-all"
+
+            {/* Current Tier Status Banner */}
+            <div
+              className={`p-3 rounded-2xl border mb-3 flex items-start gap-2.5 ${
+                hasPersonalKey
+                  ? "bg-teal-500/10 border-teal-500/20 text-teal-800 dark:text-teal-200"
+                  : isDailyLimitReached
+                  ? "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-200"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200"
+              }`}
+            >
+              <div
+                className={`p-1.5 rounded-xl shrink-0 ${
+                  hasPersonalKey
+                    ? "bg-teal-500/20 text-teal-600 dark:text-teal-400"
+                    : isDailyLimitReached
+                    ? "bg-rose-500/20 text-rose-600 dark:text-rose-400"
+                    : "bg-teal-500/10 text-teal-600 dark:text-teal-400"
+                }`}
               >
-                {t.aiAdvisor.apiKeySave}
-              </button>
-              {apiKey && (
+                {hasPersonalKey ? <KeyRound className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-xs">
+                    {hasPersonalKey ? t.aiAdvisor.tierUnlimitedLabel : t.aiAdvisor.tierFreeLabel}
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                    {hasPersonalKey ? "BYOK" : "FREE TIER"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                  {hasPersonalKey
+                    ? locale === "id"
+                      ? "Anda menggunakan DeepSeek API Key pribadi. Kuota obrolan dan pencatatan tidak dibatasi per hari."
+                      : "You are using a personal DeepSeek API key. Chatting and logging actions are completely unlimited."
+                    : t.aiAdvisor.dailyLimitTooltip}
+                </p>
+              </div>
+            </div>
+
+            {/* Elaborate Usage Metrics Grid */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {/* Tile 1: Used messages */}
+              <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium block">
+                  {t.aiAdvisor.usedLabel}
+                </span>
+                <span className="text-base font-bold text-zinc-900 dark:text-white tabular-nums block mt-0.5">
+                  {displayCount}
+                  <span className="text-[10px] text-zinc-400 font-normal ml-0.5">/ {displayLimit}</span>
+                </span>
+                <span className="text-[10px] text-zinc-400 truncate block mt-0.5">
+                  {locale === "id" ? "kuota terpakai (foto: 5)" : "quota used (photo: 5)"}
+                </span>
+              </div>
+
+              {/* Tile 2: Remaining */}
+              <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium block">
+                  {t.aiAdvisor.remainingLabel}
+                </span>
+                <span
+                  className={`text-base font-bold tabular-nums block mt-0.5 ${
+                    hasPersonalKey
+                      ? "text-teal-600 dark:text-teal-400 text-sm mt-1"
+                      : isDailyLimitReached
+                      ? "text-rose-600 dark:text-rose-400"
+                      : displayRemaining <= 5
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-zinc-900 dark:text-white"
+                  }`}
+                >
+                  {hasPersonalKey ? "∞ Unlimited" : displayRemaining}
+                </span>
+                <span className="text-[10px] text-zinc-400 truncate block mt-0.5">
+                  {hasPersonalKey
+                    ? locale === "id"
+                      ? "tanpa batas"
+                      : "no limits"
+                    : locale === "id"
+                    ? "pesan tersisa"
+                    : "left today"}
+                </span>
+              </div>
+
+              {/* Tile 3: Usage Rate */}
+              <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium block">
+                  {t.aiAdvisor.usageRateLabel}
+                </span>
+                <span className="text-base font-bold text-zinc-900 dark:text-white tabular-nums block mt-0.5">
+                  {hasPersonalKey ? "BYOK" : `${usageRate}%`}
+                </span>
+                <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-1.5">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      hasPersonalKey
+                        ? "bg-teal-500 w-full"
+                        : isDailyLimitReached
+                        ? "bg-rose-500"
+                        : displayRemaining <= 5
+                        ? "bg-amber-500"
+                        : "bg-teal-500"
+                    }`}
+                    style={{ width: hasPersonalKey ? "100%" : `${Math.min(100, usageRate)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Reset Time Info Row */}
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60 mb-3.5">
+              <Clock className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+              <div className="flex-1 flex flex-wrap items-center justify-between gap-1 text-[11px]">
+                <span className="text-zinc-600 dark:text-zinc-400 font-medium">
+                  {t.aiAdvisor.resetTimeLabel}:
+                </span>
+                <span className="text-zinc-800 dark:text-zinc-200 font-semibold">
+                  {locale === "id"
+                    ? `Setiap 00:00 WIB (~${resetHours}j ${resetMinutes}m lagi)`
+                    : `Daily at 00:00 WIB (~${resetHours}h ${resetMinutes}m left)`}
+                </span>
+              </div>
+            </div>
+
+            {/* API Key Configuration Section */}
+            <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200">
+                  {t.aiAdvisor.apiKeyLabel}
+                </label>
+                <a
+                  href="https://platform.deepseek.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 font-medium"
+                >
+                  platform.deepseek.com
+                  <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              </div>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-2">
+                {t.aiAdvisor.apiKeyHint}
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                  placeholder={t.aiAdvisor.apiKeyPlaceholder}
+                  className="flex-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-teal-500/50"
+                />
                 <button
                   type="button"
-                  onClick={handleRemoveKey}
-                  className="px-2.5 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs cursor-pointer"
+                  onClick={handleSaveKey}
+                  className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-medium text-xs cursor-pointer active:scale-95 transition-all"
                 >
-                  {t.aiAdvisor.apiKeyRemove}
+                  {t.aiAdvisor.apiKeySave}
                 </button>
+                {apiKey && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveKey}
+                    className="px-2.5 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs cursor-pointer"
+                  >
+                    {t.aiAdvisor.apiKeyRemove}
+                  </button>
+                )}
+              </div>
+              {keyToast && (
+                <p className="mt-1.5 text-[11px] text-teal-600 dark:text-teal-400 flex items-center gap-1">
+                  <Check className="w-3 h-3" /> {keyToast}
+                </p>
               )}
             </div>
-            {keyToast && (
-              <p className="mt-1.5 text-[11px] text-teal-600 dark:text-teal-400 flex items-center gap-1">
-                <Check className="w-3 h-3" /> {keyToast}
-              </p>
-            )}
           </div>
         )}
 
@@ -511,7 +732,7 @@ export default function AiAssistantSheet() {
             <button
               key={idx}
               type="button"
-              disabled={isLoading || isExtracting}
+              disabled={isLoading || isExtracting || isDailyLimitReached}
               onClick={() => sendMessage(chip)}
               className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-teal-500/50 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -566,6 +787,32 @@ export default function AiAssistantSheet() {
             </div>
           )}
 
+          {/* Daily limit reached alert banner */}
+          {isDailyLimitReached && (
+            <div className="mb-2.5 flex items-start justify-between gap-2.5 rounded-xl border border-rose-200 bg-rose-50/90 dark:border-rose-900/50 dark:bg-rose-950/40 p-2.5 text-xs text-rose-700 dark:text-rose-300">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-rose-900 dark:text-rose-200">
+                    {t.aiAdvisor.dailyLimitReached}
+                  </p>
+                  <p className="text-[11px] text-rose-700/90 dark:text-rose-400 mt-0.5">
+                    {locale === "id"
+                      ? "Kuota 20 pesan/scan server hari ini telah habis. Masukkan API key pribadi untuk lanjut tanpa batas."
+                      : "Daily free quota of 20 units reached. Add a personal API key to chat unlimitedly."}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowKeyConfig(true)}
+                className="shrink-0 px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer"
+              >
+                {locale === "id" ? "Gunakan Kunci" : "Use Key"}
+              </button>
+            </div>
+          )}
+
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -585,7 +832,7 @@ export default function AiAssistantSheet() {
             {/* Attach image button */}
             <button
               type="button"
-              disabled={isLoading || isExtracting}
+              disabled={isLoading || isExtracting || isDailyLimitReached}
               onClick={() => fileInputRef.current?.click()}
               aria-label="Unggah foto struk atau bukti transfer"
               title={locale === "id" ? "Unggah foto struk / bukti transfer" : "Upload receipt or payment proof"}
@@ -605,18 +852,20 @@ export default function AiAssistantSheet() {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={
-                attachedFile
+                isDailyLimitReached
+                  ? t.aiAdvisor.dailyLimitReached
+                  : attachedFile
                   ? locale === "id"
                     ? "Tulis catatan tambahan atau langsung kirim..."
                     : "Add optional note or press send..."
                   : t.aiAdvisor.inputPlaceholder
               }
-              disabled={isLoading || isExtracting}
+              disabled={isLoading || isExtracting || isDailyLimitReached}
               className="flex-1 resize-none rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-3.5 py-2 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-teal-500/50 max-h-24 disabled:opacity-60"
             />
             <button
               type="submit"
-              disabled={(!inputValue.trim() && !attachedFile) || isLoading || isExtracting}
+              disabled={(!inputValue.trim() && !attachedFile) || isLoading || isExtracting || isDailyLimitReached}
               aria-label={t.aiAdvisor.send}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all cursor-pointer"
             >

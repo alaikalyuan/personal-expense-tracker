@@ -5,6 +5,7 @@ import { AiProposal } from "@/utils/ai/tools";
 import { useTranslation } from "@/utils/i18n/context";
 import { usePathname } from "next/navigation";
 import AiAssistantSheet from "./AiAssistantSheet";
+import { getDailyAiUsageAction } from "@/app/ai/actions";
 
 export interface AiMessage {
   id: string;
@@ -13,12 +14,19 @@ export interface AiMessage {
   proposals?: AiProposal[];
 }
 
+export interface AiDailyUsage {
+  count: number;
+  limit: number;
+  remaining: number;
+  isPersonalKey?: boolean;
+}
+
 interface AiAssistantContextType {
   isOpen: boolean;
   openAi: (initialPrompt?: string) => void;
   closeAi: () => void;
   messages: AiMessage[];
-  sendMessage: (textToSend: string) => Promise<void>;
+  sendMessage: (textToSend: string, options?: { hasImageAttachment?: boolean }) => Promise<void>;
   isLoading: boolean;
   statusLabel: string | null;
   errorMessage: string | null;
@@ -28,6 +36,8 @@ interface AiAssistantContextType {
   updateProposal: (messageId: string, updatedProposal: AiProposal) => void;
   isAiEnabled: boolean;
   setIsAiEnabled: (enabled: boolean) => void;
+  usage: AiDailyUsage | null;
+  refreshUsage: () => Promise<void>;
 }
 
 const AiAssistantContext = createContext<AiAssistantContextType | null>(null);
@@ -95,6 +105,29 @@ export function AiAssistantProvider({
     return null;
   });
 
+  const [usage, setUsage] = useState<AiDailyUsage | null>(null);
+
+  const refreshUsage = useCallback(async () => {
+    try {
+      const res = await getDailyAiUsageAction();
+      setUsage({
+        count: res.count,
+        limit: res.limit,
+        remaining: res.remaining,
+        isPersonalKey: Boolean(apiKey && apiKey.trim().length > 0),
+      });
+    } catch (err) {
+      console.warn("Failed to fetch daily AI usage:", err);
+    }
+  }, [apiKey]);
+
+  // Refresh usage when modal opens or API key changes
+  useEffect(() => {
+    if (isOpen) {
+      refreshUsage();
+    }
+  }, [isOpen, refreshUsage]);
+
   // Persist messages thread to localStorage
   useEffect(() => {
     if (typeof window !== "undefined" && messages.length > 0) {
@@ -114,6 +147,9 @@ export function AiAssistantProvider({
         localStorage.removeItem(STORAGE_KEY_API);
       }
     }
+    setUsage((prev) =>
+      prev ? { ...prev, isPersonalKey: Boolean(key && key.trim().length > 0) } : null
+    );
   }, []);
 
   const resetChat = useCallback(() => {
@@ -145,7 +181,7 @@ export function AiAssistantProvider({
   }, []);
 
   const sendMessage = useCallback(
-    async (textToSend: string) => {
+    async (textToSend: string, options?: { hasImageAttachment?: boolean }) => {
       const trimmed = textToSend.trim();
       if (!trimmed || isLoading) return;
 
@@ -185,6 +221,7 @@ export function AiAssistantProvider({
               path: pathname,
               selectedSakuId,
             },
+            hasImageAttachment: options?.hasImageAttachment,
           }),
         });
 
@@ -232,6 +269,13 @@ export function AiAssistantProvider({
                 );
               } else if (event.type === "status") {
                 setStatusLabel(event.label || null);
+              } else if (event.type === "usage" && event.usage) {
+                setUsage((prev) => ({
+                  count: typeof event.usage.count === "number" ? event.usage.count : (prev?.count ?? 0),
+                  limit: typeof event.usage.limit === "number" ? event.usage.limit : (prev?.limit ?? 30),
+                  remaining: typeof event.usage.remaining === "number" ? event.usage.remaining : (prev?.remaining ?? 30),
+                  isPersonalKey: Boolean(event.usage.isPersonalKey || (apiKey && apiKey.trim().length > 0)),
+                }));
               } else if (event.type === "proposal" && event.proposal) {
                 setMessages((prev) =>
                   prev.map((msg) => {
@@ -301,6 +345,8 @@ export function AiAssistantProvider({
         updateProposal,
         isAiEnabled,
         setIsAiEnabled,
+        usage,
+        refreshUsage,
       }}
     >
       {children}

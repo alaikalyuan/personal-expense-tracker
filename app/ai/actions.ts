@@ -16,6 +16,7 @@ import {
 } from "@/app/actions";
 import { setWalletBudget } from "@/app/saku/actions";
 import { AiActionName } from "@/utils/ai/tools";
+import { getDailyAiUsage, DAILY_AI_LIMIT } from "@/utils/ai/rateLimit";
 
 export interface ExecuteAiActionPayload {
   action: AiActionName;
@@ -192,11 +193,35 @@ export async function executeAiAction(
         return { success: true, message: `Berhasil menyapu Rp ${amount.toLocaleString()} ke tabungan.` };
       }
 
-      default:
+    default:
         return { success: false, error: `Aksi tidak dikenal: ${action}` };
     }
   } catch (err: any) {
     console.error("executeAiAction error:", err);
     return { success: false, error: err.message || "Gagal mengeksekusi aksi." };
   }
+}
+
+export async function getDailyAiUsageAction(): Promise<{
+  count: number;
+  limit: number;
+  remaining: number;
+}> {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { count: 0, limit: DAILY_AI_LIMIT, remaining: DAILY_AI_LIMIT };
+  }
+
+  const result = getDailyAiUsage(user);
+  return {
+    count: result.count,
+    limit: result.limit,
+    remaining: result.remaining,
+  };
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
-import { checkAndIncrementAiUsage } from "@/utils/ai/rateLimit";
+import { checkAndIncrementAiUsage, PHOTO_AI_COST, DAILY_AI_LIMIT } from "@/utils/ai/rateLimit";
 import { normalizeExtraction } from "@/utils/ai/vision";
 import { getTodayString } from "@/utils/date";
 
@@ -64,23 +64,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Rate Limit Check (shares 30 daily requests pool with advisor)
-    let remainingQuota: number | undefined;
+    // Rate Limit Check (photo upload costs PHOTO_AI_COST = 5 units, allows overflow if close to limit)
+    let rateLimitResult: { allowed: boolean; remaining: number; limit: number; count: number } | null = null;
     if (!isUsingOverride) {
-      const rateLimitResult = await checkAndIncrementAiUsage(supabase, user);
+      rateLimitResult = await checkAndIncrementAiUsage(
+        supabase,
+        user,
+        PHOTO_AI_COST,
+        DAILY_AI_LIMIT,
+        true // allow overflow if close to the limit!
+      );
       if (!rateLimitResult.allowed) {
         return NextResponse.json(
           {
             error: "DAILY_LIMIT_REACHED",
             message:
               language === "id"
-                ? "Batas penggunaan gratis 30 permintaan per hari telah tercapai. Masukkan DeepSeek API Key pribadi Anda di menu pengaturan kunci AI untuk melanjutkan tanpa batas."
-                : "Daily free quota of 30 requests reached. Please add your personal DeepSeek API key in AI settings to continue without limits.",
+                ? "Batas penggunaan gratis 20 kuota per hari telah tercapai. Masukkan DeepSeek API Key pribadi Anda di menu pengaturan kunci AI untuk melanjutkan tanpa batas."
+                : "Daily free quota of 20 units reached. Please add your personal DeepSeek API key in AI settings to continue without limits.",
           },
           { status: 429 }
         );
       }
-      remainingQuota = rateLimitResult.remaining;
     }
 
     const baseUrl = process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
@@ -195,7 +200,14 @@ IMPORTANT INDONESIAN CONVENTIONS & RULES:
     return NextResponse.json({
       success: true,
       data: normalized,
-      remainingQuota,
+      usage: rateLimitResult
+        ? {
+            count: rateLimitResult.count,
+            limit: rateLimitResult.limit,
+            remaining: rateLimitResult.remaining,
+            isPersonalKey: false,
+          }
+        : { isPersonalKey: true },
     });
   } catch (err: unknown) {
     console.error("Error in /api/ai/extract:", err);
