@@ -16,7 +16,7 @@ import {
 } from "@/app/actions";
 import { setWalletBudget } from "@/app/saku/actions";
 import { AiActionName } from "@/utils/ai/tools";
-import { getDailyAiUsage, DAILY_AI_LIMIT } from "@/utils/ai/rateLimit";
+import { getDailyAiUsage, resetDailyAiUsage, DAILY_AI_LIMIT } from "@/utils/ai/rateLimit";
 
 export interface ExecuteAiActionPayload {
   action: AiActionName;
@@ -220,6 +220,40 @@ export async function getDailyAiUsageAction(): Promise<{
 
   const result = getDailyAiUsage(user);
   return {
+    count: result.count,
+    limit: result.limit,
+    remaining: result.remaining,
+  };
+}
+
+export async function resetDailyAiUsageAction(): Promise<{
+  success: boolean;
+  count: number;
+  limit: number;
+  remaining: number;
+  error?: string;
+}> {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      success: false,
+      count: 0,
+      limit: DAILY_AI_LIMIT,
+      remaining: DAILY_AI_LIMIT,
+      error: "Unauthorized",
+    };
+  }
+
+  const result = await resetDailyAiUsage(supabase, user);
+  return {
+    success: true,
     count: result.count,
     limit: result.limit,
     remaining: result.remaining,

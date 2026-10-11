@@ -5,7 +5,7 @@ import { AiProposal } from "@/utils/ai/tools";
 import { useTranslation } from "@/utils/i18n/context";
 import { usePathname } from "next/navigation";
 import AiAssistantSheet from "./AiAssistantSheet";
-import { getDailyAiUsageAction } from "@/app/ai/actions";
+import { getDailyAiUsageAction, resetDailyAiUsageAction } from "@/app/ai/actions";
 
 export interface AiMessage {
   id: string;
@@ -38,6 +38,7 @@ interface AiAssistantContextType {
   setIsAiEnabled: (enabled: boolean) => void;
   usage: AiDailyUsage | null;
   refreshUsage: () => Promise<void>;
+  resetUsage: () => Promise<void>;
 }
 
 const AiAssistantContext = createContext<AiAssistantContextType | null>(null);
@@ -118,6 +119,22 @@ export function AiAssistantProvider({
       });
     } catch (err) {
       console.warn("Failed to fetch daily AI usage:", err);
+    }
+  }, [apiKey]);
+
+  const resetUsage = useCallback(async () => {
+    try {
+      const res = await resetDailyAiUsageAction();
+      if (res.success) {
+        setUsage({
+          count: res.count,
+          limit: res.limit,
+          remaining: res.remaining,
+          isPersonalKey: Boolean(apiKey && apiKey.trim().length > 0),
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to reset daily AI usage:", err);
     }
   }, [apiKey]);
 
@@ -347,6 +364,7 @@ export function AiAssistantProvider({
         setIsAiEnabled,
         usage,
         refreshUsage,
+        resetUsage,
       }}
     >
       {children}

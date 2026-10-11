@@ -43,7 +43,28 @@ export default function AiAssistantSheet() {
     updateProposal,
     isAiEnabled,
     usage,
+    resetUsage,
   } = useAiAssistant();
+
+  const [isDevMode, setIsDevMode] = useState(false);
+  const [isResettingLimit, setIsResettingLimit] = useState(false);
+
+  useEffect(() => {
+    setIsDevMode(
+      process.env.NODE_ENV === "development" ||
+      (typeof window !== "undefined" &&
+        (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"))
+    );
+  }, []);
+
+  const handleResetLimit = async () => {
+    setIsResettingLimit(true);
+    try {
+      await resetUsage();
+    } finally {
+      setIsResettingLimit(false);
+    }
+  };
 
   const hasPersonalKey = Boolean(apiKey && apiKey.trim().length > 0) || Boolean(usage?.isPersonalKey);
   const isDailyLimitReached = Boolean(!hasPersonalKey && usage && usage.remaining <= 0);
@@ -512,6 +533,33 @@ export default function AiAssistantSheet() {
                 </span>
               </div>
             </div>
+
+            {/* Dev Mode: Reset Limit Button */}
+            {isDevMode && (
+              <div className="mb-3.5 p-2.5 rounded-xl border border-dashed border-amber-300 dark:border-amber-700/80 bg-amber-50/70 dark:bg-amber-950/25 flex items-center justify-between gap-2 animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider bg-amber-500/20 text-amber-700 dark:text-amber-300 uppercase">
+                    DEV
+                  </span>
+                  <span className="text-[11px] text-amber-800 dark:text-amber-300">
+                    {locale === "id"
+                      ? "Reset limit pemakaian harian ke 0"
+                      : "Reset daily usage limit to 0"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={isResettingLimit}
+                  onClick={handleResetLimit}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-500 hover:bg-amber-600 active:scale-95 text-white transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs shrink-0"
+                >
+                  <RotateCcw className={`w-3 h-3 ${isResettingLimit ? "animate-spin" : ""}`} />
+                  {isResettingLimit
+                    ? locale === "id" ? "Mereset..." : "Resetting..."
+                    : "Reset Limit"}
+                </button>
+              </div>
+            )}
 
             {/* API Key Configuration Section */}
             <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800">

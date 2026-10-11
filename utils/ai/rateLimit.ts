@@ -101,3 +101,34 @@ export function getDailyAiUsage(
     count: currentCount,
   };
 }
+
+/**
+ * Development helper: Resets the daily AI advisor message count stored in user_metadata back to 0.
+ */
+export async function resetDailyAiUsage(
+  supabase: SupabaseClient,
+  user: User,
+  limit: number = DAILY_AI_LIMIT
+): Promise<RateLimitResult> {
+  const today = format(getNowInTimezone(), "yyyy-MM-dd");
+
+  try {
+    await supabase.auth.updateUser({
+      data: {
+        ai_usage: {
+          date: today,
+          count: 0,
+        },
+      },
+    });
+  } catch (err) {
+    console.warn("Failed to reset AI usage in metadata:", err);
+  }
+
+  return {
+    allowed: true,
+    remaining: limit,
+    limit,
+    count: 0,
+  };
+}
