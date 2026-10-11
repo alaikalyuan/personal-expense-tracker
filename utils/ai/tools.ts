@@ -1,6 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, subMonths } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, subMonths, subDays, addDays } from "date-fns";
 import type { CategoryKey } from "../i18n/dictionaries";
+import { findDuplicates, ExpenseLite } from "./duplicates";
 
 export interface ToolDefinition {
   type: "function";
@@ -269,6 +270,9 @@ export interface AiProposalPreviewLine {
   label: string;
   before?: string;
   after: string;
+  duplicateWarning?: string;
+  isDuplicate?: boolean;
+  originalIndex?: number;
 }
 
 export interface AiProposal {
@@ -426,13 +430,70 @@ export async function buildAiProposal(
       const walletId = typeof item.wallet_id === "string" ? item.wallet_id : null;
 
       validatedItems.push({ name, amount, category, spent_at: spentAt, note, wallet_id: walletId });
+    }
+
+    for (let i = 0; i < validatedItems.length; i++) {
+      const item = validatedItems[i];
       lines.push({
-        label: `${name} • ${category}`,
-        after: `Rp ${amount.toLocaleString()}`,
+        label: `${item.name} • ${item.category}`,
+        after: `Rp ${item.amount.toLocaleString()}`,
+        originalIndex: i,
       });
     }
 
     if (validatedItems.length === 0) return null;
+
+    // Proactively check for duplicates against user's existing expenses
+    try {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const dates = validatedItems.map((it) => it.spent_at || todayStr);
+      let minDate = dates[0];
+      let maxDate = dates[0];
+      for (const d of dates) {
+        if (d < minDate) minDate = d;
+        if (d > maxDate) maxDate = d;
+      }
+
+      const winStart = format(subDays(parseISO(minDate), 2), "yyyy-MM-dd");
+      const winEnd = format(addDays(parseISO(maxDate), 2), "yyyy-MM-dd");
+
+      const { data: existingRows } = await supabase
+        .from("expenses")
+        .select("id, name, amount, spent_at, category")
+        .eq("user_id", userId)
+        .gte("spent_at", winStart)
+        .lte("spent_at", winEnd)
+        .limit(200);
+
+      if (existingRows && existingRows.length > 0) {
+        const existingList: ExpenseLite[] = existingRows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          amount: Number(r.amount) || 0,
+          spent_at: r.spent_at,
+          category: r.category,
+        }));
+
+        const dupMatches = findDuplicates(
+          validatedItems.map((v) => ({
+            name: v.name,
+            amount: v.amount,
+            spentAt: v.spent_at || todayStr,
+            category: v.category,
+          })),
+          existingList
+        );
+
+        dupMatches.forEach((match, idx) => {
+          if (match && lines[idx]) {
+            lines[idx].isDuplicate = true;
+            lines[idx].duplicateWarning = match.details;
+          }
+        });
+      }
+    } catch (dupErr) {
+      console.warn("Failed checking duplicates for proposal:", dupErr);
+    }
 
     return {
       id: proposalId,

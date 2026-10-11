@@ -13,6 +13,7 @@ import {
   Check,
   ChevronUp,
   Loader2,
+  Image as ImageIcon,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -21,6 +22,7 @@ import { usePathname } from "next/navigation";
 import { useAiAssistant } from "./AiAssistantProvider";
 import ActionProposalCard from "./ActionProposalCard";
 import { preprocessAiMarkdown } from "@/utils/ai/markdown";
+import { useImageExtract } from "@/utils/ai/useImageExtract";
 
 export default function AiAssistantSheet() {
   const { t, locale } = useTranslation();
@@ -45,6 +47,14 @@ export default function AiAssistantSheet() {
   const [keyInput, setKeyInput] = useState(apiKey || "");
   const [keyToast, setKeyToast] = useState<string | null>(null);
 
+  // Vision Image Attachment State
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [attachedPreview, setAttachedPreview] = useState<string | null>(null);
+  const [imageExtractError, setImageExtractError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { extract, isExtracting, statusMessage: extractStatus } = useImageExtract();
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -57,7 +67,7 @@ export default function AiAssistantSheet() {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isLoading, isOpen, statusLabel]);
+  }, [messages, isLoading, isOpen, statusLabel, isExtracting, extractStatus]);
 
   // Handle escape key
   useEffect(() => {
@@ -86,11 +96,77 @@ export default function AiAssistantSheet() {
     setTimeout(() => setKeyToast(null), 3000);
   };
 
-  const handleSend = () => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setImageExtractError(locale === "id" ? "File harus berupa gambar." : "File must be an image.");
+      return;
+    }
+
+    setImageExtractError(null);
+    setAttachedFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setAttachedPreview(objectUrl);
+    // Reset file input value so user can reselect same file if needed
+    e.target.value = "";
+  };
+
+  const removeAttachment = () => {
+    if (attachedPreview) {
+      URL.revokeObjectURL(attachedPreview);
+    }
+    setAttachedFile(null);
+    setAttachedPreview(null);
+    setImageExtractError(null);
+  };
+
+  const handleSend = async () => {
     const trimmed = inputValue.trim();
-    if (!trimmed || isLoading) return;
-    sendMessage(trimmed);
-    setInputValue("");
+    if ((!trimmed && !attachedFile) || isLoading || isExtracting) return;
+
+    setImageExtractError(null);
+
+    if (attachedFile) {
+      // Step 1: Extract receipt/image
+      const extracted = await extract(attachedFile, "receipt");
+      if (!extracted) {
+        setImageExtractError(
+          locale === "id"
+            ? "Gagal membaca gambar/struk. Silakan coba lagi atau unggah foto yang lebih jelas."
+            : "Failed to read the image/receipt. Please try again with a clearer photo."
+        );
+        return;
+      }
+
+      // Step 2: Format prompt with extracted data
+      let detailsSummary = "";
+      if (extracted.merchant) detailsSummary += `Merchant/Toko: ${extracted.merchant}\n`;
+      if (extracted.date) detailsSummary += `Tanggal: ${extracted.date}\n`;
+      if (extracted.total) detailsSummary += `Total: Rp ${extracted.total.toLocaleString()}\n`;
+      if (extracted.items.length > 0) {
+        detailsSummary += `Item:\n` + extracted.items.map((it) => `- ${it.name} (${it.quantity}x @ Rp ${it.unitPrice.toLocaleString()})`).join("\n") + "\n";
+      }
+      if (extracted.transactions.length > 0) {
+        detailsSummary += `Transaksi: ` + extracted.transactions.map((tx) => `${tx.name} (Rp ${tx.amount.toLocaleString()})`).join(", ") + "\n";
+      }
+
+      const userNote = trimmed
+        ? trimmed
+        : locale === "id"
+        ? "Tolong catat pengeluaran dari struk/bukti ini."
+        : "Please log the expense from this receipt/proof.";
+
+      const finalMessage = `${userNote}\n\n[Data Struk Terlampir]\n${detailsSummary.trim()}`;
+
+      removeAttachment();
+      setInputValue("");
+      sendMessage(finalMessage);
+    } else {
+      sendMessage(trimmed);
+      setInputValue("");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -412,7 +488,7 @@ export default function AiAssistantSheet() {
           ))}
 
           {/* Tool status or loading indicator */}
-          {isLoading && (
+          {(isLoading || isExtracting) && (
             <div className="flex gap-2.5 justify-start">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400 mt-0.5">
                 <Bot className="w-3.5 h-3.5" />
@@ -420,7 +496,7 @@ export default function AiAssistantSheet() {
               <div className="rounded-2xl rounded-tl-xs px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/60 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                 <Loader2 className="w-3.5 h-3.5 text-teal-500 animate-spin" />
                 <span className="text-[11px] font-medium">
-                  {statusLabel || t.aiAdvisor.thinking}
+                  {extractStatus || statusLabel || t.aiAdvisor.thinking}
                 </span>
               </div>
             </div>
@@ -435,7 +511,7 @@ export default function AiAssistantSheet() {
             <button
               key={idx}
               type="button"
-              disabled={isLoading}
+              disabled={isLoading || isExtracting}
               onClick={() => sendMessage(chip)}
               className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-teal-500/50 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -446,6 +522,50 @@ export default function AiAssistantSheet() {
 
         {/* Input bar */}
         <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+          {/* Image error banner */}
+          {imageExtractError && (
+            <div className="mb-2 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/30 p-2 text-[11px] text-rose-600 dark:text-rose-400">
+              <div className="flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{imageExtractError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImageExtractError(null)}
+                className="text-rose-400 hover:text-rose-600 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Attached image preview thumbnail */}
+          {attachedPreview && (
+            <div className="mb-2 flex items-center gap-2 p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 w-fit">
+              <img
+                src={attachedPreview}
+                alt="Receipt preview"
+                className="w-12 h-12 rounded-lg object-cover border border-zinc-200 dark:border-zinc-700"
+              />
+              <div className="pr-2">
+                <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 block truncate max-w-[140px]">
+                  {attachedFile?.name || "Foto Struk"}
+                </span>
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                  {attachedFile ? `${Math.round(attachedFile.size / 1024)} KB` : "Gambar"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={removeAttachment}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                title="Hapus gambar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -453,23 +573,58 @@ export default function AiAssistantSheet() {
             }}
             className="flex items-center gap-2"
           >
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
+            {/* Attach image button */}
+            <button
+              type="button"
+              disabled={isLoading || isExtracting}
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Unggah foto struk atau bukti transfer"
+              title={locale === "id" ? "Unggah foto struk / bukti transfer" : "Upload receipt or payment proof"}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all cursor-pointer ${
+                attachedFile
+                  ? "border-teal-500 bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-400"
+                  : "border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              } disabled:opacity-40 disabled:cursor-not-allowed active:scale-95`}
+            >
+              <ImageIcon className="w-4 h-4" />
+            </button>
+
             <textarea
               ref={textareaRef}
               rows={1}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={t.aiAdvisor.inputPlaceholder}
-              disabled={isLoading}
+              placeholder={
+                attachedFile
+                  ? locale === "id"
+                    ? "Tulis catatan tambahan atau langsung kirim..."
+                    : "Add optional note or press send..."
+                  : t.aiAdvisor.inputPlaceholder
+              }
+              disabled={isLoading || isExtracting}
               className="flex-1 resize-none rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-3.5 py-2 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-teal-500/50 max-h-24 disabled:opacity-60"
             />
             <button
               type="submit"
-              disabled={!inputValue.trim() || isLoading}
+              disabled={(!inputValue.trim() && !attachedFile) || isLoading || isExtracting}
               aria-label={t.aiAdvisor.send}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all cursor-pointer"
             >
-              <Send className="w-4 h-4" />
+              {isExtracting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </button>
           </form>
 

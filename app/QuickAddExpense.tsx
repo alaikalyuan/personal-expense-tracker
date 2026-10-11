@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { addExpense } from "@/app/actions";
+import { addExpense, addExpensesBatch } from "@/app/actions";
 import {
   X,
   Plus,
@@ -22,10 +22,20 @@ import {
   Pencil,
   Tag,
   Sparkles,
+  Camera,
+  AlertTriangle,
+  Loader2,
+  Layers,
+  ArrowRight,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { detectOneOffAnomaly, attachExemptTag } from "@/utils/exemptions";
 import { CATEGORY_KEYS, CategoryKey } from "@/utils/i18n/dictionaries";
+import { useAiAssistant } from "@/app/ai/AiAssistantProvider";
+import { useImageExtract } from "@/utils/ai/useImageExtract";
+import { checkDuplicatesAction } from "@/app/ai/duplicateActions";
+import { DuplicateMatch } from "@/utils/ai/duplicates";
+import { ExtractedDocument } from "@/utils/ai/vision";
 import {
   QuickChip,
   getStoredQuickChips,
@@ -111,6 +121,16 @@ const CATEGORY_STYLES: Record<
   },
 };
 
+interface ScannedRow {
+  id: string;
+  name: string;
+  amount: number;
+  category: CategoryKey;
+  spentAt: string;
+  selected: boolean;
+  duplicate?: DuplicateMatch | null;
+}
+
 function QuickAddModalContent({
   onClose,
   today,
@@ -120,7 +140,21 @@ function QuickAddModalContent({
   today: string;
   multiSakuEnabled?: boolean;
 }) {
-  const { t, getCategoryLabel, formatDate, currency, currencySymbol, formatCurrency } = useTranslation();
+  const { t, locale, getCategoryLabel, formatDate, currency, currencySymbol, formatCurrency } = useTranslation();
+
+  // AI Mode & Vision Extractor
+  const { isAiEnabled } = useAiAssistant();
+  const {
+    extract,
+    isExtracting,
+    statusMessage: extractStatus,
+    error: extractError,
+    clearError: clearExtractError,
+  } = useImageExtract();
+  const scanInputRef = useRef<HTMLInputElement>(null);
+  const [scannedDoc, setScannedDoc] = useState<ExtractedDocument | null>(null);
+  const [scannedRows, setScannedRows] = useState<ScannedRow[]>([]);
+  const [receiptBreakdownMode, setReceiptBreakdownMode] = useState<"summary" | "itemized">("summary");
 
   // Mode: "standard" vs "quick_type" (lazy initialization from localStorage)
   const [inputMode, setInputMode] = useState<"standard" | "quick_type">(() => getStoredInputMode());
@@ -323,11 +357,223 @@ function QuickAddModalContent({
     return () => clearTimeout(timer);
   }, [inputMode]);
 
+  const handleScanPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    clearExtractError();
+    setError(null);
+
+    try {
+      const doc = await extract(file, "receipt");
+      if (!doc) return;
+
+      setScannedDoc(doc);
+      const docDate = doc.date || today;
+
+      // Build initial candidate rows
+      let initialRows: ScannedRow[] = [];
+
+      if (doc.kind === "receipt" && doc.items.length > 0) {
+        // Default summary: merchant name & grand total
+        const receiptTotal = doc.total || doc.items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
+        initialRows = [
+          {
+            id: `scan-${Date.now()}`,
+            name: doc.merchant || "Belanja Struk",
+            amount: receiptTotal,
+            category: doc.suggestedCategory,
+            spentAt: docDate,
+            selected: true,
+          },
+        ];
+        setReceiptBreakdownMode("summary");
+      } else if (doc.transactions.length > 0) {
+        // Bank statement / mutation screenshot
+        initialRows = doc.transactions
+          .filter((t) => t.direction === "out")
+          .map((t, idx) => ({
+            id: `scan-tx-${Date.now()}-${idx}`,
+            name: t.name,
+            amount: t.amount,
+            category: t.category || doc.suggestedCategory,
+            spentAt: t.date || docDate,
+            selected: true,
+          }));
+      } else {
+        // Single fallback row
+        initialRows = [
+          {
+            id: `scan-${Date.now()}`,
+            name: doc.merchant || "Pengeluaran",
+            amount: doc.total || 0,
+            category: doc.suggestedCategory,
+            spentAt: docDate,
+            selected: true,
+          },
+        ];
+      }
+
+      // Check duplicates try-catch
+      try {
+        const dupMatches = await checkDuplicatesAction(
+          initialRows.map((r) => ({
+            name: r.name,
+            amount: r.amount,
+            spentAt: r.spentAt,
+            category: r.category,
+          }))
+        );
+
+        initialRows = initialRows.map((row, idx) => {
+          const dup = dupMatches[idx];
+          return {
+            ...row,
+            duplicate: dup,
+            selected: dup ? false : true, // Pre-uncheck duplicate rows (soft warning)
+          };
+        });
+      } catch (dupErr) {
+        console.warn("Try-catch duplicate detection failed:", dupErr);
+      }
+
+      setScannedRows(initialRows);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Gagal memproses gambar struk.");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+  const handleToggleReceiptBreakdown = async (mode: "summary" | "itemized") => {
+    if (!scannedDoc) return;
+    setReceiptBreakdownMode(mode);
+    const docDate = scannedDoc.date || today;
+
+    let newRows: ScannedRow[] = [];
+    if (mode === "summary") {
+      const receiptTotal = scannedDoc.total || scannedDoc.items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
+      newRows = [
+        {
+          id: `scan-${Date.now()}`,
+          name: scannedDoc.merchant || "Belanja Struk",
+          amount: receiptTotal,
+          category: scannedDoc.suggestedCategory,
+          spentAt: docDate,
+          selected: true,
+        },
+      ];
+    } else {
+      newRows = scannedDoc.items.map((it, idx) => ({
+        id: `scan-item-${Date.now()}-${idx}`,
+        name: it.quantity > 1 ? `${it.name} (${it.quantity}x)` : it.name,
+        amount: it.unitPrice * it.quantity,
+        category: scannedDoc.suggestedCategory,
+        spentAt: docDate,
+        selected: true,
+      }));
+    }
+
+    try {
+      const dupMatches = await checkDuplicatesAction(
+        newRows.map((r) => ({
+          name: r.name,
+          amount: r.amount,
+          spentAt: r.spentAt,
+          category: r.category,
+        }))
+      );
+      newRows = newRows.map((row, idx) => {
+        const dup = dupMatches[idx];
+        return {
+          ...row,
+          duplicate: dup,
+          selected: dup ? false : true,
+        };
+      });
+    } catch (dupErr) {
+      console.warn("Try-catch duplicate detection failed:", dupErr);
+    }
+
+    setScannedRows(newRows);
+  };
+
+  const handleToggleRowSelected = (rowId: string) => {
+    setScannedRows((prev) =>
+      prev.map((r) => (r.id === rowId ? { ...r, selected: !r.selected } : r))
+    );
+  };
+
+  const handleDismissScan = () => {
+    setScannedDoc(null);
+    setScannedRows([]);
+  };
+
+  const handleApplyScanToForm = () => {
+    const candidate = scannedRows.find((r) => r.selected) || scannedRows[0];
+    if (!candidate) return;
+
+    setName(candidate.name);
+    setAmount(candidate.amount);
+    setCategory(candidate.category);
+    if (candidate.spentAt === today) {
+      setDateMode("today");
+    } else if (candidate.spentAt === yesterdayStr) {
+      setDateMode("yesterday");
+    } else {
+      setDateMode("custom");
+      setCustomDate(candidate.spentAt);
+    }
+
+    handleDismissScan();
+    setInputMode("standard");
+  };
+
+  const handleLogScannedRows = async () => {
+    const selected = scannedRows.filter((r) => r.selected);
+    if (selected.length === 0) {
+      setError(locale === "id" ? "Pilih minimal 1 transaksi untuk dicatat." : "Select at least 1 transaction to log.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      await addExpensesBatch(
+        selected.map((r) => ({
+          name: r.name,
+          amount: r.amount,
+          category: r.category,
+          spentAt: r.spentAt,
+          walletId: selectedWalletId || null,
+        }))
+      );
+
+      const feedback = `${selected.length} ${locale === "id" ? "transaksi berhasil dicatat" : "expenses recorded"}`;
+      setBatchFeedback(feedback);
+      handleDismissScan();
+
+      if (!keepBatch) {
+        onClose();
+      } else {
+        setTimeout(() => {
+          setBatchFeedback((prev) => (prev === feedback ? null : prev));
+        }, 3000);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t.expenses.failedToAdd);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleClose = () => {
     if (isSubmitting) return;
     setError(null);
     setBatchFeedback(null);
     setIsManagingChips(false);
+    handleDismissScan();
     onClose();
   };
 
@@ -539,40 +785,69 @@ function QuickAddModalContent({
         {/* Mobile Drag Indicator */}
         <div className="sm:hidden w-10 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-2 shrink-0" />
 
-        {/* Modal Header: Title, Segmented Mode Tabs, Close */}
+        {/* Modal Header: Title, Segmented Mode Tabs, Photo Upload, Close */}
         <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800/80 gap-2 shrink-0">
-          {/* Segmented Mode Selector */}
-          <div className="flex items-center rounded-xl bg-zinc-100 dark:bg-zinc-800/80 p-1 text-xs">
-            <button
-              type="button"
-              onClick={() => handleModeChange("quick_type")}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold transition-all cursor-pointer ${
-                inputMode === "quick_type"
-                  ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
-                  : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-              }`}
-            >
-              <Zap className="w-3.5 h-3.5 text-amber-500" />
-              <span>{t.expenses.quickTypeTab}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleModeChange("standard")}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold transition-all cursor-pointer ${
-                inputMode === "standard"
-                  ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
-                  : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-              }`}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>{t.expenses.standardTab}</span>
-            </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Segmented Mode Selector */}
+            <div className="flex items-center rounded-xl bg-zinc-100 dark:bg-zinc-800/80 p-1 text-xs">
+              <button
+                type="button"
+                onClick={() => handleModeChange("quick_type")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold transition-all cursor-pointer ${
+                  inputMode === "quick_type"
+                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
+                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                <span>{t.expenses.quickTypeTab}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleModeChange("standard")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold transition-all cursor-pointer ${
+                  inputMode === "standard"
+                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
+                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>{t.expenses.standardTab}</span>
+              </button>
+            </div>
+
+            {/* AI Photo Scan Button (hidden if AI mode is disabled) */}
+            {isAiEnabled && (
+              <>
+                <input
+                  ref={scanInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleScanPhoto}
+                />
+                <button
+                  type="button"
+                  disabled={isExtracting || isSubmitting}
+                  onClick={() => scanInputRef.current?.click()}
+                  className="flex items-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 px-2.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                  title="Pindai struk belanja atau tangkapan layar transfer"
+                >
+                  {isExtracting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-600 dark:text-teal-400" />
+                  ) : (
+                    <Camera className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  )}
+                  <span>{isExtracting ? (extractStatus || "Memindai...") : "Upload Foto"}</span>
+                </button>
+              </>
+            )}
           </div>
 
           <button
             type="button"
             onClick={handleClose}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isExtracting}
             aria-label={t.common.close}
             className="text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 cursor-pointer"
           >
@@ -581,9 +856,9 @@ function QuickAddModalContent({
         </div>
 
         {/* Global Error Banner */}
-        {error && (
+        {(error || extractError) && (
           <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950/40 p-2.5 text-xs text-rose-600 dark:text-rose-300 shrink-0">
-            {error}
+            {error || extractError}
           </div>
         )}
 
@@ -599,8 +874,183 @@ function QuickAddModalContent({
           </div>
         )}
 
+        {/* SCANNED DOCUMENT REVIEW PANEL */}
+        {scannedDoc && (
+          <div className="mt-3.5 rounded-2xl border border-teal-500/30 bg-teal-500/5 dark:bg-teal-950/20 p-3.5 space-y-3 animate-fade-in">
+            {/* Header: Merchant & Discard */}
+            <div className="flex items-start justify-between gap-2 border-b border-teal-500/15 pb-2.5">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                    Hasil Pindai Foto
+                  </span>
+                  <span className="rounded-full bg-teal-500/20 px-2 py-0.5 text-[9px] font-semibold text-teal-700 dark:text-teal-300">
+                    {scannedDoc.kind === "receipt" ? "Struk Belanja" : "Bukti Mutasi/Transfer"}
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-zinc-600 dark:text-zinc-300 font-medium">
+                  {scannedDoc.merchant || "Transaksi Terdeteksi"} • {scannedDoc.date || today}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleDismissScan}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg"
+                title="Batal dan tutup hasil scan"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Receipt Itemization Mode Switch (only if receipt has items) */}
+            {scannedDoc.kind === "receipt" && scannedDoc.items.length > 0 && (
+              <div className="flex items-center justify-between text-xs bg-white/60 dark:bg-zinc-900/60 p-2 rounded-xl border border-zinc-200/60 dark:border-zinc-800">
+                <span className="text-zinc-600 dark:text-zinc-400 font-medium text-[11px]">
+                  Mode Pencatatan:
+                </span>
+                <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleReceiptBreakdown("summary")}
+                    className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                      receiptBreakdownMode === "summary"
+                        ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
+                        : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400"
+                    }`}
+                  >
+                    Ringkas (1 Total)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleReceiptBreakdown("itemized")}
+                    className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                      receiptBreakdownMode === "itemized"
+                        ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
+                        : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400"
+                    }`}
+                  >
+                    Rincian ({scannedDoc.items.length} Item)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* List of scanned transaction rows */}
+            <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar pr-0.5">
+              {scannedRows.map((row) => (
+                <div
+                  key={row.id}
+                  className={`rounded-xl p-2.5 transition-colors border ${
+                    row.duplicate
+                      ? "border-amber-300 bg-amber-50/70 dark:border-amber-800/60 dark:bg-amber-950/30"
+                      : "border-zinc-200/80 bg-white/70 dark:border-zinc-800 dark:bg-zinc-900/60"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={row.selected}
+                        onChange={() => handleToggleRowSelected(row.id)}
+                        className="mt-0.5 h-4 w-4 rounded-sm border-zinc-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-100 block">
+                          {row.name}
+                        </span>
+                        <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-zinc-400">
+                          <span className="rounded-md bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 font-medium text-zinc-600 dark:text-zinc-300">
+                            {getCategoryLabel(row.category)}
+                          </span>
+                          <span>•</span>
+                          <span>{row.spentAt}</span>
+                        </div>
+                        {row.duplicate && (
+                          <div className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400 font-medium">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <span>{row.duplicate.details}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                        {formatCurrency(row.amount)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Saku Selector if multiple wallets */}
+            {multiSakuEnabled && wallets.length > 1 && (
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-zinc-500 dark:text-zinc-400 font-medium text-[11px]">
+                  Catat ke Saku:
+                </span>
+                <select
+                  value={selectedWalletId}
+                  onChange={(e) => setSelectedWalletId(e.target.value)}
+                  className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2 py-1 text-xs text-zinc-800 dark:text-zinc-200 outline-none"
+                >
+                  {wallets.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.emoji || "👛"} {w.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Scanned Footer Actions */}
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-teal-500/15">
+              <button
+                type="button"
+                onClick={handleApplyScanToForm}
+                className="text-xs text-teal-700 dark:text-teal-300 hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <span>Gunakan di Form</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDismissScan}
+                  className="px-2.5 py-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting || scannedRows.filter((r) => r.selected).length === 0}
+                  onClick={handleLogScannedRows}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Mencatat...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>
+                        Catat {scannedRows.filter((r) => r.selected).length} Transaksi
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* MODE 1: STANDARD FORM */}
-        {inputMode === "standard" && (
+        {!scannedDoc && inputMode === "standard" && (
           <form onSubmit={handleStandardSubmit} className="flex flex-col gap-4 pt-3.5">
             {/* Quick-Fill Chips Shelf */}
             <div className="flex flex-col gap-1.5">
@@ -978,7 +1428,7 @@ function QuickAddModalContent({
         )}
 
         {/* MODE 2: ⚡ QUICK TYPE / SMART SINGLE BAR */}
-        {inputMode === "quick_type" && (
+        {!scannedDoc && inputMode === "quick_type" && (
           <form onSubmit={handleQuickSubmit} className="flex flex-col gap-4 pt-3.5">
             {/* Quick-Fill Chips Shelf in Quick Mode */}
             <div className="flex flex-col gap-1.5">

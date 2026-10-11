@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,6 +14,10 @@ import {
   Info,
   Utensils,
   Zap,
+  Camera,
+  Loader2,
+  AlertCircle,
+  X,
 } from "lucide-react";
 import {
   calculateSplitBreakdown,
@@ -26,6 +30,9 @@ import {
 import { createSplitBill } from "@/app/split/actions";
 import FriendViewPreviewModal from "./FriendViewPreviewModal";
 import { useTranslation } from "@/utils/i18n/context";
+import { useAiAssistant } from "@/app/ai/AiAssistantProvider";
+import { useImageExtract } from "@/utils/ai/useImageExtract";
+import { ExtractedDocument } from "@/utils/ai/vision";
 
 interface FormParticipant {
   id: string;
@@ -135,6 +142,117 @@ export default function SplitBillCreator({
   const [isPublishing, setIsPublishing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [draftNotice, setDraftNotice] = useState(false);
+
+  // Vision OCR Scan State
+  const { isAiEnabled } = useAiAssistant();
+  const {
+    extract,
+    isExtracting,
+    statusMessage: extractStatus,
+    error: extractError,
+    clearError: clearExtractError,
+  } = useImageExtract({ hint: "split" });
+  const scanInputRef = useRef<HTMLInputElement>(null);
+  const [scannedReceiptTotal, setScannedReceiptTotal] = useState<number | null>(null);
+  const [pendingScannedDoc, setPendingScannedDoc] = useState<ExtractedDocument | null>(null);
+  const [showReplaceDialog, setShowReplaceDialog] = useState(false);
+
+  const applyExtractedBill = (doc: ExtractedDocument, appendMode: boolean) => {
+    if (!title.trim() && doc.merchant) {
+      setTitle(doc.merchant);
+    }
+    if (doc.suggestedCategory) {
+      setCategory(doc.suggestedCategory);
+    }
+
+    const mappedItems: FormItem[] = doc.items.map((it, idx) => ({
+      id: `item-scan-${Date.now()}-${idx}`,
+      name: it.name,
+      price: it.unitPrice,
+      quantity: it.quantity || 1,
+      assignedParticipantIds: ["creator-0"],
+    }));
+
+    if (appendMode) {
+      const existingFilled = items.filter((it) => it.name.trim() || it.price > 0);
+      setItems([...existingFilled, ...mappedItems]);
+    } else {
+      setItems(
+        mappedItems.length > 0
+          ? mappedItems
+          : [
+              {
+                id: "item-1",
+                name: doc.merchant || "Tagihan Struk",
+                price: doc.total || 0,
+                quantity: 1,
+                assignedParticipantIds: ["creator-0"],
+              },
+            ]
+      );
+    }
+
+    // Taxes
+    if (doc.subtotal && doc.taxAmount && doc.subtotal > 0) {
+      const taxRatio = (doc.taxAmount / doc.subtotal) * 100;
+      if (Math.abs(taxRatio - 11) < 0.8) {
+        setTaxPreset("11");
+        setCustomTax(0);
+      } else if (Math.abs(taxRatio - 10) < 0.8) {
+        setTaxPreset("10");
+        setCustomTax(0);
+      } else if (taxRatio > 0) {
+        setTaxPreset("custom");
+        setCustomTax(Math.round(taxRatio * 10) / 10);
+      }
+    }
+
+    // Service Charge
+    if (doc.subtotal && doc.serviceAmount && doc.subtotal > 0) {
+      const srvRatio = (doc.serviceAmount / doc.subtotal) * 100;
+      setServicePercentage(Math.round(srvRatio * 10) / 10);
+    }
+
+    // Discount
+    if (doc.discountAmount && doc.discountAmount > 0) {
+      setDiscountAmount(doc.discountAmount);
+    }
+
+    if (doc.total) {
+      setScannedReceiptTotal(doc.total);
+    }
+
+    setSplitMode("itemized");
+    setPendingScannedDoc(null);
+    setShowReplaceDialog(false);
+  };
+
+  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    clearExtractError();
+    setErrorMsg("");
+
+    try {
+      const doc = await extract(file, "split");
+      if (!doc) return;
+
+      const hasExistingItems =
+        items.length > 1 || (items.length === 1 && (items[0].name.trim().length > 0 || items[0].price > 0));
+
+      if (hasExistingItems) {
+        setPendingScannedDoc(doc);
+        setShowReplaceDialog(true);
+      } else {
+        applyExtractedBill(doc, false);
+      }
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "Gagal membaca struk.");
+    } finally {
+      e.target.value = "";
+    }
+  };
 
   // Check for existing draft on client mount to avoid hydration mismatch
   useEffect(() => {
@@ -715,17 +833,82 @@ export default function SplitBillCreator({
             </div>
           </div>
 
-          {splitMode === "itemized" && (
+          <div className="flex items-center gap-2">
+            {isAiEnabled && (
+              <>
+                <input
+                  ref={scanInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleScanReceipt}
+                />
+                <button
+                  type="button"
+                  disabled={isExtracting}
+                  onClick={() => scanInputRef.current?.click()}
+                  className="flex items-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 px-2.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                  title="Pindai foto struk belanja untuk mengisi otomatis item, pajak, dan diskon"
+                >
+                  {isExtracting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-600 dark:text-teal-400" />
+                  ) : (
+                    <Camera className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  )}
+                  <span>{isExtracting ? (extractStatus || "Memindai...") : "Scan Struk"}</span>
+                </button>
+              </>
+            )}
+
+            {splitMode === "itemized" && (
+              <button
+                type="button"
+                onClick={handleAddItem}
+                className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{t.splitBill.addItemBtn}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Scan Error Banner */}
+        {extractError && (
+          <div className="flex items-center justify-between text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 p-2.5 rounded-xl border border-rose-200">
+            <div className="flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{extractError}</span>
+            </div>
             <button
               type="button"
-              onClick={handleAddItem}
-              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+              onClick={clearExtractError}
+              className="text-rose-400 hover:text-rose-600 cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{t.splitBill.addItemBtn}</span>
+              <X className="w-3.5 h-3.5" />
             </button>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Receipt Discrepancy Notice */}
+        {scannedReceiptTotal !== null && Math.abs(calculation.grandTotal - scannedReceiptTotal) > 500 && (
+          <div className="flex items-center justify-between gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-200/80">
+            <div className="flex items-center gap-1.5">
+              <Info className="w-4 h-4 shrink-0 text-amber-600" />
+              <span>
+                Total struk: <strong>{formatCurrency(scannedReceiptTotal)}</strong> vs Total terhitung: <strong>{formatCurrency(calculation.grandTotal)}</strong>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setScannedReceiptTotal(null)}
+              className="text-zinc-400 hover:text-zinc-600 cursor-pointer"
+              title="Tutup pesan"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Item Cards */}
         <div className="space-y-3">
@@ -1264,6 +1447,64 @@ export default function SplitBillCreator({
           account_name: accountName,
         }}
       />
+
+      {/* Replace vs Append Modal for Scanned Receipt */}
+      {showReplaceDialog && pendingScannedDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-sm rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Hasil Pindai Struk
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReplaceDialog(false);
+                  setPendingScannedDoc(null);
+                }}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              Form split bill ini sudah memiliki item yang dicatat. Apakah ingin menambahkan{" "}
+              <strong>{pendingScannedDoc.items.length} item</strong> dari struk ke daftar yang sudah ada, atau mengganti semua item?
+            </p>
+
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => applyExtractedBill(pendingScannedDoc, true)}
+                className="w-full py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
+              >
+                Tambahkan ke Item yang Ada (Append)
+              </button>
+              <button
+                type="button"
+                onClick={() => applyExtractedBill(pendingScannedDoc, false)}
+                className="w-full py-2 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer"
+              >
+                Ganti Semua Item (Replace)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReplaceDialog(false);
+                  setPendingScannedDoc(null);
+                }}
+                className="w-full py-1.5 text-center text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 cursor-pointer"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
