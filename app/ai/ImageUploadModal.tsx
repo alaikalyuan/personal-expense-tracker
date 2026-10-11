@@ -919,7 +919,13 @@ export function ImageUploadModal({
                     {locale === "id" ? "Hasil Terdeteksi" : "Detected Result"}
                   </h3>
                   <span className="ml-auto rounded-full bg-teal-500/10 px-2 py-0.5 text-[10px] font-semibold text-teal-700 dark:text-teal-300">
-                    {extractedDoc.kind === "receipt" ? "Struk Belanja" : "Bukti Mutasi / Transfer"}
+                    {extractedDoc.kind === "receipt"
+                      ? "Struk Belanja"
+                      : extractedDoc.kind === "transaction_list" || (extractedDoc.transactions && extractedDoc.transactions.length > 1)
+                      ? (locale === "id"
+                          ? `Mutasi (${extractedDoc.transactions?.length || extractedDoc.items?.length || 0} Transaksi)`
+                          : `Statement (${extractedDoc.transactions?.length || extractedDoc.items?.length || 0} Trans.)`)
+                      : "Bukti Mutasi / Transfer"}
                   </span>
                 </div>
 
@@ -928,7 +934,10 @@ export function ImageUploadModal({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                        {extractedDoc.merchant || (locale === "id" ? "Transaksi Terdeteksi" : "Detected Transaction")}
+                        {extractedDoc.merchant ||
+                          (extractedDoc.kind === "transaction_list" || (extractedDoc.transactions && extractedDoc.transactions.length > 1)
+                            ? (locale === "id" ? "Daftar Transaksi" : "Transaction Statement")
+                            : (locale === "id" ? "Transaksi Terdeteksi" : "Detected Transaction"))}
                       </h4>
                       <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
                         <Calendar className="w-3.5 h-3.5" />
@@ -946,27 +955,61 @@ export function ImageUploadModal({
                   </div>
 
                   {/* Item List / Transactions preview */}
-                  {extractedDoc.items && extractedDoc.items.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-800/80 space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
+                  {((extractedDoc.transactions && extractedDoc.transactions.length > 0) ||
+                    (extractedDoc.items && extractedDoc.items.length > 0)) && (
+                    <div className="mt-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-800/80 space-y-1.5 max-h-52 overflow-y-auto no-scrollbar">
                       <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
-                        {locale === "id" ? `Item Terdeteksi (${extractedDoc.items.length}):` : `Detected Items (${extractedDoc.items.length}):`}
+                        {extractedDoc.transactions && extractedDoc.transactions.length > 1
+                          ? locale === "id"
+                            ? `Transaksi Terdeteksi (${extractedDoc.transactions.length}):`
+                            : `Detected Transactions (${extractedDoc.transactions.length}):`
+                          : locale === "id"
+                          ? `Item Terdeteksi (${extractedDoc.items.length || extractedDoc.transactions?.length || 0}):`
+                          : `Detected Items (${extractedDoc.items.length || extractedDoc.transactions?.length || 0}):`}
                       </p>
-                      {extractedDoc.items.map((it, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-white dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800"
-                        >
-                          <div className="flex items-center gap-1.5 truncate pr-2">
-                            <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                              {it.quantity > 1 ? `${it.quantity}x ` : ""}
-                            </span>
-                            <span className="truncate text-zinc-800 dark:text-zinc-200">{it.name}</span>
-                          </div>
-                          <span className="font-medium text-zinc-900 dark:text-zinc-100 shrink-0">
-                            {formatCurrency(it.unitPrice * (it.quantity || 1))}
-                          </span>
-                        </div>
-                      ))}
+                      {extractedDoc.transactions && extractedDoc.transactions.length > 1
+                        ? extractedDoc.transactions.map((tx, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg bg-white dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800"
+                            >
+                              <div className="truncate pr-2">
+                                <span className="font-semibold text-zinc-800 dark:text-zinc-100 block truncate">
+                                  {tx.name}
+                                </span>
+                                {tx.date && (
+                                  <span className="text-[10px] text-zinc-400 block">
+                                    {tx.date}
+                                  </span>
+                                )}
+                              </div>
+                              <span
+                                className={`font-bold shrink-0 ${
+                                  tx.direction === "in"
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : "text-zinc-900 dark:text-zinc-100"
+                                }`}
+                              >
+                                {tx.direction === "in" ? "+" : "-"} {formatCurrency(tx.amount)}
+                              </span>
+                            </div>
+                          ))
+                        : extractedDoc.items.map((it, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-white dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800"
+                            >
+                              <div className="flex items-center gap-1.5 truncate pr-2">
+                                <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                                  {it.quantity > 1 ? `${it.quantity}x ` : ""}
+                                </span>
+                                <span className="truncate text-zinc-800 dark:text-zinc-200">{it.name}</span>
+                              </div>
+                              <span className="font-medium text-zinc-900 dark:text-zinc-100 shrink-0">
+                                {formatCurrency(it.unitPrice * (it.quantity || 1))}
+                              </span>
+                            </div>
+                          ))}
                     </div>
                   )}
 

@@ -161,16 +161,6 @@ export function normalizeExtraction(
   const taxAmount = parseCleanNumber(data.taxAmount ?? data.tax);
   const serviceAmount = parseCleanNumber(data.serviceAmount ?? data.serviceCharge ?? data.service);
   const discountAmount = parseCleanNumber(data.discountAmount ?? data.discount);
-  let total = parseCleanNumber(data.total ?? data.grandTotal);
-
-  // If total is missing on receipt but items exist, compute total
-  if (total === null || total === 0) {
-    if (items.length > 0) {
-      const itemsSum = items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
-      total = itemsSum + (taxAmount || 0) + (serviceAmount || 0) - (discountAmount || 0);
-    }
-  }
-
   // Transactions (for bank / e-wallet statements or transaction lists)
   const transactions: ExtractedTransaction[] = [];
   if (Array.isArray(data.transactions)) {
@@ -196,7 +186,34 @@ export function normalizeExtraction(
     }
   }
 
-  // If transactions are empty but this is a bank transaction, convert single total into transaction
+  // Cross-populate: if transactions exist but items is empty, mirror transactions into items
+  if (transactions.length > 0 && items.length === 0) {
+    const outTxs = transactions.filter((t) => t.direction === "out");
+    (outTxs.length > 0 ? outTxs : transactions).forEach((t) => {
+      items.push({
+        name: t.name,
+        quantity: 1,
+        unitPrice: t.amount,
+      });
+    });
+  }
+
+  let total = parseCleanNumber(data.total ?? data.grandTotal);
+
+  // If total is missing/zero, calculate from items or transactions
+  if (total === null || total === 0) {
+    if (items.length > 0) {
+      const itemsSum = items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
+      total = itemsSum + (taxAmount || 0) + (serviceAmount || 0) - (discountAmount || 0);
+    } else if (transactions.length > 0) {
+      const outSum = transactions
+        .filter((t) => t.direction === "out")
+        .reduce((acc, t) => acc + t.amount, 0);
+      total = outSum > 0 ? outSum : transactions.reduce((acc, t) => acc + t.amount, 0);
+    }
+  }
+
+  // If transactions are empty but this is a single bank transaction or expense with a total, create a single transaction
   if (transactions.length === 0 && (kind === "bank_transaction" || (!items.length && total && total > 0))) {
     transactions.push({
       name: merchant || "Transfer / Pembayaran",
@@ -206,12 +223,12 @@ export function normalizeExtraction(
     });
   }
 
-  // Determine kind if unknown
-  if (kind === "unknown") {
+  // Determine kind if unknown or if multiple transactions exist
+  if (transactions.length > 1) {
+    kind = "transaction_list";
+  } else if (kind === "unknown") {
     if (items.length > 0 || (taxAmount !== null || serviceAmount !== null)) {
       kind = "receipt";
-    } else if (transactions.length > 1) {
-      kind = "transaction_list";
     } else if (total && total > 0) {
       kind = "bank_transaction";
     }

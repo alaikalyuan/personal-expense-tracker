@@ -126,16 +126,25 @@ IMPORTANT INDONESIAN CONVENTIONS & RULES:
 1. Rupiah amounts: "25.000" or "25,000" means 25000. Do not treat "." as decimal point when followed by 3 digits.
 2. Separate pure purchased items from adjustments! "PPN 11%", "PB1 10%", "Tax", "Service 5%", "Diskon", "Rounding", "Kembalian" must go into taxAmount, serviceAmount, discountAmount, NOT in the items list.
 3. If an item line shows quantity and price like "2 x 15.000 = 30.000", quantity=2 and unitPrice=15000.
-4. If kind is a bank transfer or QRIS receipt (e.g. BCA Mobile, Livin, GoPay, ShopeePay), set kind to "bank_transaction" with the final transfer amount and payee as merchant.
-5. If kind is "receipt", set suggestedCategory based on the items or merchant (e.g. restaurant/cafe -> "Food & Dining", supermarket groceries -> "Food & Dining" or "Utilities", SPBU/Pertamina -> "Transportation").
-6. Respond ONLY with valid JSON. No conversational text, no markdown backticks.`;
+4. Single Transfer / QRIS: If kind is a single bank transfer receipt or single QRIS proof (e.g. BCA Mobile, Livin, GoPay, ShopeePay), set kind to "bank_transaction" with the transfer amount in total and payee as merchant.
+5. Mutasi Rekening / Multi-Transaction Statement: If the image is a bank statement, transaction history list (riwayat transaksi / mutasi), e-wallet history, or contains multiple transactions (e.g. multiple "QR Bayar", debit entries, transfers):
+   - Set kind to "transaction_list".
+   - Extract EVERY individual transaction entry into the "transactions" array:
+     * "name": payee, merchant, or transaction description (e.g. "KANTIN NUSANTARA, WONOCOLO" or "QR Bayar - KANTIN NUSANTARA")
+     * "amount": positive numeric amount (e.g. "- Rp 3.000" -> 3000, "- Rp 10.000" -> 10000)
+     * "date": specific transaction date (e.g. "2026-10-02", "2026-10-01"). Group entries under their respective date header!
+     * "direction": "out" if preceded by "-" or debit; "in" if preceded by "+" or credit/income
+     * "category": infer from payee/merchant (e.g. restaurant/kantin -> "Food & Dining")
+   - Also populate "items" mirroring each transaction ({ "name": name, "quantity": 1, "unitPrice": amount }) for itemized previews.
+   - Set "merchant" to the primary or most frequent merchant/source.
+   - Set "total" to the SUM of all out/debit transaction amounts in the screenshot.
+6. If kind is "receipt", set suggestedCategory based on the items or merchant (e.g. restaurant/cafe -> "Food & Dining", supermarket groceries -> "Food & Dining" or "Utilities", SPBU/Pertamina -> "Transportation").
+7. Respond ONLY with valid JSON. No conversational text, no markdown backticks.`;
 
     const userTextPrompt =
       hint === "split"
         ? "Extract all line items, quantities, prices, taxes, service charges, discounts, and total from this bill/receipt for split bill calculation."
-        : hint === "receipt"
-        ? "Extract the merchant name, date, items, subtotal, tax, and grand total from this receipt."
-        : "Extract all financial receipt, payment, or screenshot transaction details into JSON.";
+        : "Extract all financial receipt, payment, bank statement, or transaction history details into JSON. If the image is a transaction statement or mutasi rekening list with multiple transactions (e.g. QR payments, transfers), extract EVERY transaction row into the transactions and items arrays, and calculate the total sum of expense amounts.";
 
     const apiMessages = [
       {
