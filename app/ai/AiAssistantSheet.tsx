@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Sparkles,
   X,
@@ -12,236 +12,147 @@ import {
   AlertCircle,
   Check,
   ChevronUp,
+  Loader2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "@/utils/i18n/context";
+import { usePathname } from "next/navigation";
+import { useAiAssistant } from "./AiAssistantProvider";
+import ActionProposalCard from "./ActionProposalCard";
+import { preprocessAiMarkdown } from "@/utils/ai/markdown";
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
-
-interface AiAdvisorModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  isGuest?: boolean;
-}
-
-const STORAGE_KEY = "sakutrack_deepseek_key";
-
-export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps) {
+export default function AiAssistantSheet() {
   const { t, locale } = useTranslation();
+  const pathname = usePathname();
+  const {
+    isOpen,
+    closeAi,
+    messages,
+    sendMessage,
+    isLoading,
+    statusLabel,
+    errorMessage,
+    resetChat,
+    apiKey,
+    setApiKey,
+    updateProposal,
+  } = useAiAssistant();
 
-  const [messages, setMessages] = useState<Message[]>(() => [
-    {
-      id: "welcome",
-      role: "assistant",
-      content: t.aiAdvisor.welcomeMessage,
-    },
-  ]);
   const [inputValue, setInputValue] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Custom API key configuration drawer
   const [showKeyConfig, setShowKeyConfig] = useState(false);
-  const [customApiKey, setCustomApiKey] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem(STORAGE_KEY) || "";
-    }
-    return "";
-  });
-  const [savedApiKey, setSavedApiKey] = useState<string | null>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem(STORAGE_KEY);
-    }
-    return null;
-  });
+  const [keyInput, setKeyInput] = useState(apiKey || "");
   const [keyToast, setKeyToast] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setKeyInput(apiKey || "");
+  }, [apiKey]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isLoading, isOpen]);
+  }, [messages, isLoading, isOpen, statusLabel]);
+
+  // Handle escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        closeAi();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, closeAi]);
 
   if (!isOpen) return null;
 
   const handleSaveKey = () => {
-    if (typeof window === "undefined") return;
-    const trimmed = customApiKey.trim();
-    if (trimmed) {
-      localStorage.setItem(STORAGE_KEY, trimmed);
-      setSavedApiKey(trimmed);
-      setKeyToast(t.aiAdvisor.apiKeySavedToast);
-      setErrorMessage(null);
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-      setSavedApiKey(null);
-      setKeyToast(t.aiAdvisor.apiKeyRemovedToast);
-    }
+    const trimmed = keyInput.trim();
+    setApiKey(trimmed || null);
+    setKeyToast(trimmed ? t.aiAdvisor.apiKeySavedToast : t.aiAdvisor.apiKeyRemovedToast);
     setTimeout(() => setKeyToast(null), 3000);
   };
 
   const handleRemoveKey = () => {
-    if (typeof window === "undefined") return;
-    localStorage.removeItem(STORAGE_KEY);
-    setSavedApiKey(null);
-    setCustomApiKey("");
+    setKeyInput("");
+    setApiKey(null);
     setKeyToast(t.aiAdvisor.apiKeyRemovedToast);
     setTimeout(() => setKeyToast(null), 3000);
   };
 
-  const handleResetChat = () => {
-    setMessages([
-      {
-        id: "welcome-" + (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "1"),
-        role: "assistant",
-        content: t.aiAdvisor.welcomeMessage,
-      },
-    ]);
-    setErrorMessage(null);
-  };
-
-  const sendMessage = async (textToSend: string) => {
-    const trimmed = textToSend.trim();
+  const handleSend = () => {
+    const trimmed = inputValue.trim();
     if (!trimmed || isLoading) return;
-
-    setErrorMessage(null);
-    const userMsgId = "user-" + (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "msg");
-    const assistantMsgId = "assistant-" + (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "res");
-
-    const newMessages: Message[] = [
-      ...messages,
-      { id: userMsgId, role: "user", content: trimmed },
-    ];
-
-    setMessages(newMessages);
+    sendMessage(trimmed);
     setInputValue("");
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("/api/ai/advisor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
-          apiKeyOverride: savedApiKey || undefined,
-          language: locale,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        if (errorData.error === "MISSING_API_KEY") {
-          setShowKeyConfig(true);
-          setErrorMessage(t.aiAdvisor.apiKeyRequiredError);
-        } else {
-          setErrorMessage(errorData.message || t.aiAdvisor.networkError);
-        }
-        setIsLoading(false);
-        return;
-      }
-
-      // Add empty assistant placeholder to populate stream
-      setMessages((prev) => [
-        ...prev,
-        { id: assistantMsgId, role: "assistant", content: "" },
-      ]);
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("ReadableStream not supported by browser");
-      }
-
-      const decoder = new TextDecoder();
-      const streamAcc = { text: "" };
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmedLine = line.trim();
-          if (!trimmedLine || trimmedLine.startsWith(":")) continue;
-
-          if (trimmedLine === "data: [DONE]") {
-            break;
-          }
-
-          if (trimmedLine.startsWith("data: ")) {
-            const jsonStr = trimmedLine.slice(6);
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const deltaContent = parsed.choices?.[0]?.delta?.content;
-              if (deltaContent) {
-                streamAcc.text += deltaContent;
-                const nextContent = streamAcc.text;
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMsgId
-                      ? { ...msg, content: nextContent }
-                      : msg
-                  )
-                );
-              }
-            } catch {
-              // Ignore partial or non-json stream frames
-            }
-          }
-        }
-      }
-    } catch (err: unknown) {
-      const e = err as Error;
-      setErrorMessage(e.message || t.aiAdvisor.networkError);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(inputValue);
+      handleSend();
     }
   };
 
-  // Pre-process markdown: normalize unicode bullets and repair inline/merged tables
-  const preprocessMarkdown = (content: string) => {
-    let res = content.replace(/^([ \t]*)•\s+/gm, "$1- ");
-
-    // Separate table start from preceding text if inline: "Heading: | Col 1 | Col 2 |"
-    res = res.replace(/([^\n|]+:?)[ \t]+(\|(?:\s*[^|\n]+\s*\|){2,})/g, "$1\n\n$2");
-
-    // Separate rows merged on one line with "| |"
-    res = res.replace(/\|[ \t]+\|/g, "|\n|");
-
-    return res;
+  // Contextual page chips
+  const getContextChips = () => {
+    if (pathname.startsWith("/savings")) {
+      return locale === "id"
+        ? [
+            "Kapan target tabungan tercapai?",
+            "Berapa surplus yang bisa disapu ke tabungan?",
+            "Buat target tabungan baru Dana Darurat 5jt",
+          ]
+        : [
+            "When will my savings goals be reached?",
+            "How much surplus can I sweep to savings?",
+            "Create Emergency Fund goal of 5M",
+          ];
+    }
+    if (pathname.startsWith("/compare")) {
+      return locale === "id"
+        ? [
+            "Kenapa pengeluaran bulan ini berbeda dari bulan lalu?",
+            "Kategori apa yang paling boros dibanding lalu?",
+            "Bagaimana tren rata-rata belanja harianku?",
+          ]
+        : [
+            "Why is this month's spending different?",
+            "Which category surged compared to last month?",
+            "How is my daily spend trend pacing?",
+          ];
+    }
+    if (pathname.startsWith("/saku")) {
+      return locale === "id"
+        ? [
+            "Bagaimana distribusi saldo antar saku?",
+            "Ubah budget mingguan saku utama jadi 400rb",
+            "Saran alokasi dana antar saku",
+          ]
+        : [
+            "How is balance distributed across wallets?",
+            "Change primary weekly budget to 400k",
+            "Suggestions for wallet allocations",
+          ];
+    }
+    return [
+      t.aiAdvisor.promptChips.budgetPacing,
+      t.aiAdvisor.promptChips.whereToCut,
+      "Catat makan siang 35rb dan bensin 20rb",
+      t.aiAdvisor.promptChips.savingsGoal,
+    ];
   };
-
-  const promptChips = [
-    t.aiAdvisor.promptChips.budgetPacing,
-    t.aiAdvisor.promptChips.whereToCut,
-    t.aiAdvisor.promptChips.subscriptions,
-    t.aiAdvisor.promptChips.savingsGoal,
-  ];
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="ai-advisor-title"
+      aria-labelledby="ai-assistant-title"
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-zinc-950/60 backdrop-blur-xs animate-fade-in"
     >
       <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col h-[90vh] sm:h-[82vh] overflow-hidden">
@@ -253,7 +164,7 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 id="ai-advisor-title" className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                <h3 id="ai-assistant-title" className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                   {t.aiAdvisor.modalTitle}
                 </h3>
                 <span className="rounded-full bg-teal-500/10 px-2 py-0.5 text-[10px] font-semibold text-teal-600 dark:bg-teal-500/20 dark:text-teal-400">
@@ -274,7 +185,7 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
               aria-label={t.aiAdvisor.apiKeyModalTitle}
               title={t.aiAdvisor.apiKeyModalTitle}
               className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                showKeyConfig || savedApiKey
+                showKeyConfig || apiKey
                   ? "bg-teal-500/10 text-teal-600 dark:text-teal-400"
                   : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               }`}
@@ -285,7 +196,7 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
             {/* Reset chat */}
             <button
               type="button"
-              onClick={handleResetChat}
+              onClick={resetChat}
               aria-label={t.aiAdvisor.resetChat}
               title={t.aiAdvisor.resetChat}
               className="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
@@ -296,7 +207,7 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
             {/* Close button */}
             <button
               type="button"
-              onClick={onClose}
+              onClick={closeAi}
               aria-label={t.common.close}
               className="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             >
@@ -307,7 +218,7 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
 
         {/* Collapsible Key Config Drawer */}
         {showKeyConfig && (
-          <div className="p-3.5 bg-zinc-100/90 dark:bg-zinc-950/80 border-b border-zinc-200 dark:border-zinc-800 text-xs">
+          <div className="p-3.5 bg-zinc-100/90 dark:bg-zinc-950/80 border-b border-zinc-200 dark:border-zinc-800 text-xs animate-fade-in">
             <div className="flex items-center justify-between mb-2">
               <span className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
                 <KeyRound className="w-3.5 h-3.5 text-teal-500" />
@@ -327,8 +238,8 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
             <div className="flex gap-2">
               <input
                 type="password"
-                value={customApiKey}
-                onChange={(e) => setCustomApiKey(e.target.value)}
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
                 placeholder={t.aiAdvisor.apiKeyPlaceholder}
                 className="flex-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-teal-500/50"
               />
@@ -339,7 +250,7 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
               >
                 {t.aiAdvisor.apiKeySave}
               </button>
-              {savedApiKey && (
+              {apiKey && (
                 <button
                   type="button"
                   onClick={handleRemoveKey}
@@ -439,11 +350,6 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
                             {children}
                           </h3>
                         ),
-                        h4: ({ children }) => (
-                          <h4 className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 mt-1.5 mb-0.5 first:mt-0">
-                            {children}
-                          </h4>
-                        ),
                         p: ({ children }) => (
                           <p className="leading-relaxed mb-1.5 last:mb-0">
                             {children}
@@ -465,9 +371,6 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
                             {children}
                           </strong>
                         ),
-                        em: ({ children }) => (
-                          <em className="italic text-zinc-800 dark:text-zinc-200">{children}</em>
-                        ),
                         blockquote: ({ children }) => (
                           <blockquote className="my-2 border-l-2 border-teal-500 pl-3 italic text-zinc-600 dark:text-zinc-400">
                             {children}
@@ -478,11 +381,23 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
                             {children}
                           </code>
                         ),
-                        hr: () => <hr className="my-2 border-zinc-200 dark:border-zinc-700" />,
                       }}
                     >
-                      {preprocessMarkdown(msg.content)}
+                      {preprocessAiMarkdown(msg.content)}
                     </ReactMarkdown>
+
+                    {/* Interactive Action Proposal Cards */}
+                    {msg.proposals && msg.proposals.length > 0 && (
+                      <div className="mt-2.5 space-y-2">
+                        {msg.proposals.map((prop) => (
+                          <ActionProposalCard
+                            key={prop.id}
+                            proposal={prop}
+                            onUpdateProposal={(updated) => updateProposal(msg.id, updated)}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -495,17 +410,17 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
             </div>
           ))}
 
-          {/* Loading indicator */}
+          {/* Tool status or loading indicator */}
           {isLoading && (
             <div className="flex gap-2.5 justify-start">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400 mt-0.5">
                 <Bot className="w-3.5 h-3.5" />
               </div>
-              <div className="rounded-2xl rounded-tl-xs px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/60 flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse delay-150" />
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse delay-300" />
-                <span className="ml-1 text-[11px] font-medium">{t.aiAdvisor.thinking}</span>
+              <div className="rounded-2xl rounded-tl-xs px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/60 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <Loader2 className="w-3.5 h-3.5 text-teal-500 animate-spin" />
+                <span className="text-[11px] font-medium">
+                  {statusLabel || t.aiAdvisor.thinking}
+                </span>
               </div>
             </div>
           )}
@@ -515,7 +430,7 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
 
         {/* Suggestion Prompt Chips */}
         <div className="px-3.5 py-2 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-900/70 overflow-x-auto flex gap-1.5 no-scrollbar">
-          {promptChips.map((chip, idx) => (
+          {getContextChips().map((chip, idx) => (
             <button
               key={idx}
               type="button"
@@ -533,7 +448,7 @@ export default function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps)
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              sendMessage(inputValue);
+              handleSend();
             }}
             className="flex items-center gap-2"
           >

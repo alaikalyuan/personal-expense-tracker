@@ -15,6 +15,7 @@ import TransferModal from "./TransferModal";
 import IncomeModal from "./IncomeModal";
 import { archiveWallet } from "./actions";
 import UserMenu from "@/app/UserMenu";
+import AiHeaderButton from "@/app/ai/AiHeaderButton";
 
 interface SakuHubClientProps {
   wallets: WalletBalance[];
@@ -84,7 +85,10 @@ export default function SakuHubClient({
             </p>
           </div>
 
-          <UserMenu isGuest={isGuest} multiSakuEnabled={true} />
+          <div className="flex items-center gap-2">
+            <AiHeaderButton />
+            <UserMenu isGuest={isGuest} multiSakuEnabled={true} />
+          </div>
         </header>
 
         {/* Hero Card: Total Net Worth */}

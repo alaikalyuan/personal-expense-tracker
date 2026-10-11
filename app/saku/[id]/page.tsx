@@ -14,6 +14,7 @@ import {
 import ExpenseList, { ExpenseItem } from "@/app/ExpenseList";
 import SavingsClient from "@/app/savings/SavingsClient";
 import UserMenu from "@/app/UserMenu";
+import AiHeaderButton from "@/app/ai/AiHeaderButton";
 
 interface SakuDetailPageProps {
   params: Promise<{
@@ -120,7 +121,10 @@ export default async function SakuDetailPage(props: SakuDetailPageProps) {
             <span>Semua Saku</span>
           </Link>
 
-          <UserMenu isGuest={isGuest} multiSakuEnabled={true} />
+          <div className="flex items-center gap-2">
+            <AiHeaderButton />
+            <UserMenu isGuest={isGuest} multiSakuEnabled={true} />
+          </div>
         </header>
 
         {/* Saku Profile Hero Card */}

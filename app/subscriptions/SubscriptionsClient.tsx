@@ -47,6 +47,7 @@ import {
 import { useTranslation } from "@/utils/i18n/context";
 import { getTodayString } from "@/utils/date";
 import type { Wallet } from "@/utils/wallets/server";
+import AiHeaderButton from "@/app/ai/AiHeaderButton";
 
 interface SubscriptionsClientProps {
   initialSubscriptions: SubscriptionRecord[];
@@ -432,14 +433,17 @@ export default function SubscriptionsClient({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="flex items-center gap-1.5 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 font-semibold px-3 py-2 text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>{t.subscriptions.add}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <AiHeaderButton />
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="flex items-center gap-1.5 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 font-semibold px-3 py-2 text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>{t.subscriptions.add}</span>
+          </button>
+        </div>
       </header>
 
       {/* Guest Warning */}

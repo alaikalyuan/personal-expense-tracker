@@ -43,6 +43,7 @@ export const viewport: Viewport = {
 
 import { cookies } from "next/headers";
 import { FEATURE_MULTI_SAKU_ENABLED } from "@/utils/wallets/config";
+import { AiAssistantProvider } from "@/app/ai/AiAssistantProvider";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -72,9 +73,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased min-h-screen relative`}>
         <ThemeProvider initialTheme={theme}>
           <LanguageProvider initialLocale={locale} initialCurrency={currency}>
-            <ServiceWorkerRegister />
-            {children}
-            <BottomNav initialMultiSaku={multiSakuEnabled} />
+            <AiAssistantProvider>
+              <ServiceWorkerRegister />
+              {children}
+              <BottomNav initialMultiSaku={multiSakuEnabled} />
+            </AiAssistantProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

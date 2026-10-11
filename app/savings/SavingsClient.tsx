@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import UserMenu from "@/app/UserMenu";
+import AiHeaderButton from "@/app/ai/AiHeaderButton";
 import { useTranslation } from "@/utils/i18n/context";
 import {
   createSavingsGoal,
@@ -298,7 +299,10 @@ export default function SavingsClient({
           </p>
         </div>
 
-        <UserMenu isGuest={isGuest} />
+        <div className="flex items-center gap-2">
+          <AiHeaderButton />
+          <UserMenu isGuest={isGuest} />
+        </div>
       </div>
 
       {/* Two Pillars Financial Health Overview */}

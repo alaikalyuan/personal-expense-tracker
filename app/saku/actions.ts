@@ -218,6 +218,59 @@ export async function updateWallet(formData: FormData) {
   revalidatePath("/saku");
 }
 
+export async function setWalletBudget(
+  walletId: string,
+  cadence: "week" | "month",
+  amount: number | null
+) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const budgetVal = amount !== null && !isNaN(amount) && amount > 0 ? amount : null;
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (cadence === "week") {
+    updateData.weekly_budget = budgetVal;
+  } else {
+    updateData.monthly_budget = budgetVal;
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from("wallets")
+    .update(updateData)
+    .eq("id", walletId)
+    .eq("user_id", user.id)
+    .select("is_primary")
+    .maybeSingle();
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  // If this wallet is primary, keep user_metadata synced
+  if (updated?.is_primary && budgetVal !== null) {
+    await supabase.auth.updateUser({
+      data: cadence === "week" ? { weekly_budget: budgetVal } : { monthly_budget: budgetVal },
+    });
+  }
+
+  revalidatePath("/", "layout");
+  revalidatePath("/saku");
+  revalidatePath(`/saku/${walletId}`);
+  revalidatePath("/compare");
+}
+
 export async function archiveWallet(walletId: string) {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);

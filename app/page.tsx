@@ -23,6 +23,7 @@ import {
   getSelectedSakuServer,
 } from "@/utils/wallets/server";
 import { processSubscriptionRenewals } from "@/app/subscriptions/actions";
+import { resolveBudgets } from "@/utils/budget";
 
 export default async function DashboardPage(props: {
   searchParams?: Promise<{
@@ -154,68 +155,24 @@ export default async function DashboardPage(props: {
     0
   );
 
-  let weeklyBudget: number;
-  let monthlyBudget: number;
-
-  if (multiSakuEnabled && selectedWallet) {
-    weeklyBudget =
-      selectedWallet.weekly_budget !== null && selectedWallet.weekly_budget !== undefined
-        ? Number(selectedWallet.weekly_budget)
-        : Number(user.user_metadata?.weekly_budget || 500000);
-
-    monthlyBudget =
-      selectedWallet.monthly_budget !== null && selectedWallet.monthly_budget !== undefined
-        ? Number(selectedWallet.monthly_budget)
-        : Number(
-            user.user_metadata?.monthly_budget || Math.round((weeklyBudget / 7) * totalDaysInMonth)
-          );
-  } else if (multiSakuEnabled && selectedSakuId === "all" && wallets.length > 0) {
-    const spendingWallets = wallets.filter((w) => w.kind === "spending");
-    const totalWeeklyBudget = spendingWallets.reduce(
-      (sum, w) => sum + (w.weekly_budget !== null ? Number(w.weekly_budget) : 0),
-      0
-    );
-    const totalMonthlyBudget = spendingWallets.reduce(
-      (sum, w) =>
-        sum +
-        (w.monthly_budget !== null
-          ? Number(w.monthly_budget)
-          : w.weekly_budget !== null
-          ? Math.round((Number(w.weekly_budget) / 7) * totalDaysInMonth)
-          : 0),
-      0
-    );
-
-    weeklyBudget =
-      totalWeeklyBudget > 0
-        ? totalWeeklyBudget
-        : Number(user.user_metadata?.weekly_budget || 500000);
-
-    monthlyBudget =
-      totalMonthlyBudget > 0
-        ? totalMonthlyBudget
-        : Number(
-            user.user_metadata?.monthly_budget || Math.round((weeklyBudget / 7) * totalDaysInMonth)
-          );
-  } else {
+  let fallbackWallet = null;
+  if (!multiSakuEnabled || selectedSakuId === "all") {
     const { spendingWallet } = await getPrimaryWallets(
       supabase,
       user.id,
       user.user_metadata
     );
-
-    weeklyBudget =
-      spendingWallet?.weekly_budget !== null && spendingWallet?.weekly_budget !== undefined
-        ? Number(spendingWallet.weekly_budget)
-        : Number(user.user_metadata?.weekly_budget || 500000);
-
-    monthlyBudget =
-      spendingWallet?.monthly_budget !== null && spendingWallet?.monthly_budget !== undefined
-        ? Number(spendingWallet.monthly_budget)
-        : Number(
-            user.user_metadata?.monthly_budget || Math.round((weeklyBudget / 7) * totalDaysInMonth)
-          );
+    fallbackWallet = spendingWallet;
   }
+
+  const { weeklyBudget, monthlyBudget } = resolveBudgets({
+    user,
+    wallets,
+    fallbackWallet,
+    multiSakuEnabled,
+    selectedSakuId,
+    totalDaysInMonth,
+  });
 
   return (
     <DashboardClient

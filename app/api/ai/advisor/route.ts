@@ -1,15 +1,14 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  format,
-  startOfWeek,
-  startOfMonth,
-  endOfMonth,
-  getDaysInMonth,
-  getDate,
-} from "date-fns";
-import { getNowInTimezone } from "@/utils/date";
+import { buildFinancialSnapshot } from "@/utils/ai/snapshot";
+import { AI_TOOLS, executeReadTool, buildAiProposal, AiActionName } from "@/utils/ai/tools";
+import { checkAndIncrementAiUsage } from "@/utils/ai/rateLimit";
+
+interface ClientMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,13 +28,21 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { messages = [], apiKeyOverride, language = "id" } = body;
+    const {
+      messages = [],
+      apiKeyOverride,
+      language = "id",
+      pageContext = {},
+    } = body;
+
+    const isUsingOverride = Boolean(
+      apiKeyOverride && typeof apiKeyOverride === "string" && apiKeyOverride.trim().length > 0
+    );
 
     // Resolve DeepSeek API Key (hybrid override > server environment)
-    const apiKey =
-      apiKeyOverride && typeof apiKeyOverride === "string" && apiKeyOverride.trim().length > 0
-        ? apiKeyOverride.trim()
-        : process.env.DEEPSEEK_API_KEY?.trim();
+    const apiKey = isUsingOverride
+      ? apiKeyOverride.trim()
+      : process.env.DEEPSEEK_API_KEY?.trim();
 
     if (!apiKey) {
       return NextResponse.json(
@@ -48,185 +55,270 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const now = getNowInTimezone();
-    const currentDay = getDate(now);
-    const totalDaysInMonth = getDaysInMonth(now);
-    const startOfWeekDate = startOfWeek(now, { weekStartsOn: 1 });
-    const startOfMonthDate = startOfMonth(now);
-    const endOfMonthDate = endOfMonth(now);
-
-    const startOfWeekStr = format(startOfWeekDate, "yyyy-MM-dd");
-    const startOfMonthStr = format(startOfMonthDate, "yyyy-MM-dd");
-    const endOfMonthStr = format(endOfMonthDate, "yyyy-MM-dd");
-
-    // Fetch user recent expenses & period expenses
-    const [expensesRes, recentExpensesRes, subscriptionsRes, walletsRes] = await Promise.all([
-      supabase
-        .from("expenses")
-        .select("amount, category, spent_at")
-        .eq("user_id", user.id)
-        .gte("spent_at", startOfMonthStr)
-        .lte("spent_at", endOfMonthStr),
-      supabase
-        .from("expenses")
-        .select("id, name, amount, category, spent_at, note")
-        .eq("user_id", user.id)
-        .order("spent_at", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(40),
-      supabase
-        .from("subscriptions")
-        .select("name, price, billing_cycle, category, status")
-        .eq("user_id", user.id)
-        .eq("status", "active"),
-      supabase
-        .from("wallets")
-        .select("name, kind, currency, weekly_budget, monthly_budget, opening_balance")
-        .eq("user_id", user.id)
-        .is("archived_at", null),
-    ]);
-
-    const monthExpenses = expensesRes.data || [];
-    const recentExpenses = recentExpensesRes.data || [];
-    const subscriptions = subscriptionsRes.data || [];
-    const wallets = walletsRes.data || [];
-
-    // Calculate period stats
-    let totalSpentMonth = 0;
-    let totalSpentWeek = 0;
-    const categoryTotals: Record<string, number> = {};
-
-    for (const exp of monthExpenses) {
-      const amt = Number(exp.amount) || 0;
-      totalSpentMonth += amt;
-      const spentDate = exp.spent_at ? exp.spent_at.split("T")[0] : "";
-      if (spentDate >= startOfWeekStr) {
-        totalSpentWeek += amt;
+    // Rate Limit Check (bypassed if user provided personal API key)
+    if (!isUsingOverride) {
+      const rateLimitResult = await checkAndIncrementAiUsage(supabase, user);
+      if (!rateLimitResult.allowed) {
+        return NextResponse.json(
+          {
+            error: "DAILY_LIMIT_REACHED",
+            message:
+              language === "id"
+                ? "Batas penggunaan gratis 30 pesan per hari telah tercapai. Masukkan DeepSeek API Key pribadi Anda di menu pengaturan kunci AI untuk melanjutkan tanpa batas."
+                : "Daily free quota of 30 messages reached. Please add your personal DeepSeek API key in AI settings to continue without limits.",
+          },
+          { status: 429 }
+        );
       }
-      categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + amt;
     }
 
-    // Determine budgets
-    const userWeeklyBudget = Number(user.user_metadata?.weekly_budget || 500000);
-    const userMonthlyBudget = Number(
-      user.user_metadata?.monthly_budget || Math.round((userWeeklyBudget / 7) * totalDaysInMonth)
-    );
+    // Build comprehensive financial snapshot
+    const snapshot = await buildFinancialSnapshot(supabase, user, {
+      selectedSakuId: pageContext.selectedSakuId,
+      path: pageContext.path,
+      locale: language,
+    });
 
-    const totalSubCommitmentMonthly = subscriptions.reduce((acc, sub) => {
-      const p = Number(sub.price) || 0;
-      if (sub.billing_cycle === "monthly") return acc + p;
-      if (sub.billing_cycle === "yearly") return acc + Math.round(p / 12);
-      if (sub.billing_cycle === "weekly") return acc + Math.round(p * 4.33);
-      return acc + p;
-    }, 0);
+    const systemPrompt = `You are "SakuTrack AI", an intelligent, empathetic, highly capable financial assistant & action companion embedded directly inside the SakuTrack expense tracker app.
 
-    const baseCurrency = wallets[0]?.currency || "IDR";
-    const daysRemainingInMonth = Math.max(0, totalDaysInMonth - currentDay);
+${snapshot.systemPromptContext}
 
-    // Build financial snapshot context string
-    const categorySummary = Object.entries(categoryTotals)
-      .sort((a, b) => b[1] - a[1])
-      .map(([cat, amt]) => {
-        const pct = totalSpentMonth > 0 ? Math.round((amt / totalSpentMonth) * 100) : 0;
-        return `- ${cat}: ${amt.toLocaleString()} (${pct}%)`;
-      })
-      .join("\n");
-
-    const recentTxSummary = recentExpenses
-      .slice(0, 30)
-      .map((e) => {
-        return `- ${e.spent_at}: ${e.name} [${e.category}] -> ${Number(e.amount).toLocaleString()}${
-          e.note ? ` ("${e.note}")` : ""
-        }`;
-      })
-      .join("\n");
-
-    const subSummary =
-      subscriptions.length > 0
-        ? subscriptions
-            .map((s) => `- ${s.name}: ${Number(s.price).toLocaleString()} / ${s.billing_cycle}`)
-            .join("\n")
-        : "No active subscriptions tracked.";
-
-    const systemPrompt = `You are "SakuTrack AI", an empathetic, highly intelligent, and objective personal financial assistant embedded inside the SakuTrack expense tracker app.
-
-USER'S REAL-TIME FINANCIAL CONTEXT:
-- Base Currency: ${baseCurrency}
-- Current Date: ${format(now, "yyyy-MM-dd")} (Day ${currentDay} of ${totalDaysInMonth} in the month)
-- Days Remaining in Month: ${daysRemainingInMonth} days
-- Monthly Budget: ${userMonthlyBudget.toLocaleString()} ${baseCurrency}
-- Total Spent This Month (MTD): ${totalSpentMonth.toLocaleString()} ${baseCurrency} (${
-      userMonthlyBudget > 0 ? Math.round((totalSpentMonth / userMonthlyBudget) * 100) : 0
-    }% of monthly budget)
-- Weekly Budget: ${userWeeklyBudget.toLocaleString()} ${baseCurrency}
-- Total Spent This Week: ${totalSpentWeek.toLocaleString()} ${baseCurrency} (${
-      userWeeklyBudget > 0 ? Math.round((totalSpentWeek / userWeeklyBudget) * 100) : 0
-    }% of weekly budget)
-- Total Active Monthly Subscriptions: ${totalSubCommitmentMonthly.toLocaleString()} ${baseCurrency}/month
-
-SPENDING BY CATEGORY (This Month):
-${categorySummary || "No expenses recorded this month yet."}
-
-ACTIVE RECURRING SUBSCRIPTIONS:
-${subSummary}
-
-RECENT INDIVIDUAL TRANSACTIONS (Latest ${Math.min(30, recentExpenses.length)} items):
-${recentTxSummary || "No recent transactions found."}
+CORE CAPABILITIES & TOOLS:
+1. READ TOOLS: You can search transaction history beyond recent logs using 'search_expenses' (by keyword, category, date range, or saku) or get past period totals using 'get_period_summary'. Use these proactively when the user asks questions about specific historical spending or categories!
+2. ACTION TOOLS: You can propose real app actions to help the user:
+   - 'log_expenses': Record single or multiple expenses (e.g., user says "tadi makan 25rb, parkir 5rb").
+   - 'update_expense': Update existing expense details (refer to ID from transaction list).
+   - 'delete_expense': Delete an erroneous expense.
+   - 'set_expense_exempt': Mark/unmark an expense as one-off splurge/exempt.
+   - 'set_budget': Change weekly or monthly budget targets.
+   - 'create_savings_goal', 'allocate_savings_to_goal', 'withdraw_savings_from_goal', 'sweep_surplus_to_savings'.
+   When the user expresses intent to add, update, delete, or budget, YOU MUST CALL THE CORRESPONDING ACTION TOOL so an interactive confirmation card appears for the user. Do not merely say "I have logged it" without invoking the tool.
 
 RESPONSE GUIDELINES:
-1. LANGUAGE: The user's interface language is set to "${
-      language === "id" ? "Bahasa Indonesia" : "English"
-    }". You MUST answer in ${
+1. LANGUAGE: Respond in ${
       language === "id"
-        ? "Bahasa Indonesia yang bersahabat, jelas, dan natural"
-        : "clear, encouraging, and natural English"
+        ? "Bahasa Indonesia yang santun, bersahabat, jelas, dan natural"
+        : "clear, encouraging, natural English"
     }.
-2. ROLE: You are an analytical, constructive, and realistic financial advisor. Praise good spending habits, give constructive warnings if they are pacing over budget, point out large anomalous expenses, and offer actionable cost-cutting suggestions.
-3. CONCISENESS & FORMATTING: Keep responses concise, well-structured, and readable on mobile devices. Use markdown bullet points, bold key numbers, and short paragraphs. When presenting comparisons or budget scenarios in a table, use standard GitHub Flavored Markdown table format with a blank line before and after, placing each row on its own separate line (never merge multiple table rows onto a single line). Do not write endless walls of text.
-4. HONESTY: Always reference their actual numbers from the context above. If they have no expenses or budget set, kindly encourage them to record them.
-5. SAFETY: You provide budgeting insights and personal finance habits, not certified legal or investment advice.`;
+2. FORMATTING RULES (CRITICAL):
+   - Keep answers readable on mobile screens. Use markdown bullets, bold key amounts, and concise paragraphs.
+   - TABLE FORMATTING: If generating a Markdown table, ALWAYS put each row on its own separate line. Every table row must start and end with '|'. Include a standard markdown separator line (|---|---|). Never squish multiple rows or cells on a single line.
+3. TRUTHFULNESS: Always reference the user's actual figures from the context above. If they have no expenses or budget set, kindly encourage them.
+4. SAFETY: You provide budgeting insights, practical personal finance tracking, and habit recommendations, not formal legal or investment advice.`;
 
-    const apiMessages = [
+    const apiMessages: any[] = [
       { role: "system", content: systemPrompt },
-      ...messages.slice(-10),
+      ...messages.slice(-10).map((m: ClientMessage) => ({
+        role: m.role,
+        content: m.content,
+      })),
     ];
 
     const baseUrl = process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
 
-    const deepseekResponse = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+    // Setup streaming response
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const sendEvent = (event: Record<string, unknown>) => {
+          controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+        };
+
+        try {
+          let currentMessages = [...apiMessages];
+          let loopCount = 0;
+          const MAX_LOOPS = 4;
+
+          while (loopCount < MAX_LOOPS) {
+            loopCount++;
+
+            const res = await fetch(`${baseUrl}/chat/completions`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                model: "deepseek-chat",
+                messages: currentMessages,
+                tools: AI_TOOLS,
+                stream: true,
+                temperature: loopCount === 1 ? 0.6 : 0.3,
+              }),
+            });
+
+            if (!res.ok) {
+              const errText = await res.text().catch(() => "");
+              let errMsg = `DeepSeek API returned error ${res.status}`;
+              try {
+                const parsed = JSON.parse(errText);
+                if (parsed.error?.message) errMsg = parsed.error.message;
+              } catch {}
+              sendEvent({ type: "error", code: "DEEPSEEK_ERROR", message: errMsg });
+              break;
+            }
+
+            const reader = res.body?.getReader();
+            if (!reader) {
+              sendEvent({ type: "error", code: "STREAM_ERROR", message: "No response body reader" });
+              break;
+            }
+
+            const decoder = new TextDecoder();
+            let buffer = "";
+            let assistantText = "";
+            const toolCallsMap: Map<number, { id: string; name: string; arguments: string }> = new Map();
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n");
+              buffer = lines.pop() || "";
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith(":")) continue;
+                if (trimmed === "data: [DONE]") break;
+
+                if (trimmed.startsWith("data: ")) {
+                  try {
+                    const parsed = JSON.parse(trimmed.slice(6));
+                    const delta = parsed.choices?.[0]?.delta;
+                    if (!delta) continue;
+
+                    if (delta.content) {
+                      assistantText += delta.content;
+                      sendEvent({ type: "text", delta: delta.content });
+                    }
+
+                    if (Array.isArray(delta.tool_calls)) {
+                      for (const tc of delta.tool_calls) {
+                        const index = tc.index ?? 0;
+                        if (!toolCallsMap.has(index)) {
+                          toolCallsMap.set(index, {
+                            id: tc.id || `call_${index}`,
+                            name: tc.function?.name || "",
+                            arguments: tc.function?.arguments || "",
+                          });
+                        } else {
+                          const existing = toolCallsMap.get(index)!;
+                          if (tc.id) existing.id = tc.id;
+                          if (tc.function?.name) existing.name += tc.function.name;
+                          if (tc.function?.arguments) existing.arguments += tc.function.arguments;
+                        }
+                      }
+                    }
+                  } catch {}
+                }
+              }
+            }
+
+            // Check if model called any tools
+            if (toolCallsMap.size === 0) {
+              // Finished text output without tool calls
+              break;
+            }
+
+            // Process tool calls
+            const toolCallsArray = Array.from(toolCallsMap.values());
+            currentMessages.push({
+              role: "assistant",
+              content: assistantText || null,
+              tool_calls: toolCallsArray.map((tc) => ({
+                id: tc.id,
+                type: "function",
+                function: { name: tc.name, arguments: tc.arguments },
+              })),
+            });
+
+            let hasReadToolCall = false;
+
+            for (const tc of toolCallsArray) {
+              let parsedArgs: Record<string, unknown> = {};
+              try {
+                parsedArgs = JSON.parse(tc.arguments);
+              } catch {
+                parsedArgs = {};
+              }
+
+              if (tc.name === "search_expenses" || tc.name === "get_period_summary") {
+                // Execute Read Tool
+                sendEvent({
+                  type: "status",
+                  label:
+                    tc.name === "search_expenses"
+                      ? language === "id"
+                        ? "Mencari data transaksi..."
+                        : "Searching transactions..."
+                      : language === "id"
+                      ? "Menganalisis periode..."
+                      : "Analyzing period...",
+                });
+
+                const readResult = await executeReadTool(supabase, user.id, tc.name, parsedArgs);
+                currentMessages.push({
+                  role: "tool",
+                  tool_call_id: tc.id,
+                  content: readResult,
+                });
+                hasReadToolCall = true;
+              } else {
+                // Action Proposal Tool: Validate and build proposal card
+                const proposal = await buildAiProposal(
+                  supabase,
+                  user.id,
+                  tc.name as AiActionName,
+                  parsedArgs
+                );
+
+                if (proposal) {
+                  sendEvent({ type: "proposal", proposal });
+                  currentMessages.push({
+                    role: "tool",
+                    tool_call_id: tc.id,
+                    content: JSON.stringify({
+                      status: "proposal_presented_to_user",
+                      note: "The action card has been shown to the user with a Confirm button.",
+                    }),
+                  });
+                } else {
+                  currentMessages.push({
+                    role: "tool",
+                    tool_call_id: tc.id,
+                    content: JSON.stringify({
+                      status: "error",
+                      message: "Invalid action arguments or record not found.",
+                    }),
+                  });
+                }
+              }
+            }
+
+            // If only proposals were generated without read tools, DeepSeek may produce a brief wrap-up or we can finish
+            if (!hasReadToolCall && assistantText.length > 0) {
+              break;
+            }
+          }
+
+          sendEvent({ type: "done" });
+          controller.close();
+        } catch (streamErr: any) {
+          sendEvent({
+            type: "error",
+            code: "INTERNAL_ERROR",
+            message: streamErr?.message || "Stream processing failure",
+          });
+          controller.close();
+        }
       },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: apiMessages,
-        stream: true,
-        temperature: 0.7,
-      }),
     });
 
-    if (!deepseekResponse.ok) {
-      const errText = await deepseekResponse.text().catch(() => "");
-      let errMsg = `DeepSeek API returned error ${deepseekResponse.status}`;
-      try {
-        const parsed = JSON.parse(errText);
-        if (parsed.error?.message) {
-          errMsg = parsed.error.message;
-        }
-      } catch {
-        // use fallback errMsg
-      }
-      return NextResponse.json(
-        { error: "DEEPSEEK_API_ERROR", message: errMsg },
-        { status: deepseekResponse.status }
-      );
-    }
-
-    return new Response(deepseekResponse.body, {
+    return new Response(stream, {
       headers: {
-        "Content-Type": "text/event-stream; charset=utf-8",
+        "Content-Type": "application/x-ndjson; charset=utf-8",
         "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",
       },

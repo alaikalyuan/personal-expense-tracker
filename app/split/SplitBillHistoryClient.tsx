@@ -22,6 +22,7 @@ import { SubscriptionRecord } from "@/app/subscriptions/types";
 import { createSplitBillFromSubscription } from "@/app/subscriptions/actions";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/utils/i18n/context";
+import AiHeaderButton from "@/app/ai/AiHeaderButton";
 
 export interface HistoryBillRecord {
   id: string;
@@ -193,13 +194,16 @@ export default function SplitBillHistoryClient({
           <span>{t.splitBill.backToHome}</span>
         </Link>
 
-        <Link
-          href="/split/new"
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>{t.splitBill.newSplit}</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <AiHeaderButton />
+          <Link
+            href="/split/new"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>{t.splitBill.newSplit}</span>
+          </Link>
+        </div>
       </div>
 
       {/* Header */}

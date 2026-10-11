@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import UserMenu from "@/app/UserMenu";
+import AiHeaderButton from "@/app/ai/AiHeaderButton";
 import DailyTrendComparison from "./DailyTrendComparison";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -249,7 +250,10 @@ export default async function ComparePage() {
             </div>
           )}
         </div>
-        <UserMenu isGuest={isGuest} />
+        <div className="flex items-center gap-2">
+          <AiHeaderButton />
+          <UserMenu isGuest={isGuest} />
+        </div>
       </div>
 
       {/* Week-over-Week Spend Hero Card */}

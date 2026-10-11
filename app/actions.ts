@@ -282,6 +282,78 @@ export async function addExpense(formData: FormData) {
   }
 }
 
+export interface AddExpenseBatchItem {
+  name: string;
+  amount: number;
+  category: string;
+  spentAt?: string;
+  note?: string | null;
+  walletId?: string | null;
+}
+
+export async function addExpensesBatch(items: AddExpenseBatchItem[]) {
+  if (!items || items.length === 0) return [];
+
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const { spendingWallet } = await getPrimaryWallets(supabase, user.id, user.user_metadata);
+  const defaultWalletId =
+    spendingWallet?.id && spendingWallet.id !== "fallback-spending" ? spendingWallet.id : null;
+
+  const todayStr = getTodayString();
+  const insertPayloads = items.map((item) => {
+    const trimmedName = item.name?.trim();
+    if (!trimmedName) throw new Error("Expense name is required for all items");
+    const amt = Number(item.amount);
+    if (isNaN(amt) || amt < 0) throw new Error("Amount must be greater than or equal to 0");
+
+    let wId = item.walletId?.trim() || null;
+    if (!wId || wId === "all") {
+      wId = defaultWalletId;
+    }
+
+    const row: Record<string, unknown> = {
+      user_id: user.id,
+      category: item.category || "Others",
+      name: trimmedName,
+      note: item.note?.trim() || null,
+      amount: amt,
+      spent_at: item.spentAt || todayStr,
+    };
+    if (wId) {
+      row.wallet_id = wId;
+    }
+    return row;
+  });
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("expenses")
+    .insert(insertPayloads)
+    .select();
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/compare");
+  revalidatePath("/archive");
+  revalidatePath("/savings");
+  revalidatePath("/saku");
+
+  return inserted || [];
+}
+
 export async function logNoSpendDay(customDate?: string, locale: "id" | "en" = "id") {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
