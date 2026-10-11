@@ -106,7 +106,7 @@ RESPONSE GUIDELINES:
 3. TRUTHFULNESS: Always reference the user's actual figures from the context above. If they have no expenses or budget set, kindly encourage them.
 4. SAFETY: You provide budgeting insights, practical personal finance tracking, and habit recommendations, not formal legal or investment advice.`;
 
-    const apiMessages: any[] = [
+    const apiMessages: unknown[] = [
       { role: "system", content: systemPrompt },
       ...messages.slice(-10).map((m: ClientMessage) => ({
         role: m.role,
@@ -126,7 +126,7 @@ RESPONSE GUIDELINES:
         };
 
         try {
-          let currentMessages = [...apiMessages];
+          const currentMessages = [...apiMessages];
           let loopCount = 0;
           const MAX_LOOPS = 4;
 
@@ -305,11 +305,12 @@ RESPONSE GUIDELINES:
 
           sendEvent({ type: "done" });
           controller.close();
-        } catch (streamErr: any) {
+        } catch (streamErr: unknown) {
           sendEvent({
             type: "error",
             code: "INTERNAL_ERROR",
-            message: streamErr?.message || "Stream processing failure",
+            message:
+              streamErr instanceof Error ? streamErr.message : "Stream processing failure",
           });
           controller.close();
         }
