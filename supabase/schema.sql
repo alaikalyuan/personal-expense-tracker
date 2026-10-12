@@ -1,8 +1,7 @@
 -- ==============================================================================
--- SakuTrack Complete Supabase Database Schema
+-- SakuTrack Complete Supabase Database Schema (Canonical)
 -- ==============================================================================
--- Run this script in your Supabase Dashboard SQL Editor:
--- Go to https://supabase.com/dashboard -> Project -> SQL Editor -> New Query
+-- Run this script in your Supabase Dashboard SQL Editor or via migrations.
 -- ==============================================================================
 
 -- 1. USER SETTINGS TABLE
@@ -189,13 +188,13 @@ CREATE POLICY "wallet_transactions_owner_policy"
 CREATE INDEX IF NOT EXISTS idx_wallet_tx_user_date ON public.wallet_transactions (user_id, occurred_on DESC);
 CREATE INDEX IF NOT EXISTS idx_wallet_tx_from_to ON public.wallet_transactions (from_wallet_id, to_wallet_id);
 
--- Wallet Balances View
+-- Wallet Balances View (single canonical calculation)
 CREATE OR REPLACE VIEW public.wallet_balances AS
 WITH inflows AS (
   SELECT
     wallet_transactions.to_wallet_id AS wallet_id,
     COALESCE(SUM(wallet_transactions.amount), 0::numeric) AS total_inflow
-  FROM wallet_transactions
+  FROM public.wallet_transactions
   WHERE wallet_transactions.to_wallet_id IS NOT NULL
   GROUP BY wallet_transactions.to_wallet_id
 ),
@@ -203,15 +202,16 @@ outflows AS (
   SELECT
     wallet_transactions.from_wallet_id AS wallet_id,
     COALESCE(SUM(wallet_transactions.amount), 0::numeric) AS total_outflow
-  FROM wallet_transactions
+  FROM public.wallet_transactions
   WHERE wallet_transactions.from_wallet_id IS NOT NULL
+    AND wallet_transactions.expense_id IS NULL
   GROUP BY wallet_transactions.from_wallet_id
 ),
 expense_deductions AS (
   SELECT
     expenses.wallet_id,
     COALESCE(SUM(expenses.amount), 0::numeric) AS total_expenses
-  FROM expenses
+  FROM public.expenses
   WHERE expenses.wallet_id IS NOT NULL
   GROUP BY expenses.wallet_id
 )
@@ -236,7 +236,7 @@ SELECT
     WHEN w.track_balance = false THEN 0::numeric
     ELSE (w.opening_balance + COALESCE(inf.total_inflow, 0::numeric)) - (COALESCE(outf.total_outflow, 0::numeric) + COALESCE(exp_ded.total_expenses, 0::numeric))
   END AS current_balance
-FROM wallets w
+FROM public.wallets w
 LEFT JOIN inflows inf ON inf.wallet_id = w.id
 LEFT JOIN outflows outf ON outf.wallet_id = w.id
 LEFT JOIN expense_deductions exp_ded ON exp_ded.wallet_id = w.id;
@@ -332,6 +332,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   split_config JSONB NOT NULL DEFAULT '{"split_mode":"equal","friends":[],"auto_create_split_bill":true,"auto_log_to_expenses":true}'::jsonb,
   last_split_bill_id UUID REFERENCES public.split_bills(id) ON DELETE SET NULL,
   last_processed_date DATE,
+  pay_from_wallet_id UUID REFERENCES public.wallets(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -412,7 +413,122 @@ CREATE POLICY "email_transactions_user_policy"
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
--- Ingestion RPC Function
+-- 8. FUNCTIONS & TRIGGERS
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.ensure_default_wallets(p_user_id UUID)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_main_wallet_id UUID;
+  v_savings_wallet_id UUID;
+BEGIN
+  -- 1. Ensure user_settings exists
+  INSERT INTO public.user_settings (user_id, base_currency, multi_saku_enabled)
+  VALUES (p_user_id, 'IDR', false)
+  ON CONFLICT (user_id) DO NOTHING;
+
+  -- 2. Check if primary spending wallet exists
+  SELECT id INTO v_main_wallet_id
+  FROM public.wallets
+  WHERE user_id = p_user_id AND is_primary = true AND kind = 'spending'
+  LIMIT 1;
+
+  IF v_main_wallet_id IS NULL THEN
+    INSERT INTO public.wallets (
+      user_id, kind, name, emoji, color, currency, is_primary, track_balance, opening_balance, sort_order
+    ) VALUES (
+      p_user_id, 'spending', 'Dompet Utama', '👛', '#10b981', 'IDR', true, false, 0, 0
+    )
+    RETURNING id INTO v_main_wallet_id;
+  END IF;
+
+  -- 3. Check if stash wallet (Tabungan) exists
+  SELECT id INTO v_savings_wallet_id
+  FROM public.wallets
+  WHERE user_id = p_user_id AND kind = 'stash'
+  LIMIT 1;
+
+  IF v_savings_wallet_id IS NULL THEN
+    INSERT INTO public.wallets (
+      user_id, kind, name, emoji, color, currency, is_primary, track_balance, opening_balance, sort_order
+    ) VALUES (
+      p_user_id, 'stash', 'Tabungan', '🏦', '#0d9488', 'IDR', false, true, 0, 1
+    )
+    RETURNING id INTO v_savings_wallet_id;
+  END IF;
+
+  -- 4. Update default_wallet_id in user_settings if not set
+  UPDATE public.user_settings
+  SET default_wallet_id = v_main_wallet_id
+  WHERE user_id = p_user_id AND default_wallet_id IS NULL;
+
+  RETURN v_main_wallet_id;
+END;
+$$;
+
+-- Trigger on expense insertion: assign default wallet ONLY for registered users
+CREATE OR REPLACE FUNCTION public.handle_new_expense_wallet()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_wallet_id UUID;
+  v_is_anon BOOLEAN;
+BEGIN
+  -- Check if user is anonymous
+  SELECT COALESCE(is_anonymous, false) INTO v_is_anon
+  FROM auth.users
+  WHERE id = NEW.user_id;
+
+  -- For anonymous guests, do not generate wallets or force wallet_id
+  IF v_is_anon THEN
+    RETURN NEW;
+  END IF;
+
+  -- For registered users without a wallet_id, assign default wallet
+  IF NEW.wallet_id IS NULL THEN
+    SELECT default_wallet_id INTO v_wallet_id
+    FROM public.user_settings
+    WHERE user_id = NEW.user_id;
+
+    IF v_wallet_id IS NULL THEN
+      v_wallet_id := public.ensure_default_wallets(NEW.user_id);
+    END IF;
+
+    NEW.wallet_id := v_wallet_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.handle_update_expense_wallet()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Allow wallet_id to be updated or cleared (e.g. on ON DELETE SET NULL)
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_expense_set_default_wallet ON public.expenses;
+CREATE TRIGGER on_expense_set_default_wallet
+  BEFORE INSERT ON public.expenses
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_expense_wallet();
+
+DROP TRIGGER IF EXISTS on_expense_update_wallet ON public.expenses;
+CREATE TRIGGER on_expense_update_wallet
+  BEFORE UPDATE ON public.expenses
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_update_expense_wallet();
+
+-- Email Ingestion RPC Function
 CREATE OR REPLACE FUNCTION public.ingest_email_transaction(
   p_token TEXT,
   p_merchant TEXT,
@@ -479,24 +595,24 @@ BEGIN
   IF v_mode = 'auto' THEN
     INSERT INTO public.expenses (
       user_id,
-      wallet_id,
-      name,
-      amount,
       category,
+      name,
+      note,
+      amount,
       spent_at,
-      note
+      wallet_id
     ) VALUES (
       v_user_id,
-      v_target_wallet_id,
-      p_merchant,
-      p_amount,
       COALESCE(p_category, 'Food & Dining'),
-      p_date,
+      p_merchant,
       CASE 
         WHEN p_ref IS NOT NULL AND trim(p_ref) != '' 
         THEN 'Auto-logged via Livin'' QRIS (' || trim(p_ref) || ')' 
         ELSE 'Auto-logged via Livin'' QRIS' 
-      END
+      END,
+      p_amount,
+      p_date,
+      v_target_wallet_id
     )
     RETURNING id INTO v_expense_id;
 

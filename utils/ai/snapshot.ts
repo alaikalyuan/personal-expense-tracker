@@ -78,7 +78,7 @@ export async function buildFinancialSnapshot(
       .select("multi_saku_enabled, base_currency")
       .eq("user_id", user.id)
       .maybeSingle(),
-    getSavingsGoals(supabase, user.id, user.user_metadata),
+    getSavingsGoals(supabase, user.id),
     supabase
       .from("expenses")
       .select("id, name, amount, category, spent_at, note, wallet_id")
@@ -118,7 +118,7 @@ export async function buildFinancialSnapshot(
   // Resolve budgets using unified logic
   let fallbackWallet = null;
   if (!multiSakuEnabled || selectedSakuId === "all") {
-    const { spendingWallet } = await getPrimaryWallets(supabase, user.id, user.user_metadata);
+    const { spendingWallet } = await getPrimaryWallets(supabase, user.id);
     fallbackWallet = spendingWallet;
   }
 

@@ -40,37 +40,34 @@ export default async function SavingsPage() {
   // Active weekly budget & primary wallets
   const { spendingWallet, stashWallet } = await getPrimaryWallets(
     supabase,
-    user.id,
-    user.user_metadata
+    user.id
   );
 
   const weeklyBudget =
     spendingWallet?.weekly_budget !== null && spendingWallet?.weekly_budget !== undefined
       ? Number(spendingWallet.weekly_budget)
-      : Number(user.user_metadata?.weekly_budget || 500000);
+      : 500000;
 
-  // User savings goals from savings_goals table (with metadata fallback)
+  // User savings goals from savings_goals table
   const rawGoals: SavingsGoalItem[] = await getSavingsGoals(
     supabase,
-    user.id,
-    user.user_metadata
+    user.id
   );
 
-  // Core Savings balance (Tabungan Pokok) from stash wallet (with metadata fallback)
-  const coreSavings = stashWallet
-    ? Number(stashWallet.current_balance)
-    : Number(user.user_metadata?.savings_manual_deposit || 0);
+  // Core Savings balance (Tabungan Pokok) from stash wallet
+  const coreSavings = stashWallet ? Number(stashWallet.current_balance) : 0;
 
-  // Cumulative surplus already swept/transferred from metadata
-  const sweptSurplus = Number(user.user_metadata?.savings_swept_surplus || 0);
-
-  // Savings balance history from wallet_transactions (with metadata fallback)
+  // Savings balance history from wallet_transactions
   const rawHistory: SavingsHistoryItem[] = await getSavingsHistory(
     supabase,
     user.id,
-    stashWallet?.id,
-    user.user_metadata
+    stashWallet?.id
   );
+
+  // Cumulative surplus already swept/transferred calculated directly from transaction ledger
+  const sweptSurplus = rawHistory
+    .filter((h) => h.type === "surplus_sweep" || h.type === "surplus_sweep_goal")
+    .reduce((sum, h) => sum + Number(h.amount || 0), 0);
 
   let savingsHistory = rawHistory;
   if (savingsHistory.length === 0 && coreSavings > 0) {

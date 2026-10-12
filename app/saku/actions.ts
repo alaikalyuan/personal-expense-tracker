@@ -89,7 +89,7 @@ export async function createWallet(formData: FormData) {
     throw new Error("Unauthorized");
   }
 
-  const settings = await getUserSettings(supabase, user.id, user.user_metadata);
+  const settings = await getUserSettings(supabase, user.id);
 
   const name = (formData.get("name") as string)?.trim();
   const kind = (formData.get("kind") as "spending" | "stash") || "spending";
@@ -258,13 +258,6 @@ export async function setWalletBudget(
     throw new Error(updateError.message);
   }
 
-  // If this wallet is primary, keep user_metadata synced
-  if (updated?.is_primary && budgetVal !== null) {
-    await supabase.auth.updateUser({
-      data: cadence === "week" ? { weekly_budget: budgetVal } : { monthly_budget: budgetVal },
-    });
-  }
-
   revalidatePath("/", "layout");
   revalidatePath("/saku");
   revalidatePath(`/saku/${walletId}`);
@@ -421,7 +414,7 @@ export async function recordWalletIncome(formData: FormData) {
     throw new Error("Invalid income amount");
   }
 
-  const settings = await getUserSettings(supabase, user.id, user.user_metadata);
+  const settings = await getUserSettings(supabase, user.id);
 
   const { error: txError } = await supabase.from("wallet_transactions").insert({
     id: crypto.randomUUID(),

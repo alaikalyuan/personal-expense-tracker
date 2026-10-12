@@ -159,8 +159,7 @@ export default async function DashboardPage(props: {
   if (!multiSakuEnabled || selectedSakuId === "all") {
     const { spendingWallet } = await getPrimaryWallets(
       supabase,
-      user.id,
-      user.user_metadata
+      user.id
     );
     fallbackWallet = spendingWallet;
   }

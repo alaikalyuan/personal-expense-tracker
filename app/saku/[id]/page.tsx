@@ -53,8 +53,8 @@ export default async function SakuDetailPage(props: SakuDetailPageProps) {
       redirect("/savings");
     }
 
-    const goals = await getSavingsGoals(supabase, user.id, user.user_metadata);
-    const history = await getSavingsHistory(supabase, user.id, wallet.id, user.user_metadata);
+    const goals = await getSavingsGoals(supabase, user.id);
+    const history = await getSavingsHistory(supabase, user.id, wallet.id);
     const coreSavings = Number(wallet.current_balance || 0);
 
     const totalAllocatedToGoals = goals.reduce((sum, g) => sum + Number(g.allocatedAmount || 0), 0);
