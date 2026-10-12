@@ -272,3 +272,32 @@ BEGIN
   RETURN v_result;
 END;
 $$;
+
+-- 5. Helper RPC to save verification code securely (SECURITY DEFINER)
+CREATE OR REPLACE FUNCTION public.save_email_verification_code(
+  p_token TEXT,
+  p_code TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_updated INT;
+BEGIN
+  UPDATE public.user_settings
+  SET last_email_verification_code = p_code
+  WHERE email_sync_token = p_token;
+
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+
+  IF v_updated > 0 THEN
+    RETURN jsonb_build_object('success', true, 'code', p_code);
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'TOKEN_NOT_FOUND');
+  END IF;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.save_email_verification_code(TEXT, TEXT) TO anon, authenticated, service_role;
+

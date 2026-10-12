@@ -144,10 +144,10 @@ export async function POST(req: NextRequest) {
       }
 
       const supabase = createClient(supabaseUrl, supabaseKey);
-      await supabase
-        .from("user_settings")
-        .update({ last_email_verification_code: verificationValue })
-        .eq("email_sync_token", token);
+      await supabase.rpc("save_email_verification_code", {
+        p_token: token,
+        p_code: verificationValue,
+      });
 
       return NextResponse.json({
         success: true,
