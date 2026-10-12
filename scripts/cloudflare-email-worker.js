@@ -14,6 +14,7 @@
  */
 
 export default {
+  // 1. Handler Email: Dipanggil otomatis oleh Cloudflare Email Routing saat email diterima
   async email(message, env, ctx) {
     try {
       const rawEmail = await new Response(message.raw).text();
@@ -21,8 +22,8 @@ export default {
       const from = message.from;
       const subject = message.headers.get("subject") || "Bukti Transaksi";
 
-      // Your deployed SakuTrack app URL
-      const appEndpoint = env.SAKUTRACK_URL || "https://sakutrack.my.id/api/email/inbound";
+      // URL endpoint SakuTrack (gunakan www.sakutrack.my.id sesuai domain utama Vercel)
+      const appEndpoint = env.SAKUTRACK_URL || "https://www.sakutrack.my.id/api/email/inbound";
 
       const res = await fetch(appEndpoint, {
         method: "POST",
@@ -41,10 +42,19 @@ export default {
         const errorText = await res.text();
         console.error(`SakuTrack webhook error [${res.status}]:`, errorText);
       } else {
-        console.log("Successfully forwarded transaction email to SakuTrack.");
+        console.log("Successfully forwarded transaction email to SakuTrack:", { to, from, subject });
       }
     } catch (err) {
       console.error("Cloudflare Email Worker exception:", err);
     }
   },
+
+  // 2. Handler HTTP (opsional): Untuk tes koneksi/health check jika Worker dibuka via browser
+  async fetch(request, env, ctx) {
+    return new Response("SakuTrack Email Worker is running and listening for Email Routing events!", {
+      status: 200,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  },
 };
+
