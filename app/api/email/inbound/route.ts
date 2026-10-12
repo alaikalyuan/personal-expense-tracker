@@ -7,6 +7,82 @@ import { formatMoney } from "@/utils/money";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
+function decodeMimeAndHtml(raw: string): string {
+  let combined = raw;
+
+  // 1. Decode any base64 blocks inside MIME multipart
+  const b64Regex = /Content-Transfer-Encoding:\s*base64\s*\r?\n\r?\n([A-Za-z0-9+/=\r\n]+)/gi;
+  let match: RegExpExecArray | null;
+  while ((match = b64Regex.exec(raw)) !== null) {
+    try {
+      const decoded = Buffer.from(match[1].replace(/\r?\n/g, ""), "base64").toString("utf-8");
+      combined += "\n" + decoded;
+    } catch {}
+  }
+
+  // 2. Decode Quoted-Printable
+  let qpDecoded = combined.replace(/=\r?\n/g, "");
+  qpDecoded = qpDecoded.replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => {
+    try {
+      return String.fromCharCode(parseInt(hex, 16));
+    } catch {
+      return hex;
+    }
+  });
+
+  // 3. Clean HTML and entities
+  return qpDecoded
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"');
+}
+
+function extractGoogleVerification(raw: string): { code: string | null; url: string | null } {
+  const clean = decodeMimeAndHtml(raw);
+
+  let code: string | null = null;
+  let url: string | null = null;
+
+  // 1. Explicit code labels
+  const labelMatch = clean.match(
+    /(?:confirmation\s*code|kode\s*(?:konfirmasi|verifikasi)|verification\s*code)[^0-9a-zA-Z]{1,60}([0-9]{6,12})/i
+  );
+  if (labelMatch && labelMatch[1]) {
+    code = labelMatch[1];
+  }
+
+  // 2. Google verification URL
+  const urlMatch =
+    raw.match(/(https:\/\/(?:mail|mail-settings)\.google\.com\/mail\/(?:vf|f)[^\s"'>\r\n]+)/i) ||
+    clean.match(/(https:\/\/(?:mail|mail-settings)\.google\.com\/mail\/(?:vf|f)[^\s"'>\r\n]+)/i);
+
+  if (urlMatch && urlMatch[1]) {
+    url = urlMatch[1];
+    if (!code) {
+      const codeInUrl = url.match(/[?&](?:c|code|key)=([0-9]{6,12})/i);
+      if (codeInUrl && codeInUrl[1]) {
+        code = codeInUrl[1];
+      }
+    }
+  }
+
+  // 3. Standalone 7-10 digit numbers
+  if (!code) {
+    const standaloneMatch = clean.match(/(?:^|[\s:;>#<\[\(])([0-9]{7,10})(?:$|[\s<\]\)\.])/m);
+    if (standaloneMatch && standaloneMatch[1]) {
+      code = standaloneMatch[1];
+    }
+  }
+
+  return { code, url };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
@@ -46,31 +122,49 @@ export async function POST(req: NextRequest) {
     // Check if this is a Gmail forwarding verification email
     const isGoogleVerification =
       sender.toLowerCase().includes("google.com") ||
+      sender.toLowerCase().includes("googlemail.com") ||
       subject.toLowerCase().includes("confirmation") ||
       subject.toLowerCase().includes("konfirmasi") ||
+      subject.toLowerCase().includes("forwarding") ||
+      subject.toLowerCase().includes("penerusan") ||
       rawContent.toLowerCase().includes("confirmation code") ||
-      rawContent.toLowerCase().includes("kode konfirmasi");
+      rawContent.toLowerCase().includes("kode konfirmasi") ||
+      rawContent.toLowerCase().includes("kode verifikasi") ||
+      rawContent.toLowerCase().includes("verification code") ||
+      rawContent.toLowerCase().includes("mail.google.com") ||
+      rawContent.toLowerCase().includes("mail-settings.google.com");
 
     if (isGoogleVerification) {
-      const codeMatch = rawContent.match(/(?:confirmation code|kode konfirmasi)[:\s]+([0-9]{7,12})/i);
-      if (codeMatch && codeMatch[1]) {
-        const supabase = createClient(supabaseUrl, supabaseKey);
-        await supabase
-          .from("user_settings")
-          .update({ last_email_verification_code: codeMatch[1] })
-          .eq("email_sync_token", token);
+      const { code, url } = extractGoogleVerification(rawContent);
+      const verificationValue = code || url || "VERIFIED";
 
-        return NextResponse.json({
-          success: true,
-          is_verification: true,
-          message: "Gmail forwarding verification code captured.",
-          code: codeMatch[1],
-        });
+      // If a verification URL is found, attempt background fetch to auto-confirm with Google
+      if (url) {
+        fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } }).catch(() => {});
       }
+
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      await supabase
+        .from("user_settings")
+        .update({ last_email_verification_code: verificationValue })
+        .eq("email_sync_token", token);
+
+      return NextResponse.json({
+        success: true,
+        is_verification: true,
+        message: "Gmail forwarding verification captured.",
+        code: verificationValue,
+        url,
+      });
     }
 
-    // Parse email
-    const parsed = parseLivinEmail(rawContent);
+    // Parse email (try raw first, then decoded text)
+    let parsed = parseLivinEmail(rawContent);
+    if (!parsed.isValid) {
+      const decodedContent = decodeMimeAndHtml(rawContent);
+      parsed = parseLivinEmail(decodedContent);
+    }
+
     if (!parsed.isValid) {
       return NextResponse.json(
         {

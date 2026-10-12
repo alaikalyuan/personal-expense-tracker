@@ -344,16 +344,28 @@ Rp 5.000,00`);
 
                 {settings?.lastVerificationCode && (
                   <div className="mt-2.5 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{t.emailSync.verificationCodeTitle}</span>
-                      <span className="font-mono font-bold tracking-wider">{settings.lastVerificationCode}</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-semibold shrink-0">{t.emailSync.verificationCodeTitle}</span>
+                      {settings.lastVerificationCode.startsWith("http") ? (
+                        <a
+                          href={settings.lastVerificationCode}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate font-mono font-bold text-emerald-700 underline dark:text-emerald-300 hover:text-emerald-800"
+                          title={settings.lastVerificationCode}
+                        >
+                          Buka Link Konfirmasi ↗
+                        </a>
+                      ) : (
+                        <span className="font-mono font-bold tracking-wider">{settings.lastVerificationCode}</span>
+                      )}
                     </div>
                     <button
                       type="button"
                       onClick={() => {
                         navigator.clipboard.writeText(settings.lastVerificationCode!);
                       }}
-                      className="text-[11px] font-bold text-emerald-700 hover:underline dark:text-emerald-400 cursor-pointer"
+                      className="text-[11px] font-bold text-emerald-700 hover:underline dark:text-emerald-400 cursor-pointer shrink-0 ml-2"
                     >
                       {t.emailSync.copyCodeBtn}
                     </button>
