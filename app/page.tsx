@@ -174,6 +174,33 @@ export default async function DashboardPage(props: {
     totalDaysInMonth,
   });
 
+  let pendingEmailTransactions: any[] = [];
+  if (!isGuest) {
+    const { data: pendingTxs } = await supabase
+      .from("email_transactions")
+      .select(`
+        id,
+        source,
+        sender,
+        subject,
+        merchant_name,
+        amount,
+        currency,
+        transaction_date,
+        transaction_time,
+        reference_id,
+        suggested_category,
+        target_wallet_id,
+        status,
+        created_at
+      `)
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    pendingEmailTransactions = pendingTxs || [];
+  }
+
   return (
     <DashboardClient
       initialCadence={initialCadence}
@@ -191,6 +218,7 @@ export default async function DashboardPage(props: {
       wallets={wallets}
       selectedSakuId={selectedSakuId}
       multiSakuEnabled={multiSakuEnabled}
+      pendingEmailTransactions={pendingEmailTransactions}
     />
   );
 }

@@ -21,6 +21,7 @@ import {
   Bell,
   Coins,
   Layers,
+  Mail,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { useTheme } from "@/utils/theme/context";
@@ -31,6 +32,7 @@ import {
 } from "@/utils/money";
 import { FEATURE_MULTI_SAKU_ENABLED } from "@/utils/wallets/config";
 import NotificationSettingsModal from "./NotificationSettingsModal";
+import EmailSyncSettingsModal from "@/app/email-sync/EmailSyncSettingsModal";
 import { useAiAssistant } from "@/app/ai/AiAssistantProvider";
 
 interface UserMenuProps {
@@ -47,6 +49,7 @@ export default function UserMenu({
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [isEmailSyncModalOpen, setIsEmailSyncModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { locale, setLocale, currency, setCurrency, t } = useTranslation();
@@ -270,6 +273,21 @@ export default function UserMenu({
               <span>{t.nav.notifications}</span>
             </button>
 
+            {/* Email QRIS Sync Settings */}
+            {!isGuest && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsEmailSyncModalOpen(true);
+                }}
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer w-full text-left"
+              >
+                <Mail className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+                <span>{t.nav.emailSync}</span>
+              </button>
+            )}
+
             <div className="my-1 border-t border-zinc-200/80 dark:border-zinc-800/80" />
 
             {/* Language Selector */}
@@ -455,6 +473,14 @@ export default function UserMenu({
         onClose={() => setIsNotificationModalOpen(false)}
         isGuest={isGuest}
       />
+
+      {/* Email QRIS Sync Settings Modal */}
+      {!isGuest && (
+        <EmailSyncSettingsModal
+          isOpen={isEmailSyncModalOpen}
+          onClose={() => setIsEmailSyncModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

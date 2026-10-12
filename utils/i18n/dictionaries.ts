@@ -48,6 +48,7 @@ export interface Dictionary {
     splitBill: string;
     subscriptions: string;
     notifications: string;
+    emailSync: string;
     loginBadge: string;
   };
   categories: Record<CategoryKey, string>;
@@ -835,6 +836,57 @@ export interface Dictionary {
     tierUnlimitedLabel: string;
     getKeyLink: string;
   };
+  emailSync: {
+    bannerTitle: string;
+    bannerMore: string;
+    bannerCategory: string;
+    bannerTargetSaku: string;
+    bannerDismiss: string;
+    bannerEdit: string;
+    bannerRecord: string;
+    reviewModalTitle: string;
+    merchantLabel: string;
+    amountLabel: string;
+    categoryLabel: string;
+    sakuLabel: string;
+    primarySakuDefault: string;
+    dateLabel: string;
+    refLabel: string;
+    dismissBtn: string;
+    approveBtn: string;
+    modalTitle: string;
+    modalSubtitle: string;
+    tabSettings: string;
+    tabPaste: string;
+    privacyNote: string;
+    modeTitle: string;
+    modeDesc: string;
+    modeReview: string;
+    modeReviewDesc: string;
+    modeAuto: string;
+    modeAutoDesc: string;
+    sakuTitle: string;
+    sakuDesc: string;
+    forwardingTitle: string;
+    resetToken: string;
+    resetConfirm: string;
+    gmailGuideTitle: string;
+    gmailStep1: string;
+    gmailStep2: string;
+    gmailStep3: string;
+    gmailStep4: string;
+    saveBtn: string;
+    savedToast: string;
+    pasteTitle: string;
+    pasteDesc: string;
+    loadSampleBtn: string;
+    pastePlaceholder: string;
+    extractBtn: string;
+    extractSuccess: string;
+    extractFailed: string;
+    verificationCodeTitle: string;
+    copyCodeBtn: string;
+  };
 }
 
 export const dictionaries: Record<Locale, Dictionary> = {
@@ -875,6 +927,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       splitBill: "Split Bill",
       subscriptions: "Langganan",
       notifications: "Notifikasi & Pengingat",
+      emailSync: "Deteksi Email QRIS",
       loginBadge: "Masuk",
     },
     categories: {
@@ -1681,6 +1734,57 @@ export const dictionaries: Record<Locale, Dictionary> = {
       tierUnlimitedLabel: "Kunci Pribadi Aktif (Tanpa Batas)",
       getKeyLink: "Dapatkan API key di platform.deepseek.com",
     },
+    emailSync: {
+      bannerTitle: "Deteksi Email QRIS",
+      bannerMore: "+{count} lainnya",
+      bannerCategory: "Kategori",
+      bannerTargetSaku: "Target",
+      bannerDismiss: "Abaikan",
+      bannerEdit: "Ubah Saku",
+      bannerRecord: "Catat",
+      reviewModalTitle: "Tinjau Transaksi Email",
+      merchantLabel: "Nama Toko / Merchant",
+      amountLabel: "Nominal Transaksi",
+      categoryLabel: "Kategori",
+      sakuLabel: "Target Saku (Wallet)",
+      primarySakuDefault: "Saku Utama (Default)",
+      dateLabel: "Tanggal",
+      refLabel: "Ref",
+      dismissBtn: "Abaikan",
+      approveBtn: "Setujui & Catat",
+      modalTitle: "Deteksi Transaksi Email (Livin' QRIS)",
+      modalSubtitle: "Deteksi otomatis & aman hanya untuk bukti pembayaran bank Anda",
+      tabSettings: "Pengaturan & Forwarding",
+      tabPaste: "Tempel Email (Uji Langsung)",
+      privacyNote: "Privasi 100% Terjaga: Aplikasi ini tidak pernah memiliki akses ke inbox pribadi Gmail Anda. Hanya email bukti resi Mandiri yang Anda filter untuk diteruskan yang akan diproses.",
+      modeTitle: "Mode Eksekusi (Hybrid)",
+      modeDesc: "Pilih bagaimana sistem memproses transaksi yang terdeteksi dari email:",
+      modeReview: "Tinjau Dahulu",
+      modeReviewDesc: "Masuk ke antrean Dashboard untuk Anda setujui dengan 1 ketukan.",
+      modeAuto: "Otomatis Penuh",
+      modeAutoDesc: "Langsung dicatat ke pengeluaran + notifikasi instan.",
+      sakuTitle: "Tujuan Saku (Wallet)",
+      sakuDesc: "Pilih saku tempat transaksi QRIS akan dialokasikan:",
+      forwardingTitle: "Alamat Email Penerusan Pribadi",
+      resetToken: "Reset Token",
+      resetConfirm: "Regenerasi token akan mengubah alamat email sync Anda. Lanjutkan?",
+      gmailGuideTitle: "Cara Pasang di Gmail (1 Menit):",
+      gmailStep1: "Salin alamat di atas, buka Gmail > Setelan > Penerusan (Forwarding).",
+      gmailStep2: "Buat Filter Baru: Pada kolom Dari isi: noreply.livin@bankmandiri.co.id",
+      gmailStep3: "Centang Teruskan ke dan pilih alamat sinkronisasi Anda.",
+      gmailStep4: "Selesai! Setiap resi QRIS Livin' akan terdeteksi seketika.",
+      saveBtn: "Simpan Pengaturan",
+      savedToast: "Pengaturan Tersimpan!",
+      pasteTitle: "Tempel Teks Bukti Email",
+      pasteDesc: "Uji ekstraksi secara langsung tanpa menunggu forwarding.",
+      loadSampleBtn: "Muat Contoh Resi",
+      pastePlaceholder: "Tempel teks atau isi email Livin di sini...",
+      extractBtn: "Ekstrak & Proses Transaksi",
+      extractSuccess: "Berhasil Diproses!",
+      extractFailed: "Gagal Mengekstrak",
+      verificationCodeTitle: "Kode Verifikasi Gmail:",
+      copyCodeBtn: "Salin Kode",
+    },
   },
   en: {
     common: {
@@ -1719,6 +1823,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       splitBill: "Split Bill",
       subscriptions: "Subscriptions",
       notifications: "Notifications & Reminders",
+      emailSync: "Email QRIS Detection",
       loginBadge: "Log in",
     },
     categories: {
@@ -2524,6 +2629,57 @@ export const dictionaries: Record<Locale, Dictionary> = {
       tierFreeLabel: "Free Server Tier (20 quota/day)",
       tierUnlimitedLabel: "Personal Key Active (Unlimited)",
       getKeyLink: "Get an API key at platform.deepseek.com",
+    },
+    emailSync: {
+      bannerTitle: "Email QRIS Detection",
+      bannerMore: "+{count} more",
+      bannerCategory: "Category",
+      bannerTargetSaku: "Target",
+      bannerDismiss: "Dismiss",
+      bannerEdit: "Edit Saku",
+      bannerRecord: "Record",
+      reviewModalTitle: "Review Email Transaction",
+      merchantLabel: "Merchant Name",
+      amountLabel: "Transaction Amount",
+      categoryLabel: "Category",
+      sakuLabel: "Target Saku (Wallet)",
+      primarySakuDefault: "Primary Saku (Default)",
+      dateLabel: "Date",
+      refLabel: "Ref",
+      dismissBtn: "Dismiss",
+      approveBtn: "Approve & Record",
+      modalTitle: "Email Transaction Detection (Livin' QRIS)",
+      modalSubtitle: "Secure, automatic detection strictly for your bank receipts",
+      tabSettings: "Settings & Forwarding",
+      tabPaste: "Paste Email (Test Live)",
+      privacyNote: "100% Privacy Preserved: This app never accesses your personal Gmail inbox. Only Mandiri receipt emails that you filter to forward will be processed.",
+      modeTitle: "Execution Mode (Hybrid)",
+      modeDesc: "Choose how the system handles transactions detected from email:",
+      modeReview: "Human Review",
+      modeReviewDesc: "Held in a Dashboard queue for 1-tap confirmation.",
+      modeAuto: "Full Automation",
+      modeAutoDesc: "Logged directly to expenses + instant notification.",
+      sakuTitle: "Destination Saku (Wallet)",
+      sakuDesc: "Select the saku where QRIS expenses will be assigned:",
+      forwardingTitle: "Private Forwarding Email Address",
+      resetToken: "Reset Token",
+      resetConfirm: "Regenerating the token will change your sync email address. Continue?",
+      gmailGuideTitle: "How to set up in Gmail (1 Minute):",
+      gmailStep1: "Copy the address above, go to Gmail > Settings > Forwarding.",
+      gmailStep2: "Create a New Filter: In the From field, enter: noreply.livin@bankmandiri.co.id",
+      gmailStep3: "Check Forward it to and select your sync address.",
+      gmailStep4: "Done! Every Livin' QRIS receipt will be detected instantly.",
+      saveBtn: "Save Settings",
+      savedToast: "Settings Saved!",
+      pasteTitle: "Paste Email Receipt Text",
+      pasteDesc: "Test extraction directly without waiting for email forwarding.",
+      loadSampleBtn: "Load Sample Receipt",
+      pastePlaceholder: "Paste Livin email text or receipt content here...",
+      extractBtn: "Extract & Process Transaction",
+      extractSuccess: "Successfully Processed!",
+      extractFailed: "Extraction Failed",
+      verificationCodeTitle: "Gmail Verification Code:",
+      copyCodeBtn: "Copy Code",
     },
   },
 };

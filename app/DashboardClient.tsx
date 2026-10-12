@@ -35,6 +35,9 @@ import AiAdvisorCard from "./AiAdvisorCard";
 import AiHeaderButton from "@/app/ai/AiHeaderButton";
 import { paySubscription } from "@/app/subscriptions/actions";
 
+import PendingTransactionsBanner from "@/app/email-sync/PendingTransactionsBanner";
+import type { PendingEmailTransaction } from "@/app/email-sync/actions";
+
 interface DashboardClientProps {
   initialCadence: "week" | "month";
   allExpenses: ExpenseItem[];
@@ -67,6 +70,7 @@ interface DashboardClientProps {
   wallets?: WalletBalance[];
   selectedSakuId?: string;
   multiSakuEnabled?: boolean;
+  pendingEmailTransactions?: PendingEmailTransaction[];
 }
 
 export default function DashboardClient({
@@ -85,6 +89,7 @@ export default function DashboardClient({
   wallets = [],
   selectedSakuId = "all",
   multiSakuEnabled = false,
+  pendingEmailTransactions = [],
 }: DashboardClientProps) {
   const router = useRouter();
   const [cadence, setCadence] = useState<"week" | "month">(initialCadence);
@@ -443,6 +448,14 @@ export default function DashboardClient({
 
       {/* PWA Install Banner */}
       <InstallPrompt />
+
+      {/* Pending Email QRIS Transactions Banner */}
+      {!isGuest && (
+        <PendingTransactionsBanner
+          initialTransactions={pendingEmailTransactions}
+          spendingWallets={wallets.filter((w) => w.kind === "spending")}
+        />
+      )}
 
       {/* Upcoming Subscriptions Renewal Banner (for subscriptions due soon) */}
       {soonDueSubscriptions.length > 0 && (
