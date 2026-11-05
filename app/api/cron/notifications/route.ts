@@ -7,7 +7,7 @@ import { computeNextRenewalDate } from "@/app/subscriptions/types";
 import { formatMoney } from "@/utils/money";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export async function GET(req: NextRequest) {
   return handleCron(req);
@@ -20,18 +20,25 @@ export async function POST(req: NextRequest) {
 async function handleCron(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const secretParam = req.nextUrl.searchParams.get("secret");
-  const cronSecret = process.env.CRON_SECRET || "sakutrack_secret_cron_key_2026";
+  const cronSecret = process.env.CRON_SECRET;
 
   const isAuthorized =
-    authHeader === `Bearer ${cronSecret}` ||
-    secretParam === cronSecret ||
+    (Boolean(cronSecret) &&
+      (authHeader === `Bearer ${cronSecret}` || secretParam === cronSecret)) ||
     process.env.NODE_ENV === "development";
 
   if (!isAuthorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  if (!serviceRoleKey) {
+    console.error("Cron aborted: SUPABASE_SERVICE_ROLE_KEY is not set");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   const todayStr = getTodayString();
   const now = getNowInTimezone();
   const currentHour = now.getHours();
@@ -62,36 +69,43 @@ async function handleCron(req: NextRequest) {
 
         // CASE A: Renewal Day Has Arrived (daysDiff <= 0)
         if (daysDiff <= 0 && sub.last_processed_date !== sub.next_renewal_date) {
-          const nextDate = computeNextRenewalDate(sub.next_renewal_date, sub.billing_cycle);
+          // Auto-split renewals need the owner's session to create the bill, so
+          // processSubscriptionRenewals handles them on the next app load. Advancing
+          // the date here would mean the bill is never created.
+          const waitsForApp = sub.is_split && sub.split_config?.auto_create_split_bill;
 
-          // Auto-log expense for non-split subscriptions if auto_log_to_expenses is true (default true)
-          if (!sub.is_split && Number(sub.price) > 0 && sub.split_config?.auto_log_to_expenses !== false) {
-            try {
-              await supabase.from("expenses").insert({
-                user_id: sub.user_id,
-                category: sub.category || "Entertainment",
-                name: `Langganan: ${sub.name}`,
-                note: `[Perpanjangan Otomatis] Pembayaran via ${sub.payment_platform || "Langganan"}`,
-                amount: Number(sub.price) || 0,
-                spent_at: sub.next_renewal_date,
-                wallet_id: sub.pay_from_wallet_id || null,
-              });
-            } catch (expErr) {
-              console.error("Cron failed to log renewal expense:", expErr);
+          if (!waitsForApp) {
+            const nextDate = computeNextRenewalDate(sub.next_renewal_date, sub.billing_cycle);
+
+            // Auto-log expense if auto_log_to_expenses is true (default true)
+            if (Number(sub.price) > 0 && sub.split_config?.auto_log_to_expenses !== false) {
+              try {
+                await supabase.from("expenses").insert({
+                  user_id: sub.user_id,
+                  category: sub.category || "Entertainment",
+                  name: `Langganan: ${sub.name}`,
+                  note: `[Perpanjangan Otomatis] Pembayaran via ${sub.payment_platform || "Langganan"}`,
+                  amount: Number(sub.price) || 0,
+                  spent_at: sub.next_renewal_date,
+                  wallet_id: sub.pay_from_wallet_id || null,
+                });
+              } catch (expErr) {
+                console.error("Cron failed to log renewal expense:", expErr);
+              }
             }
+
+            // Update subscription cycle
+            await supabase
+              .from("subscriptions")
+              .update({
+                next_renewal_date: nextDate,
+                last_processed_date: sub.next_renewal_date,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", sub.id);
+
+            processedRenewals++;
           }
-
-          // Update subscription cycle
-          await supabase
-            .from("subscriptions")
-            .update({
-              next_renewal_date: nextDate,
-              last_processed_date: sub.next_renewal_date,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", sub.id);
-
-          processedRenewals++;
 
           // Send push notification
           for (const pSub of pushSubs) {

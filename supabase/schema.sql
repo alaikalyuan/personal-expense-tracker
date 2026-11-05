@@ -189,7 +189,10 @@ CREATE INDEX IF NOT EXISTS idx_wallet_tx_user_date ON public.wallet_transactions
 CREATE INDEX IF NOT EXISTS idx_wallet_tx_from_to ON public.wallet_transactions (from_wallet_id, to_wallet_id);
 
 -- Wallet Balances View (single canonical calculation)
-CREATE OR REPLACE VIEW public.wallet_balances AS
+-- security_invoker applies the caller's RLS. CREATE OR REPLACE resets view options,
+-- so it must stay in this statement.
+CREATE OR REPLACE VIEW public.wallet_balances
+WITH (security_invoker = true) AS
 WITH inflows AS (
   SELECT
     wallet_transactions.to_wallet_id AS wallet_id,
@@ -240,6 +243,9 @@ FROM public.wallets w
 LEFT JOIN inflows inf ON inf.wallet_id = w.id
 LEFT JOIN outflows outf ON outf.wallet_id = w.id
 LEFT JOIN expense_deductions exp_ded ON exp_ded.wallet_id = w.id;
+
+REVOKE ALL ON public.wallet_balances FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.wallet_balances TO authenticated, service_role;
 
 -- 5. SPLIT BILLS
 -- ------------------------------------------------------------------------------
@@ -419,11 +425,18 @@ CREATE OR REPLACE FUNCTION public.ensure_default_wallets(p_user_id UUID)
 RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path TO 'public'
 AS $$
 DECLARE
   v_main_wallet_id UUID;
   v_savings_wallet_id UUID;
 BEGIN
+  -- Signed-in users may only provision their own wallets. A NULL auth.uid() is the
+  -- internal path: the expense trigger firing during token-checked email ingestion.
+  IF auth.uid() IS NOT NULL AND p_user_id IS DISTINCT FROM auth.uid() THEN
+    RAISE EXCEPTION 'Not allowed to create wallets for another user' USING ERRCODE = '42501';
+  END IF;
+
   -- 1. Ensure user_settings exists
   INSERT INTO public.user_settings (user_id, base_currency, multi_saku_enabled)
   VALUES (p_user_id, 'IDR', false)
@@ -527,6 +540,13 @@ CREATE TRIGGER on_expense_update_wallet
   BEFORE UPDATE ON public.expenses
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_update_expense_wallet();
+
+-- Trigger functions don't need API access; firing a trigger does not check EXECUTE.
+REVOKE ALL ON FUNCTION public.handle_new_expense_wallet() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.handle_update_expense_wallet() FROM PUBLIC, anon, authenticated;
+
+REVOKE ALL ON FUNCTION public.ensure_default_wallets(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.ensure_default_wallets(UUID) TO authenticated, service_role;
 
 -- Email Ingestion RPC Function
 CREATE OR REPLACE FUNCTION public.ingest_email_transaction(
