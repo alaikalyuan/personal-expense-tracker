@@ -49,9 +49,12 @@ export async function login(formData: FormData) {
   const newUserId = authData?.user?.id;
   let mergedCount = 0;
   if (guestExpenses.length > 0 && newUserId && newUserId !== guestId) {
+    const { spendingWallet } = await getPrimaryWallets(supabase, newUserId);
+    const primaryWalletId = spendingWallet?.id && spendingWallet.id !== "fallback-spending" ? spendingWallet.id : null;
     const rowsToInsert = guestExpenses.map((expense) => ({
       ...expense,
       user_id: newUserId,
+      wallet_id: primaryWalletId,
     }));
     const { error: insertError } = await supabase.from("expenses").insert(rowsToInsert);
     if (!insertError) {
@@ -106,9 +109,12 @@ export async function signup(formData: FormData) {
   const newUserId = authData?.user?.id;
   let mergedCount = 0;
   if (guestExpenses.length > 0 && newUserId && newUserId !== guestId) {
+    const { spendingWallet } = await getPrimaryWallets(supabase, newUserId);
+    const primaryWalletId = spendingWallet?.id && spendingWallet.id !== "fallback-spending" ? spendingWallet.id : null;
     const rowsToInsert = guestExpenses.map((expense) => ({
       ...expense,
       user_id: newUserId,
+      wallet_id: primaryWalletId,
     }));
     const { error: insertError } = await supabase.from("expenses").insert(rowsToInsert);
     if (!insertError) {
@@ -146,13 +152,26 @@ export async function upgradeGuestAccount(formData: FormData) {
     return { error: "Email and password are required" };
   }
 
-  const { error } = await supabase.auth.updateUser({
+  const { data: authData, error } = await supabase.auth.updateUser({
     email,
     password,
   });
 
   if (error) {
     return { error: error.message };
+  }
+
+  const upgradedUserId = authData?.user?.id;
+  if (upgradedUserId) {
+    const { spendingWallet } = await getPrimaryWallets(supabase, upgradedUserId);
+    const primaryWalletId = spendingWallet?.id && spendingWallet.id !== "fallback-spending" ? spendingWallet.id : null;
+    if (primaryWalletId) {
+      await supabase
+        .from("expenses")
+        .update({ wallet_id: primaryWalletId })
+        .eq("user_id", upgradedUserId)
+        .is("wallet_id", null);
+    }
   }
 
   revalidatePath("/", "layout");
@@ -205,9 +224,12 @@ export async function modalLogin(formData: FormData) {
   const newUserId = authData?.user?.id;
   let mergedCount = 0;
   if (guestExpenses.length > 0 && newUserId && newUserId !== guestId) {
+    const { spendingWallet } = await getPrimaryWallets(supabase, newUserId);
+    const primaryWalletId = spendingWallet?.id && spendingWallet.id !== "fallback-spending" ? spendingWallet.id : null;
     const rowsToInsert = guestExpenses.map((expense) => ({
       ...expense,
       user_id: newUserId,
+      wallet_id: primaryWalletId,
     }));
     const { error: insertError } = await supabase.from("expenses").insert(rowsToInsert);
     if (!insertError) {
@@ -248,10 +270,14 @@ export async function addExpense(formData: FormData) {
     throw new Error("Expense name is required");
   }
 
-  let walletId = (formData.get("wallet_id") as string)?.trim() || null;
-  if (!walletId || walletId === "all") {
-    const { spendingWallet } = await getPrimaryWallets(supabase, user.id, user.user_metadata);
-    walletId = spendingWallet?.id && spendingWallet.id !== "fallback-spending" ? spendingWallet.id : null;
+  const isGuest = Boolean(user.is_anonymous);
+  let walletId: string | null = null;
+  if (!isGuest) {
+    walletId = (formData.get("wallet_id") as string)?.trim() || null;
+    if (!walletId || walletId === "all") {
+      const { spendingWallet } = await getPrimaryWallets(supabase, user.id);
+      walletId = spendingWallet?.id && spendingWallet.id !== "fallback-spending" ? spendingWallet.id : null;
+    }
   }
 
   const insertData: Record<string, unknown> = {
@@ -306,9 +332,13 @@ export async function addExpensesBatch(items: AddExpenseBatchItem[]) {
     throw new Error("Unauthorized");
   }
 
-  const { spendingWallet } = await getPrimaryWallets(supabase, user.id, user.user_metadata);
-  const defaultWalletId =
-    spendingWallet?.id && spendingWallet.id !== "fallback-spending" ? spendingWallet.id : null;
+  const isGuest = Boolean(user.is_anonymous);
+  let defaultWalletId: string | null = null;
+  if (!isGuest) {
+    const { spendingWallet } = await getPrimaryWallets(supabase, user.id);
+    defaultWalletId =
+      spendingWallet?.id && spendingWallet.id !== "fallback-spending" ? spendingWallet.id : null;
+  }
 
   const todayStr = getTodayString();
   const insertPayloads = items.map((item) => {
@@ -317,8 +347,8 @@ export async function addExpensesBatch(items: AddExpenseBatchItem[]) {
     const amt = Number(item.amount);
     if (isNaN(amt) || amt < 0) throw new Error("Amount must be greater than or equal to 0");
 
-    let wId = item.walletId?.trim() || null;
-    if (!wId || wId === "all") {
+    let wId = isGuest ? null : (item.walletId?.trim() || null);
+    if (!isGuest && (!wId || wId === "all")) {
       wId = defaultWalletId;
     }
 
@@ -508,22 +538,12 @@ export async function setWeeklyBudget(formData: FormData) {
     throw new Error("Invalid budget amount");
   }
 
-  // Dual-write: update primary wallet in wallets table
-  try {
-    await supabase
-      .from("wallets")
-      .update({ weekly_budget: budget, updated_at: new Date().toISOString() })
-      .eq("user_id", user.id)
-      .eq("is_primary", true);
-  } catch (err) {
-    console.error("Error updating weekly_budget in wallets:", err);
-  }
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: {
-      weekly_budget: budget,
-    },
-  });
+  // Update primary wallet in wallets table
+  const { error: updateError } = await supabase
+    .from("wallets")
+    .update({ weekly_budget: budget, updated_at: new Date().toISOString() })
+    .eq("user_id", user.id)
+    .eq("is_primary", true);
 
   if (updateError) {
     throw new Error(updateError.message);
@@ -552,22 +572,12 @@ export async function setMonthlyBudget(formData: FormData) {
     throw new Error("Invalid budget amount");
   }
 
-  // Dual-write: update primary wallet in wallets table
-  try {
-    await supabase
-      .from("wallets")
-      .update({ monthly_budget: budget, updated_at: new Date().toISOString() })
-      .eq("user_id", user.id)
-      .eq("is_primary", true);
-  } catch (err) {
-    console.error("Error updating monthly_budget in wallets:", err);
-  }
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: {
-      monthly_budget: budget,
-    },
-  });
+  // Update primary wallet in wallets table
+  const { error: updateError } = await supabase
+    .from("wallets")
+    .update({ monthly_budget: budget, updated_at: new Date().toISOString() })
+    .eq("user_id", user.id)
+    .eq("is_primary", true);
 
   if (updateError) {
     throw new Error(updateError.message);
@@ -732,48 +742,26 @@ export async function createSavingsGoal(formData: FormData) {
   const newGoalId = crypto.randomUUID();
   const createdAtIso = new Date().toISOString();
 
-  // Dual-write to savings_goals table
-  try {
-    const { stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
-    if (stashWalletId) {
-      await supabase.from("savings_goals").insert({
-        id: newGoalId,
-        wallet_id: stashWalletId,
-        user_id: user.id,
-        name,
-        emoji,
-        target_amount: targetAmount,
-        allocated_amount: 0,
-        sort_order: 0,
-        created_at: createdAtIso,
-        updated_at: createdAtIso,
-      });
-    }
-  } catch (err) {
-    console.error("Error inserting into savings_goals table:", err);
+  const { stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
+  if (!stashWalletId) {
+    throw new Error("Stash wallet not found");
   }
 
-  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
-    ? user.user_metadata.savings_goals
-    : [];
-
-  const newGoal: SavingsGoal = {
+  const { error: insertError } = await supabase.from("savings_goals").insert({
     id: newGoalId,
+    wallet_id: stashWalletId,
+    user_id: user.id,
     name,
-    targetAmount,
-    allocatedAmount: 0,
     emoji,
-    createdAt: createdAtIso,
-  };
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: {
-      savings_goals: [...existingGoals, newGoal],
-    },
+    target_amount: targetAmount,
+    allocated_amount: 0,
+    sort_order: 0,
+    created_at: createdAtIso,
+    updated_at: createdAtIso,
   });
 
-  if (updateError) {
-    throw new Error(updateError.message);
+  if (insertError) {
+    throw new Error(insertError.message);
   }
 
   revalidatePath("/savings");
@@ -801,35 +789,16 @@ export async function updateSavingsGoal(formData: FormData) {
     throw new Error("Invalid goal details");
   }
 
-  // Dual-write to savings_goals table
-  try {
-    await supabase
-      .from("savings_goals")
-      .update({
-        name,
-        target_amount: targetAmount,
-        emoji,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .eq("user_id", user.id);
-  } catch (err) {
-    console.error("Error updating savings_goals table:", err);
-  }
-
-  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
-    ? user.user_metadata.savings_goals
-    : [];
-
-  const updatedGoals = existingGoals.map((g) =>
-    g.id === id ? { ...g, name, targetAmount, emoji } : g
-  );
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: {
-      savings_goals: updatedGoals,
-    },
-  });
+  const { error: updateError } = await supabase
+    .from("savings_goals")
+    .update({
+      name,
+      target_amount: targetAmount,
+      emoji,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   if (updateError) {
     throw new Error(updateError.message);
@@ -851,77 +820,38 @@ export async function deleteSavingsGoal(goalId: string) {
     throw new Error("Unauthorized");
   }
 
-  // Dual-write to savings_goals table
-  try {
-    await supabase
-      .from("savings_goals")
-      .delete()
-      .eq("id", goalId)
-      .eq("user_id", user.id);
-  } catch (err) {
-    console.error("Error deleting from savings_goals table:", err);
-  }
+  // Check goal details for refund if allocated_amount > 0
+  const { data: targetGoal } = await supabase
+    .from("savings_goals")
+    .select("name, emoji, allocated_amount, wallet_id")
+    .eq("id", goalId)
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
-    ? user.user_metadata.savings_goals
-    : [];
-
-  const targetGoal = existingGoals.find((g) => g.id === goalId);
-  const updatedGoals = existingGoals.filter((g) => g.id !== goalId);
-
-  const updateData: Record<string, unknown> = {
-    savings_goals: updatedGoals,
-  };
-
-  if (targetGoal && Number(targetGoal.allocatedAmount || 0) > 0) {
-    const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
-    const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
-      ? user.user_metadata.savings_history
-      : [];
-
+  if (targetGoal && Number(targetGoal.allocated_amount || 0) > 0) {
     const refundId = crypto.randomUUID();
     const refundNote = `Pengembalian dana dari penghapusan ${targetGoal.emoji || "🎯"} ${targetGoal.name}`;
-
-    try {
-      const { stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
-      if (stashWalletId) {
-        await supabase.from("wallet_transactions").insert({
-          id: refundId,
-          user_id: user.id,
-          type: "goal_withdraw",
-          amount: Number(targetGoal.allocatedAmount),
-          currency: "IDR",
-          from_wallet_id: stashWalletId,
-          to_wallet_id: stashWalletId,
-          note: refundNote,
-          occurred_on: getTodayString(),
-        });
-      }
-    } catch (err) {
-      console.error("Error inserting refund transaction:", err);
-    }
-
-    const newEntry: SavingsHistoryItem = {
+    await supabase.from("wallet_transactions").insert({
       id: refundId,
+      user_id: user.id,
       type: "goal_withdraw",
-      amount: Number(targetGoal.allocatedAmount),
-      balanceAfter: currentManual,
+      amount: Number(targetGoal.allocated_amount),
+      currency: "IDR",
+      from_wallet_id: targetGoal.wallet_id,
+      to_wallet_id: targetGoal.wallet_id,
       note: refundNote,
-      goalId,
-      goalName: targetGoal.name,
-      goalEmoji: targetGoal.emoji,
-      createdAt: new Date().toISOString(),
-    };
-
-    updateData.savings_history = [newEntry, ...existingHistory].slice(0, 200);
+      occurred_on: getTodayString(),
+    });
   }
 
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: updateData,
-  });
+  const { error: deleteError } = await supabase
+    .from("savings_goals")
+    .delete()
+    .eq("id", goalId)
+    .eq("user_id", user.id);
 
-  if (updateError) {
-    throw new Error(updateError.message);
+  if (deleteError) {
+    throw new Error(deleteError.message);
   }
 
   revalidatePath("/savings");
@@ -944,79 +874,43 @@ export async function allocateSavingsToGoal(goalId: string, amount: number) {
     throw new Error("Invalid allocation amount");
   }
 
-  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
-    ? user.user_metadata.savings_goals
-    : [];
+  const { data: targetGoal } = await supabase
+    .from("savings_goals")
+    .select("name, emoji, allocated_amount, wallet_id")
+    .eq("id", goalId)
+    .eq("user_id", user.id)
+    .single();
 
-  const targetGoal = existingGoals.find((g) => g.id === goalId);
-  const updatedGoals = existingGoals.map((g) => {
-    if (g.id === goalId) {
-      return {
-        ...g,
-        allocatedAmount: Number(g.allocatedAmount || 0) + amount,
-      };
-    }
-    return g;
-  });
-
-  const txId = crypto.randomUUID();
-  const note = `Alokasi dana ke ${targetGoal?.emoji || "🎯"} ${targetGoal?.name || "Target"}`;
-
-  // Dual-write to database
-  try {
-    const { stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
-    if (stashWalletId) {
-      const newAllocated = Number(targetGoal?.allocatedAmount || 0) + amount;
-      await supabase
-        .from("savings_goals")
-        .update({ allocated_amount: newAllocated, updated_at: new Date().toISOString() })
-        .eq("id", goalId)
-        .eq("user_id", user.id);
-
-      await supabase.from("wallet_transactions").insert({
-        id: txId,
-        user_id: user.id,
-        type: "goal_allocate",
-        amount,
-        currency: "IDR",
-        from_wallet_id: stashWalletId,
-        to_wallet_id: stashWalletId,
-        goal_id: goalId,
-        note,
-        occurred_on: getTodayString(),
-      });
-    }
-  } catch (err) {
-    console.error("Error dual-writing allocateSavingsToGoal:", err);
+  if (!targetGoal) {
+    throw new Error("Savings goal not found");
   }
 
-  const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
-  const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
-    ? user.user_metadata.savings_history
-    : [];
-
-  const newEntry: SavingsHistoryItem = {
-    id: txId,
-    type: "goal_allocate",
-    amount,
-    balanceAfter: currentManual,
-    note,
-    goalId,
-    goalName: targetGoal?.name,
-    goalEmoji: targetGoal?.emoji,
-    createdAt: new Date().toISOString(),
-  };
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: {
-      savings_goals: updatedGoals,
-      savings_history: [newEntry, ...existingHistory].slice(0, 200),
-    },
-  });
+  const newAllocated = Number(targetGoal.allocated_amount || 0) + amount;
+  const { error: updateError } = await supabase
+    .from("savings_goals")
+    .update({ allocated_amount: newAllocated, updated_at: new Date().toISOString() })
+    .eq("id", goalId)
+    .eq("user_id", user.id);
 
   if (updateError) {
     throw new Error(updateError.message);
   }
+
+  const txId = crypto.randomUUID();
+  const note = `Alokasi dana ke ${targetGoal.emoji || "🎯"} ${targetGoal.name || "Target"}`;
+
+  await supabase.from("wallet_transactions").insert({
+    id: txId,
+    user_id: user.id,
+    type: "goal_allocate",
+    amount,
+    currency: "IDR",
+    from_wallet_id: targetGoal.wallet_id,
+    to_wallet_id: targetGoal.wallet_id,
+    goal_id: goalId,
+    note,
+    occurred_on: getTodayString(),
+  });
 
   revalidatePath("/savings");
 }
@@ -1038,161 +932,47 @@ export async function withdrawSavingsFromGoal(goalId: string, amount: number) {
     throw new Error("Invalid withdrawal amount");
   }
 
-  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
-    ? user.user_metadata.savings_goals
-    : [];
+  const { data: targetGoal } = await supabase
+    .from("savings_goals")
+    .select("name, emoji, allocated_amount, wallet_id")
+    .eq("id", goalId)
+    .eq("user_id", user.id)
+    .single();
 
-  const targetGoal = existingGoals.find((g) => g.id === goalId);
-  const updatedGoals = existingGoals.map((g) => {
-    if (g.id === goalId) {
-      const current = Number(g.allocatedAmount || 0);
-      return {
-        ...g,
-        allocatedAmount: Math.max(0, current - amount),
-      };
-    }
-    return g;
-  });
+  if (!targetGoal) {
+    throw new Error("Savings goal not found");
+  }
+
+  const current = Number(targetGoal.allocated_amount || 0);
+  const newAllocated = Math.max(0, current - amount);
+
+  const { error: updateError } = await supabase
+    .from("savings_goals")
+    .update({ allocated_amount: newAllocated, updated_at: new Date().toISOString() })
+    .eq("id", goalId)
+    .eq("user_id", user.id);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
 
   const txId = crypto.randomUUID();
-  const note = `Penarikan dana dari ${targetGoal?.emoji || "🎯"} ${targetGoal?.name || "Target"}`;
+  const note = `Penarikan dana dari ${targetGoal.emoji || "🎯"} ${targetGoal.name || "Target"}`;
 
-  // Dual-write to database
-  try {
-    const { stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
-    if (stashWalletId) {
-      const current = Number(targetGoal?.allocatedAmount || 0);
-      const newAllocated = Math.max(0, current - amount);
-      await supabase
-        .from("savings_goals")
-        .update({ allocated_amount: newAllocated, updated_at: new Date().toISOString() })
-        .eq("id", goalId)
-        .eq("user_id", user.id);
-
-      await supabase.from("wallet_transactions").insert({
-        id: txId,
-        user_id: user.id,
-        type: "goal_withdraw",
-        amount,
-        currency: "IDR",
-        from_wallet_id: stashWalletId,
-        to_wallet_id: stashWalletId,
-        goal_id: goalId,
-        note,
-        occurred_on: getTodayString(),
-      });
-    }
-  } catch (err) {
-    console.error("Error dual-writing withdrawSavingsFromGoal:", err);
-  }
-
-  const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
-  const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
-    ? user.user_metadata.savings_history
-    : [];
-
-  const newEntry: SavingsHistoryItem = {
+  await supabase.from("wallet_transactions").insert({
     id: txId,
+    user_id: user.id,
     type: "goal_withdraw",
     amount,
-    balanceAfter: currentManual,
+    currency: "IDR",
+    from_wallet_id: targetGoal.wallet_id,
+    to_wallet_id: targetGoal.wallet_id,
+    goal_id: goalId,
     note,
-    goalId,
-    goalName: targetGoal?.name,
-    goalEmoji: targetGoal?.emoji,
-    createdAt: new Date().toISOString(),
-  };
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: {
-      savings_goals: updatedGoals,
-      savings_history: [newEntry, ...existingHistory].slice(0, 200),
-    },
+    occurred_on: getTodayString(),
   });
 
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-
   revalidatePath("/savings");
-}
-
-export async function patchWeekWithSavings(weekId: string, amount: number) {
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
-
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    throw new Error("Unauthorized");
-  }
-
-  if (!weekId || isNaN(amount) || amount <= 0) {
-    throw new Error("Invalid patch amount or week");
-  }
-
-  const existingPatches: Record<string, WeekPatch> =
-    user.user_metadata?.savings_patches && typeof user.user_metadata.savings_patches === "object"
-      ? user.user_metadata.savings_patches
-      : {};
-
-  const updatedPatches = {
-    ...existingPatches,
-    [weekId]: {
-      amount,
-      patchedAt: new Date().toISOString(),
-    },
-  };
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: {
-      savings_patches: updatedPatches,
-    },
-  });
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-
-  revalidatePath("/savings");
-  revalidatePath("/archive");
-}
-
-export async function unpatchWeek(weekId: string) {
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
-
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    throw new Error("Unauthorized");
-  }
-
-  const existingPatches: Record<string, WeekPatch> =
-    user.user_metadata?.savings_patches && typeof user.user_metadata.savings_patches === "object"
-      ? { ...user.user_metadata.savings_patches }
-      : {};
-
-  delete existingPatches[weekId];
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: {
-      savings_patches: existingPatches,
-    },
-  });
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-
-  revalidatePath("/savings");
-  revalidatePath("/archive");
 }
 
 export async function recordManualSavingsAdjustment(formData: FormData) {
@@ -1216,68 +996,28 @@ export async function recordManualSavingsAdjustment(formData: FormData) {
     throw new Error("Invalid adjustment amount");
   }
 
+  const { stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
+  if (!stashWalletId) {
+    throw new Error("Stash wallet not found");
+  }
+
   const txId = crypto.randomUUID();
   const txNote = note || (type === "deposit" ? "Setor ke Tabungan" : "Penarikan Tabungan");
 
-  // Dual-write to wallet_transactions table
-  try {
-    const { stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
-    if (stashWalletId) {
-      await supabase.from("wallet_transactions").insert({
-        id: txId,
-        user_id: user.id,
-        type: "adjustment",
-        amount,
-        currency: "IDR",
-        from_wallet_id: type === "withdraw" ? stashWalletId : null,
-        to_wallet_id: type === "deposit" ? stashWalletId : null,
-        note: txNote,
-        occurred_on: getTodayString(),
-      });
-    }
-  } catch (err) {
-    console.error("Error dual-writing recordManualSavingsAdjustment:", err);
-  }
-
-  const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
-  const updatedManual = type === "deposit" ? currentManual + amount : Math.max(0, currentManual - amount);
-
-  const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
-    ? user.user_metadata.savings_history
-    : [];
-
-  const baseHistory: SavingsHistoryItem[] =
-    existingHistory.length === 0 && currentManual > 0
-      ? [
-          {
-            id: "initial-balance",
-            type: "manual_deposit",
-            amount: currentManual,
-            balanceAfter: currentManual,
-            note: "Saldo awal tercatat",
-            createdAt: user.created_at || new Date().toISOString(),
-          },
-        ]
-      : existingHistory;
-
-  const newEntry: SavingsHistoryItem = {
+  const { error: txError } = await supabase.from("wallet_transactions").insert({
     id: txId,
-    type: type === "deposit" ? "manual_deposit" : "manual_withdraw",
+    user_id: user.id,
+    type: "adjustment",
     amount,
-    balanceAfter: updatedManual,
+    currency: "IDR",
+    from_wallet_id: type === "withdraw" ? stashWalletId : null,
+    to_wallet_id: type === "deposit" ? stashWalletId : null,
     note: txNote,
-    createdAt: new Date().toISOString(),
-  };
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: {
-      savings_manual_deposit: updatedManual,
-      savings_history: [newEntry, ...baseHistory].slice(0, 200),
-    },
+    occurred_on: getTodayString(),
   });
 
-  if (updateError) {
-    throw new Error(updateError.message);
+  if (txError) {
+    throw new Error(txError.message);
   }
 
   revalidatePath("/savings");
@@ -1300,115 +1040,50 @@ export async function sweepSurplusToSavings(amount: number, targetGoalId?: strin
     throw new Error("Invalid sweep amount");
   }
 
-  const currentSwept = Number(user.user_metadata?.savings_swept_surplus || 0);
-  const updatedSwept = currentSwept + amount;
+  const { spendingWalletId, stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
+  if (!stashWalletId) {
+    throw new Error("Stash wallet not found");
+  }
 
-  const currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
-  const updatedManual = currentManual + amount;
-
-  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
-    ? user.user_metadata.savings_goals
-    : [];
-
-  let targetGoal: SavingsGoal | undefined;
-  let updatedGoals = existingGoals;
-
+  let txNote = "Aliran sisa anggaran mingguan ke tabungan";
   if (targetGoalId) {
-    targetGoal = existingGoals.find((g) => g.id === targetGoalId);
-    updatedGoals = existingGoals.map((g) => {
-      if (g.id === targetGoalId) {
-        return {
-          ...g,
-          allocatedAmount: Number(g.allocatedAmount || 0) + amount,
-        };
-      }
-      return g;
-    });
+    const { data: goal } = await supabase
+      .from("savings_goals")
+      .select("name, emoji, allocated_amount")
+      .eq("id", targetGoalId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (goal) {
+      txNote = `Aliran sisa anggaran ke ${goal.emoji || "🎯"} ${goal.name}`;
+      const newAllocated = Number(goal.allocated_amount || 0) + amount;
+      await supabase
+        .from("savings_goals")
+        .update({
+          allocated_amount: newAllocated,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", targetGoalId)
+        .eq("user_id", user.id);
+    }
   }
 
   const txId = crypto.randomUUID();
-  const txNote = targetGoal
-    ? `Aliran sisa anggaran ke ${targetGoal.emoji || "🎯"} ${targetGoal.name}`
-    : "Aliran sisa anggaran mingguan ke tabungan";
-
-  // Dual-write to database
-  try {
-    const { spendingWalletId, stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
-    if (stashWalletId) {
-      if (targetGoalId) {
-        await supabase
-          .from("savings_goals")
-          .update({
-            allocated_amount: Number(targetGoal?.allocatedAmount || 0) + amount,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", targetGoalId)
-          .eq("user_id", user.id);
-      }
-
-      await supabase.from("wallet_transactions").insert({
-        id: txId,
-        user_id: user.id,
-        type: "surplus_sweep",
-        amount,
-        currency: "IDR",
-        from_wallet_id: spendingWalletId,
-        to_wallet_id: stashWalletId,
-        goal_id: targetGoalId || null,
-        note: txNote,
-        occurred_on: getTodayString(),
-      });
-    }
-  } catch (err) {
-    console.error("Error dual-writing sweepSurplusToSavings:", err);
-  }
-
-  const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
-    ? user.user_metadata.savings_history
-    : [];
-
-  const baseHistory: SavingsHistoryItem[] =
-    existingHistory.length === 0 && currentManual > 0
-      ? [
-          {
-            id: "initial-balance",
-            type: "manual_deposit",
-            amount: currentManual,
-            balanceAfter: currentManual,
-            note: "Saldo awal tercatat",
-            createdAt: user.created_at || new Date().toISOString(),
-          },
-        ]
-      : existingHistory;
-
-  const newEntry: SavingsHistoryItem = {
+  const { error: txError } = await supabase.from("wallet_transactions").insert({
     id: txId,
-    type: targetGoalId ? "surplus_sweep_goal" : "surplus_sweep",
+    user_id: user.id,
+    type: "surplus_sweep",
     amount,
-    balanceAfter: updatedManual,
+    currency: "IDR",
+    from_wallet_id: spendingWalletId,
+    to_wallet_id: stashWalletId,
+    goal_id: targetGoalId || null,
     note: txNote,
-    goalId: targetGoal?.id,
-    goalName: targetGoal?.name,
-    goalEmoji: targetGoal?.emoji,
-    createdAt: new Date().toISOString(),
-  };
-
-  const updateData: Record<string, unknown> = {
-    savings_swept_surplus: updatedSwept,
-    savings_manual_deposit: updatedManual,
-    savings_history: [newEntry, ...baseHistory].slice(0, 200),
-  };
-
-  if (targetGoalId) {
-    updateData.savings_goals = updatedGoals;
-  }
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: updateData,
+    occurred_on: getTodayString(),
   });
 
-  if (updateError) {
-    throw new Error(updateError.message);
+  if (txError) {
+    throw new Error(txError.message);
   }
 
   revalidatePath("/savings");
@@ -1427,116 +1102,56 @@ export async function deleteSavingsHistoryEntry(entryId: string) {
     throw new Error("Unauthorized");
   }
 
-  // Delete from wallet_transactions table
-  try {
-    await supabase
-      .from("wallet_transactions")
-      .delete()
-      .eq("id", entryId)
-      .eq("user_id", user.id);
-  } catch (err) {
-    console.error("Error deleting from wallet_transactions table:", err);
-  }
+  // Check transaction details first to reverse goal allocations if applicable
+  const { data: entry } = await supabase
+    .from("wallet_transactions")
+    .select("id, type, amount, goal_id")
+    .eq("id", entryId)
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-  const existingHistory: SavingsHistoryItem[] = Array.isArray(user.user_metadata?.savings_history)
-    ? user.user_metadata.savings_history
-    : [];
-
-  const entry = existingHistory.find((item) => item.id === entryId);
   if (!entry) {
     revalidatePath("/savings");
     return;
   }
 
-  let currentManual = Number(user.user_metadata?.savings_manual_deposit || 0);
-  let currentSwept = Number(user.user_metadata?.savings_swept_surplus || 0);
-  const existingGoals: SavingsGoal[] = Array.isArray(user.user_metadata?.savings_goals)
-    ? user.user_metadata.savings_goals
-    : [];
-  let updatedGoals = existingGoals;
+  const entryAmount = Number(entry.amount || 0);
 
-  // Revert the effect of the entry
-  if (entry.type === "manual_deposit") {
-    currentManual = Math.max(0, currentManual - entry.amount);
-  } else if (entry.type === "manual_withdraw") {
-    currentManual = currentManual + entry.amount;
-  } else if (entry.type === "surplus_sweep") {
-    currentManual = Math.max(0, currentManual - entry.amount);
-    currentSwept = Math.max(0, currentSwept - entry.amount);
-  } else if (entry.type === "surplus_sweep_goal") {
-    currentManual = Math.max(0, currentManual - entry.amount);
-    currentSwept = Math.max(0, currentSwept - entry.amount);
-    if (entry.goalId) {
-      updatedGoals = existingGoals.map((g) =>
-        g.id === entry.goalId
-          ? { ...g, allocatedAmount: Math.max(0, Number(g.allocatedAmount || 0) - entry.amount) }
-          : g
-      );
-      try {
-        const targetGoal = existingGoals.find((g) => g.id === entry.goalId);
-        const newAllocated = Math.max(0, Number(targetGoal?.allocatedAmount || 0) - entry.amount);
-        await supabase
-          .from("savings_goals")
-          .update({ allocated_amount: newAllocated, updated_at: new Date().toISOString() })
-          .eq("id", entry.goalId)
-          .eq("user_id", user.id);
-      } catch (e) {
-        console.error("Error updating goal on delete history:", e);
+  // If entry affected a goal, reverse the goal allocation
+  if (entry.goal_id) {
+    const { data: targetGoal } = await supabase
+      .from("savings_goals")
+      .select("allocated_amount")
+      .eq("id", entry.goal_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (targetGoal) {
+      const current = Number(targetGoal.allocated_amount || 0);
+      let newAllocated = current;
+      if (entry.type === "surplus_sweep" || entry.type === "goal_allocate") {
+        newAllocated = Math.max(0, current - entryAmount);
+      } else if (entry.type === "goal_withdraw") {
+        newAllocated = current + entryAmount;
       }
-    }
-  } else if (entry.type === "goal_allocate") {
-    if (entry.goalId) {
-      updatedGoals = existingGoals.map((g) =>
-        g.id === entry.goalId
-          ? { ...g, allocatedAmount: Math.max(0, Number(g.allocatedAmount || 0) - entry.amount) }
-          : g
-      );
-      try {
-        const targetGoal = existingGoals.find((g) => g.id === entry.goalId);
-        const newAllocated = Math.max(0, Number(targetGoal?.allocatedAmount || 0) - entry.amount);
-        await supabase
-          .from("savings_goals")
-          .update({ allocated_amount: newAllocated, updated_at: new Date().toISOString() })
-          .eq("id", entry.goalId)
-          .eq("user_id", user.id);
-      } catch (e) {
-        console.error("Error updating goal on delete history:", e);
-      }
-    }
-  } else if (entry.type === "goal_withdraw") {
-    if (entry.goalId) {
-      updatedGoals = existingGoals.map((g) =>
-        g.id === entry.goalId
-          ? { ...g, allocatedAmount: Number(g.allocatedAmount || 0) + entry.amount }
-          : g
-      );
-      try {
-        const targetGoal = existingGoals.find((g) => g.id === entry.goalId);
-        const newAllocated = Number(targetGoal?.allocatedAmount || 0) + entry.amount;
-        await supabase
-          .from("savings_goals")
-          .update({ allocated_amount: newAllocated, updated_at: new Date().toISOString() })
-          .eq("id", entry.goalId)
-          .eq("user_id", user.id);
-      } catch (e) {
-        console.error("Error updating goal on delete history:", e);
-      }
+
+      await supabase
+        .from("savings_goals")
+        .update({ allocated_amount: newAllocated, updated_at: new Date().toISOString() })
+        .eq("id", entry.goal_id)
+        .eq("user_id", user.id);
     }
   }
 
-  const updatedHistory = existingHistory.filter((item) => item.id !== entryId);
+  // Delete from wallet_transactions table
+  const { error: deleteError } = await supabase
+    .from("wallet_transactions")
+    .delete()
+    .eq("id", entryId)
+    .eq("user_id", user.id);
 
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: {
-      savings_manual_deposit: currentManual,
-      savings_swept_surplus: currentSwept,
-      savings_goals: updatedGoals,
-      savings_history: updatedHistory,
-    },
-  });
-
-  if (updateError) {
-    throw new Error(updateError.message);
+  if (deleteError) {
+    throw new Error(deleteError.message);
   }
 
   revalidatePath("/savings");

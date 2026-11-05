@@ -289,6 +289,8 @@ Fill in your configuration:
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+# Server-only, used by the cron route. Bypasses row-level security, so never prefix it with NEXT_PUBLIC_.
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # Optional Timezone Configuration (Defaults to Asia/Jakarta / WIB / GMT+7)
 NEXT_PUBLIC_TIMEZONE=Asia/Jakarta

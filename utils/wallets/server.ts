@@ -113,12 +113,11 @@ interface RawTransactionRow {
 }
 
 /**
- * Fetch or initialize user settings
+ * Fetch user settings from user_settings table
  */
 export async function getUserSettings(
   supabase: SupabaseClient,
-  userId: string,
-  userMetadata?: Record<string, unknown>
+  userId: string
 ): Promise<UserSettings> {
   try {
     const { data, error } = await supabase
@@ -144,15 +143,9 @@ export async function getUserSettings(
     console.error("getUserSettings error:", err);
   }
 
-  // Fallback from metadata or defaults
-  const metaCurrency = typeof userMetadata?.base_currency === "string" ? userMetadata.base_currency : undefined;
-  const baseCurrency = isSupportedCurrency(metaCurrency)
-    ? metaCurrency
-    : DEFAULT_CURRENCY;
-
   return {
     user_id: userId,
-    base_currency: baseCurrency,
+    base_currency: DEFAULT_CURRENCY,
     multi_saku_enabled: false,
     default_wallet_id: null,
     created_at: new Date().toISOString(),
@@ -244,12 +237,12 @@ export async function getWalletBalances(
 }
 
 /**
- * Get primary spending and stash wallets for a user with metadata fallback
+ * Get primary spending and stash wallets for a user
  */
 export async function getPrimaryWallets(
   supabase: SupabaseClient,
   userId: string,
-  userMetadata?: Record<string, unknown>
+  _userMetadata?: Record<string, unknown>
 ): Promise<{
   spendingWallet: WalletBalance | null;
   stashWallet: WalletBalance | null;
@@ -265,9 +258,7 @@ export async function getPrimaryWallets(
   let stash = balances.find((b) => b.kind === "stash") || null;
 
   // Fallback for spending wallet if not found in database (e.g. guest mode)
-  if (!spending && userMetadata) {
-    const weeklyBudget = Number(userMetadata.weekly_budget || 500000);
-    const monthlyBudget = userMetadata.monthly_budget ? Number(userMetadata.monthly_budget) : null;
+  if (!spending) {
     spending = {
       id: "fallback-spending",
       user_id: userId,
@@ -279,8 +270,8 @@ export async function getPrimaryWallets(
       is_primary: true,
       track_balance: false,
       opening_balance: 0,
-      weekly_budget: weeklyBudget,
-      monthly_budget: monthlyBudget,
+      weekly_budget: 500000,
+      monthly_budget: null,
       sort_order: 0,
       archived_at: null,
       created_at: new Date().toISOString(),
@@ -292,8 +283,7 @@ export async function getPrimaryWallets(
   }
 
   // Fallback for stash wallet if not found in database (e.g. guest mode)
-  if (!stash && userMetadata) {
-    const coreSavings = Number(userMetadata.savings_manual_deposit || 0);
+  if (!stash) {
     stash = {
       id: "fallback-stash",
       user_id: userId,
@@ -304,7 +294,7 @@ export async function getPrimaryWallets(
       currency: DEFAULT_CURRENCY,
       is_primary: false,
       track_balance: true,
-      opening_balance: coreSavings,
+      opening_balance: 0,
       weekly_budget: null,
       monthly_budget: null,
       sort_order: 1,
@@ -313,24 +303,24 @@ export async function getPrimaryWallets(
       updated_at: new Date().toISOString(),
       total_inflow: 0,
       total_outflow: 0,
-      current_balance: coreSavings,
+      current_balance: 0,
     };
   }
 
   return {
     spendingWallet: spending,
     stashWallet: stash,
-    defaultWalletId: spending?.id || null,
+    defaultWalletId: spending?.id && spending.id !== "fallback-spending" ? spending.id : null,
   };
 }
 
 /**
- * Fetch savings goals from savings_goals table with fallback to user_metadata
+ * Fetch savings goals from savings_goals table
  */
 export async function getSavingsGoals(
   supabase: SupabaseClient,
   userId: string,
-  userMetadata?: Record<string, unknown>
+  _userMetadata?: Record<string, unknown>
 ): Promise<SavingsGoalItem[]> {
   try {
     const { data, error } = await supabase
@@ -356,21 +346,17 @@ export async function getSavingsGoals(
     console.error("getSavingsGoals error:", err);
   }
 
-  // Fallback to metadata
-  if (Array.isArray(userMetadata?.savings_goals)) {
-    return userMetadata.savings_goals as SavingsGoalItem[];
-  }
   return [];
 }
 
 /**
- * Fetch savings transaction history with fallback to user_metadata
+ * Fetch savings transaction history from wallet_transactions table
  */
 export async function getSavingsHistory(
   supabase: SupabaseClient,
   userId: string,
   stashWalletId?: string,
-  userMetadata?: Record<string, unknown>
+  _userMetadata?: Record<string, unknown>
 ): Promise<SavingsHistoryItem[]> {
   try {
     let query = supabase
@@ -455,10 +441,6 @@ export async function getSavingsHistory(
     console.error("getSavingsHistory error:", err);
   }
 
-  // Fallback to metadata
-  if (Array.isArray(userMetadata?.savings_history)) {
-    return userMetadata.savings_history as SavingsHistoryItem[];
-  }
   return [];
 }
 
@@ -510,4 +492,3 @@ export async function getSelectedSakuServer(
   const cookieVal = cookieStore.get("SELECTED_SAKU")?.value;
   return cookieVal || "all";
 }
-

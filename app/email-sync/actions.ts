@@ -256,7 +256,7 @@ export async function approveEmailTransaction(
   // 2. Resolve wallet id
   let finalWalletId = overrides?.walletId ?? tx.target_wallet_id;
   if (!finalWalletId || finalWalletId === "primary") {
-    const { spendingWallet } = await getPrimaryWallets(supabase, user.id, user.user_metadata);
+    const { spendingWallet } = await getPrimaryWallets(supabase, user.id);
     finalWalletId = spendingWallet?.id && spendingWallet.id !== "fallback-spending" ? spendingWallet.id : null;
   }
 
