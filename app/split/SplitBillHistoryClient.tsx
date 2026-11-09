@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Receipt,
   Plus,
   ArrowLeft,
   Trash2,
+  Pencil,
   ExternalLink,
   Search,
   AlertTriangle,
@@ -158,6 +159,17 @@ export default function SplitBillHistoryClient({
   const billToDelete = useMemo(() => {
     return bills.find((b) => b.id === deletingBillId) || null;
   }, [bills, deletingBillId]);
+
+  useEffect(() => {
+    if (!deletingBillId) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isDeleting) {
+        setDeletingBillId(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [deletingBillId, isDeleting]);
 
   const handleDelete = async () => {
     if (!deletingBillId) return;
@@ -439,15 +451,27 @@ export default function SplitBillHistoryClient({
 
               {/* Card Footer Actions */}
               <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
-                {/* Delete button */}
-                <button
-                  type="button"
-                  onClick={() => setDeletingBillId(b.id)}
-                  aria-label={t.splitBill.deleteBillAria}
-                  className="p-2 rounded-xl text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    onClick={() => setDeletingBillId(b.id)}
+                    aria-label={t.splitBill.deleteBillAria}
+                    className="p-2 rounded-xl text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" aria-hidden="true" />
+                  </button>
+
+                  {/* Edit button */}
+                  <Link
+                    href={`/split/${b.id}/edit`}
+                    aria-label={t.splitBill.editBillAria}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>{t.splitBill.editBillBtn}</span>
+                  </Link>
+                </div>
 
                 {/* View Breakdown & Share */}
                 <Link
@@ -455,7 +479,7 @@ export default function SplitBillHistoryClient({
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold transition-all cursor-pointer"
                 >
                   <span>{t.splitBill.openAndShare}</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
                 </Link>
               </div>
             </div>

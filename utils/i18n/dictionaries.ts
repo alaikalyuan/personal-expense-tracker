@@ -757,6 +757,16 @@ export interface Dictionary {
     noPaymentDestination: string;
     continueEditingBtn: string;
     confirmPublishBtn: string;
+    editBillBtn: string;
+    editBillAria: string;
+    editSplitTitle: string;
+    editSplitSubtitle: string;
+    editSplitBadge: string;
+    backToBill: string;
+    saveChangesBtn: string;
+    savingChangesBtn: string;
+    confirmSaveBtn: string;
+    errGenericUpdate: string;
   };
   notifications: {
     title: string;
@@ -1655,6 +1665,16 @@ export const dictionaries: Record<Locale, Dictionary> = {
       noPaymentDestination: "Belum ada nomor rekening/e-wallet yang dimasukkan",
       continueEditingBtn: "Lanjut Edit",
       confirmPublishBtn: "Semua Sesuai, Publikasikan!",
+      editBillBtn: "Ubah",
+      editBillAria: "Ubah tagihan",
+      editSplitTitle: "Ubah Split Bill",
+      editSplitSubtitle: "Perbarui rincian menu, peserta, pajak, atau nomor rekening. Status lunas peserta yang sudah membayar tetap terjaga.",
+      editSplitBadge: "Mode Edit",
+      backToBill: "Kembali ke Tagihan",
+      saveChangesBtn: "Simpan Perubahan",
+      savingChangesBtn: "Menyimpan...",
+      confirmSaveBtn: "Simpan Perubahan",
+      errGenericUpdate: "Terjadi kesalahan saat menyimpan perubahan tagihan.",
     },
     notifications: {
       title: "Notifikasi & Pengingat PWA",
@@ -2551,6 +2571,16 @@ export const dictionaries: Record<Locale, Dictionary> = {
       noPaymentDestination: "No bank account or e-wallet details provided yet",
       continueEditingBtn: "Continue Editing",
       confirmPublishBtn: "All Good, Publish!",
+      editBillBtn: "Edit",
+      editBillAria: "Edit bill",
+      editSplitTitle: "Edit Split Bill",
+      editSplitSubtitle: "Update menu items, participants, tax, or transfer details. Paid statuses for existing participants are preserved.",
+      editSplitBadge: "Edit Mode",
+      backToBill: "Back to Bill",
+      saveChangesBtn: "Save Changes",
+      savingChangesBtn: "Saving...",
+      confirmSaveBtn: "Save Changes",
+      errGenericUpdate: "An error occurred while saving bill changes.",
     },
     notifications: {
       title: "PWA Notifications & Reminders",
