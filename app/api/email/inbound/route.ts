@@ -109,7 +109,12 @@ export async function POST(req: NextRequest) {
 
     // Extract content
     const rawContent = body.text || body.html || body.content || body.body || "";
-    const sender = body.from || body.sender || "noreply.livin@bankmandiri.co.id";
+    // Gmail auto-forwarding rewrites the envelope sender to postmaster@...google.com,
+    // so read the original sender from the message's own From header.
+    const envelopeSender = String(body.from || body.sender || "");
+    const headerSection = rawContent.split(/\r?\n\r?\n/, 1)[0] || "";
+    const headerFrom = headerSection.match(/^From:[ \t]*(.+(?:\r?\n[ \t].+)*)/im)?.[1]?.trim() || "";
+    const sender = headerFrom || envelopeSender || "noreply.livin@bankmandiri.co.id";
     const subject = body.subject || "Pembayaran Berhasil";
 
     if (!rawContent || typeof rawContent !== "string") {
@@ -120,19 +125,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if this is a Gmail forwarding verification email
+    // Only Gmail's own forwarding confirmation counts. Every auto-forwarded email
+    // arrives from postmaster@...google.com, so a broad "google.com" check would
+    // swallow real QRIS receipts.
     const isGoogleVerification =
-      sender.toLowerCase().includes("google.com") ||
-      sender.toLowerCase().includes("googlemail.com") ||
-      subject.toLowerCase().includes("confirmation") ||
-      subject.toLowerCase().includes("konfirmasi") ||
-      subject.toLowerCase().includes("forwarding") ||
-      subject.toLowerCase().includes("penerusan") ||
-      rawContent.toLowerCase().includes("confirmation code") ||
-      rawContent.toLowerCase().includes("kode konfirmasi") ||
-      rawContent.toLowerCase().includes("kode verifikasi") ||
-      rawContent.toLowerCase().includes("verification code") ||
-      rawContent.toLowerCase().includes("mail.google.com") ||
-      rawContent.toLowerCase().includes("mail-settings.google.com");
+      headerFrom.toLowerCase().includes("forwarding-noreply@google.com") ||
+      /https:\/\/(?:mail|mail-settings)\.google\.com\/mail\/vf/i.test(rawContent);
 
     if (isGoogleVerification) {
       const { code, url } = extractGoogleVerification(rawContent);
