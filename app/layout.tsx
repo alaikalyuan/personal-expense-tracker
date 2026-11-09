@@ -8,6 +8,7 @@ import { LanguageProvider } from "@/utils/i18n/context";
 import { getLocaleServer, getCurrencyServer } from "@/utils/i18n/server";
 import { ThemeProvider } from "@/utils/theme/context";
 import { getThemeServer } from "@/utils/theme/server";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -81,6 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </AiAssistantProvider>
           </LanguageProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
