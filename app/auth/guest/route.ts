@@ -1,68 +1,28 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { createClient } from "@/utils/supabase/server";
 
+/**
+ * Legacy entry point kept for old links and bookmarks.
+ * It no longer creates a guest session on GET (crawlers and link previewers
+ * would create anonymous users). Guests are created by the "Continue" button
+ * on the welcome screen at "/".
+ */
 export async function GET(request: Request) {
   const { origin, searchParams } = new URL(request.url);
-  const next = searchParams.get("next") ?? "/";
-  const cookieStore = await cookies();
+  const rawNext = searchParams.get("next") ?? "/";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.startsWith("/\\") ? rawNext : "/";
 
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const isLocalEnv = process.env.NODE_ENV === "development";
-  const baseOrigin = isLocalEnv ? origin : forwardedHost ? `https://${forwardedHost}` : origin;
-
-  // Redirect destination: append welcome=true query parameter so the welcome modal triggers (unless auth modal was requested)
-  const redirectUrl = new URL(next, baseOrigin);
-  if (!redirectUrl.searchParams.has("auth")) {
-    redirectUrl.searchParams.set("welcome", "true");
-  }
-
-  const response = NextResponse.redirect(redirectUrl.toString());
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            try {
-              cookieStore.set(name, value, options);
-            } catch {
-              // Ignore cookieStore error in route handler
-            }
-            response.cookies.set(name, value, options);
-          });
-        },
-      },
-    }
-  );
-
-  // Check if session already exists
+  const supabase = await createClient(await cookies());
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (session) {
-    return response;
+  if (user) {
+    return NextResponse.redirect(new URL(next, origin));
   }
 
-  // Attempt anonymous sign-in
-  const { error } = await supabase.auth.signInAnonymously();
-
-  if (error) {
-    console.error("Supabase anonymous sign-in error:", error);
-    // If anonymous sign-in is disabled in Supabase dashboard or errors, redirect to login
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(
-        error.message || "Could not start guest mode. Please log in."
-      )}`
-    );
-  }
-
-  return response;
+  const landing = new URL("/", origin);
+  if (next !== "/") landing.searchParams.set("next", next);
+  return NextResponse.redirect(landing);
 }
-

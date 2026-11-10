@@ -26,7 +26,7 @@ export default async function SakuPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/guest?next=/saku");
+    redirect("/?next=/saku");
   }
 
   const isGuest = Boolean(user.is_anonymous);

@@ -20,7 +20,7 @@ export default async function SubscriptionsPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/guest");
+    redirect("/?next=/subscriptions");
   }
 
   const isGuest = Boolean(user.is_anonymous);

@@ -15,9 +15,11 @@ export const config = {
      * - favicon.ico (favicon file)
      * - manifest.webmanifest (PWA manifest)
      * - icons/ (PWA icons)
+     * - robots.txt, sitemap.xml, llms.txt (crawler files must never hit auth)
+     * - sw.js (browsers refuse to register a service worker served behind a redirect)
      * - static file extensions (.svg, .png, .jpg, .webmanifest, etc.)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|manifest\\.webmanifest|icons|.*\\.(?:svg|png|jpg|jpeg|gif|webp|webmanifest)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest\\.webmanifest|icons|robots\\.txt|sitemap\\.xml|llms\\.txt|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|webmanifest)$).*)",
   ],
 };
 

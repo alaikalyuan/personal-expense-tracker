@@ -54,7 +54,7 @@ export default async function ComparePage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/guest?next=/compare");
+    redirect("/?next=/compare");
   }
 
   const isGuest = Boolean(user.is_anonymous);

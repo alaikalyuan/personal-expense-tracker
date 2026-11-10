@@ -27,7 +27,6 @@ import BreakdownCard, { DaySpend, WeekSpend, CategorySpend } from "./BreakdownCa
 import ExpenseList, { ExpenseItem } from "./ExpenseList";
 import { useTranslation } from "@/utils/i18n/context";
 import { calculateExemptTotals, isExpenseExempt } from "@/utils/exemptions";
-import WelcomeGuestModal from "./WelcomeGuestModal";
 import UpgradeAccountModal from "./UpgradeAccountModal";
 import SakuSwitcher from "./SakuSwitcher";
 import { WalletBalance } from "@/utils/wallets/server";
@@ -611,16 +610,7 @@ export default function DashboardClient({
         wallets={wallets}
       />
 
-      {/* Guest Onboarding & Upgrade Modals */}
-      {isGuest && (
-        <WelcomeGuestModal
-          onOpenUpgrade={(mode = "signup") => {
-            setAuthModalMode(mode);
-            setAuthModalError(null);
-            setIsUpgradeModalOpen(true);
-          }}
-        />
-      )}
+      {/* Guest Upgrade Modal (the welcome screen lives in GuestLanding, before a session exists) */}
       <UpgradeAccountModal
         isOpen={isUpgradeModalOpen}
         onClose={() => {
