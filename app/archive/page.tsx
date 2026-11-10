@@ -36,7 +36,7 @@ export default async function ArchivePage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/guest?next=/archive");
+    redirect("/?next=/archive");
   }
 
   const isGuest = Boolean(user.is_anonymous);

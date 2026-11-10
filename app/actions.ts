@@ -138,8 +138,36 @@ export async function logout() {
   redirect("/login");
 }
 
-export async function continueAsGuest() {
-  redirect("/auth/guest");
+/** Only allow same-origin relative paths, so `next` can't redirect off-site. */
+function safeNextPath(next: FormDataEntryValue | null): string {
+  if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) {
+    return "/";
+  }
+  return next;
+}
+
+/** Creates the anonymous guest session. Called from the welcome screen's "Continue" button. */
+export async function continueAsGuest(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+  const next = safeNextPath(formData.get("next"));
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      console.error("Supabase anonymous sign-in error:", error);
+      redirect(
+        `/?auth=login&error=${encodeURIComponent(error.message || "Could not start guest mode. Please log in.")}`
+      );
+    }
+  }
+
+  revalidatePath("/", "layout");
+  redirect(next);
 }
 
 export async function upgradeGuestAccount(formData: FormData) {
@@ -152,10 +180,14 @@ export async function upgradeGuestAccount(formData: FormData) {
     return { error: "Email and password are required" };
   }
 
-  const { data: authData, error } = await supabase.auth.updateUser({
-    email,
-    password,
-  });
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+
+  // Visitors who sign up straight from the welcome screen have no guest session to upgrade.
+  const { data: authData, error } = currentUser
+    ? await supabase.auth.updateUser({ email, password })
+    : await supabase.auth.signUp({ email, password });
 
   if (error) {
     return { error: error.message };

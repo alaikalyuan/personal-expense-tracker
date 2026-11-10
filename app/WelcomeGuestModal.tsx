@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef } from "react";
+import { useFormStatus } from "react-dom";
 import Image from "next/image";
 import {
   Zap,
@@ -9,72 +10,42 @@ import {
   ArrowRight,
   LogIn,
   ShieldAlert,
+  Loader2,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
+import { continueAsGuest } from "@/app/actions";
 
 interface WelcomeGuestModalProps {
-  isOpen?: boolean;
-  onClose?: () => void;
-  onOpenUpgrade?: (mode?: "signup" | "login") => void;
+  /** Path to return to after the guest session is created. */
+  next?: string;
+  onOpenAuth: (mode: "signup" | "login") => void;
 }
 
-export default function WelcomeGuestModal({
-  isOpen: controlledIsOpen,
-  onClose: controlledOnClose,
-  onOpenUpgrade,
-}: WelcomeGuestModalProps) {
+function ContinueButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 py-3 text-xs font-bold shadow-md active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
+    >
+      <span>{label}</span>
+      {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+    </button>
+  );
+}
+
+export default function WelcomeGuestModal({ next, onOpenAuth }: WelcomeGuestModalProps) {
   const { t } = useTranslation();
-  const [internalIsOpen, setInternalIsOpen] = useState(() => {
-    if (typeof controlledIsOpen === "boolean") return controlledIsOpen;
-    if (typeof window !== "undefined") {
-      const welcomed = localStorage.getItem("sakutrack_guest_welcomed");
-      const urlParams = new URLSearchParams(window.location.search);
-      const isWelcomeParam = urlParams.get("welcome") === "true";
-      const hasAuthParam = urlParams.has("auth");
-      return !hasAuthParam && (!welcomed || isWelcomeParam);
-    }
-    return false;
-  });
-  const isOpen = typeof controlledIsOpen === "boolean" ? controlledIsOpen : internalIsOpen;
-
-  const handleContinue = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("sakutrack_guest_welcomed", "true");
-      // Clean up URL parameter cleanly
-      const url = new URL(window.location.href);
-      if (url.searchParams.has("welcome")) {
-        url.searchParams.delete("welcome");
-        window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
-      }
-    }
-    setInternalIsOpen(false);
-    if (controlledOnClose) {
-      controlledOnClose();
-    }
-  };
-
-  const handleSignInOrRegister = () => {
-    handleContinue();
-    if (onOpenUpgrade) {
-      onOpenUpgrade("signup");
-    }
-  };
-
-  const handleLogInHere = () => {
-    handleContinue();
-    if (onOpenUpgrade) {
-      onOpenUpgrade("login");
-    }
-  };
-
-  if (!isOpen) return null;
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm animate-fade-in"
       onMouseDown={(e) => {
+        // Clicking the backdrop counts as "Continue", as before.
         if (e.target === e.currentTarget) {
-          handleContinue();
+          formRef.current?.requestSubmit();
         }
       }}
     >
@@ -108,9 +79,9 @@ export default function WelcomeGuestModal({
                 <Zap className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                   {t.guest.features.instantTitle}
-                </h4>
+                </h3>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
                   {t.guest.features.instantDesc}
                 </p>
@@ -122,9 +93,9 @@ export default function WelcomeGuestModal({
                 <SlidersHorizontal className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                   {t.guest.features.budgetTitle}
-                </h4>
+                </h3>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
                   {t.guest.features.budgetDesc}
                 </p>
@@ -136,9 +107,9 @@ export default function WelcomeGuestModal({
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                   {t.guest.features.insightsTitle}
-                </h4>
+                </h3>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
                   {t.guest.features.insightsDesc}
                 </p>
@@ -168,20 +139,16 @@ export default function WelcomeGuestModal({
 
         {/* Modal Actions */}
         <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex flex-col gap-2.5">
-          {/* Primary Call to Action: Continue */}
-          <button
-            type="button"
-            onClick={handleContinue}
-            className="w-full rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 py-3 text-xs font-bold shadow-md active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2"
-          >
-            <span>{t.guest.continueBtn}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          {/* Primary Call to Action: Continue (creates the guest session) */}
+          <form ref={formRef} action={continueAsGuest}>
+            <input type="hidden" name="next" value={next ?? "/"} />
+            <ContinueButton label={t.guest.continueBtn} />
+          </form>
 
           {/* Secondary Action: Sign In or Register */}
           <button
             type="button"
-            onClick={handleSignInOrRegister}
+            onClick={() => onOpenAuth("signup")}
             className="w-full rounded-2xl border border-zinc-200 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800 py-2.5 text-xs font-semibold active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-1.5"
           >
             <LogIn className="w-3.5 h-3.5" />
@@ -194,7 +161,7 @@ export default function WelcomeGuestModal({
               {t.guest.alreadyHaveAccount}{" "}
               <button
                 type="button"
-                onClick={handleLogInHere}
+                onClick={() => onOpenAuth("login")}
                 className="font-semibold text-zinc-900 dark:text-zinc-200 underline hover:opacity-80 transition-opacity cursor-pointer"
               >
                 {t.guest.logInHere}

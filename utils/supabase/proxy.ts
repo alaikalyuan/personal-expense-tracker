@@ -19,17 +19,24 @@ export async function updateSession(request: NextRequest) {
     .getAll()
     .some((cookie) => cookie.name.includes("-auth-token"));
 
-  // 1. Fast path for unauthenticated users on protected routes:
-  // Redirect to /auth/guest to automatically establish guest mode
+  // Visitors without a session land on "/", which renders the welcome screen.
+  // A guest session is only created when they choose "Continue" there, so
+  // crawlers and link previewers never create anonymous users.
   const fullDestination = request.nextUrl.pathname + request.nextUrl.search;
-  if (!hasAuthCookie && !isPublicRoute) {
+  const redirectToLanding = () => {
     const url = request.nextUrl.clone();
-    url.pathname = "/auth/guest";
+    url.pathname = "/";
     url.search = "";
-    if (fullDestination !== "/") {
-      url.searchParams.set("next", fullDestination);
-    }
+    url.searchParams.set("next", fullDestination);
     return NextResponse.redirect(url);
+  };
+
+  // 1. Fast path for visitors without a session
+  if (!hasAuthCookie) {
+    if (pathname === "/" || isPublicRoute) {
+      return NextResponse.next({ request });
+    }
+    return redirectToLanding();
   }
 
   // 2. Fast path for client-side navigation (RSC / prefetch):
@@ -77,14 +84,8 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && !isPublicRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/guest";
-    url.search = "";
-    if (fullDestination !== "/") {
-      url.searchParams.set("next", fullDestination);
-    }
-    return NextResponse.redirect(url);
+  if (!user && !isPublicRoute && pathname !== "/") {
+    return redirectToLanding();
   }
 
   // Only redirect permanent (non-guest) users away from /login

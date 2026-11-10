@@ -32,7 +32,7 @@ export default async function SavingsPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/guest?next=/savings");
+    redirect("/?next=/savings");
   }
 
   const isGuest = Boolean(user.is_anonymous);

@@ -1,6 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import {
   format,
   startOfWeek,
@@ -13,6 +12,7 @@ import {
   addDays,
 } from "date-fns";
 import DashboardClient from "./DashboardClient";
+import GuestLanding from "./GuestLanding";
 import { getNowInTimezone } from "@/utils/date";
 import { calculateStreak } from "@/utils/streak";
 import { getDictionaryServer } from "@/utils/i18n/server";
@@ -31,10 +31,12 @@ export default async function DashboardPage(props: {
     merged?: string;
     auth?: "login" | "signup";
     error?: string;
+    next?: string;
   }>;
 }) {
   const cookieStore = await cookies();
   const searchParams = await props.searchParams;
+  const hasAuthCookie = cookieStore.getAll().some((cookie) => cookie.name.includes("-auth-token"));
   const initialMergedCount = searchParams?.merged ? parseInt(searchParams.merged, 10) : 0;
   const initialAuthMode = searchParams?.auth;
   const initialAuthError = searchParams?.error;
@@ -45,15 +47,21 @@ export default async function DashboardPage(props: {
       : "week";
 
   const supabase = await createClient(cookieStore);
-  const { locale } = await getDictionaryServer();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // No auth cookie means no session: skip the Supabase round trip entirely.
+  const user = hasAuthCookie ? (await supabase.auth.getUser()).data.user : null;
 
   if (!user) {
-    redirect("/auth/guest");
+    return (
+      <GuestLanding
+        next={searchParams?.next}
+        initialAuthMode={initialAuthMode}
+        initialAuthError={initialAuthError}
+      />
+    );
   }
+
+  const { locale } = await getDictionaryServer();
 
   const isGuest = Boolean(user.is_anonymous);
 
