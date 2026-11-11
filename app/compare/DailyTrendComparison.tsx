@@ -44,6 +44,7 @@ export interface DailyTrendComparisonProps {
     lastWeek: string;
     viewBreakdown: string;
     viewChart: string;
+    daysLogged: string;
     daysLower: string;
     daysHigher: string;
     allDaysEven: string;
@@ -76,11 +77,11 @@ export default function DailyTrendComparison({
   const selectedDay = dayComparison[selectedDayIndex] || dayComparison[0];
 
   return (
-    <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs backdrop-blur-xs dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">
+    <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">
       {/* Header with Title and Segmented View Switcher */}
       <div className="flex items-center justify-between pb-3 border-b border-zinc-200/80 dark:border-zinc-800/80">
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+          <h3 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
             {dict.trendTitle}
           </h3>
         </div>
@@ -90,7 +91,8 @@ export default function DailyTrendComparison({
           <button
             type="button"
             onClick={() => setActiveTab("chart")}
-            className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${
+            aria-pressed={activeTab === "chart"}
+            className={`flex min-h-11 items-center gap-1 px-3 text-sm font-medium rounded-md ${
               activeTab === "chart"
                 ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs font-semibold"
                 : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -102,7 +104,8 @@ export default function DailyTrendComparison({
           <button
             type="button"
             onClick={() => setActiveTab("breakdown")}
-            className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${
+            aria-pressed={activeTab === "breakdown"}
+            className={`flex min-h-11 items-center gap-1 px-3 text-sm font-medium rounded-md ${
               activeTab === "breakdown"
                 ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs font-semibold"
                 : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -117,7 +120,7 @@ export default function DailyTrendComparison({
       {/* Legend & Quick Insight Pills */}
       <div className="pt-3 space-y-2.5">
         {/* Legend */}
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
               <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block" />
@@ -130,8 +133,8 @@ export default function DailyTrendComparison({
           </div>
 
           {stats.activeDays > 0 && (
-            <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
-              {stats.activeDays}/7 active
+            <span className="text-xs text-zinc-400 dark:text-zinc-500">
+              {stats.activeDays}/7 {dict.daysLogged}
             </span>
           )}
         </div>
@@ -140,7 +143,7 @@ export default function DailyTrendComparison({
         <div className="flex flex-wrap gap-1.5">
           {stats.activeDays > 0 && (
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                 stats.daysLower > stats.daysHigher
                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40"
                   : stats.daysHigher > stats.daysLower
@@ -168,7 +171,7 @@ export default function DailyTrendComparison({
           )}
 
           {stats.peakDay && stats.peakDay.amount > 0 && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40">
               <Flame className="w-3 h-3 text-amber-500" />
               {dict.highestSpend
                 .replace("{day}", stats.peakDay.dayName)
@@ -177,7 +180,7 @@ export default function DailyTrendComparison({
           )}
 
           {stats.bestSavingDay && stats.bestSavingDay.amount > 0 && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
               <Sparkles className="w-3 h-3 text-emerald-500" />
               {dict.biggestSaving
                 .replace("{day}", stats.bestSavingDay.dayName)
@@ -224,16 +227,16 @@ export default function DailyTrendComparison({
                       <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                         {day.fullDayName}
                       </span>
-                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">
+                      <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
                         {day.dateFormatted}
                       </span>
                       {day.isToday && (
-                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-500 text-white dark:bg-emerald-600">
+                        <span className="px-1.5 py-0.5 rounded-full text-xs font-bold bg-emerald-600 text-white dark:bg-emerald-600">
                           {dict.today}
                         </span>
                       )}
                       {day.isFuture && (
-                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-medium bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                        <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
                           {dict.upcoming}
                         </span>
                       )}
@@ -242,11 +245,11 @@ export default function DailyTrendComparison({
                     {/* Delta Badge */}
                     <div className="text-right shrink-0">
                       {day.isFuture ? (
-                        <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500">
+                        <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
                           {dict.upcoming}
                         </span>
                       ) : bothZero ? (
-                        <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500">
+                        <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
                           {dict.noSpendDay}
                         </span>
                       ) : hasDecreased ? (
@@ -254,7 +257,7 @@ export default function DailyTrendComparison({
                           <ArrowDownRight className="w-3.5 h-3.5" />
                           -{formatCurrency(Math.abs(day.diff))}
                           {day.diffPct !== null && (
-                            <span className="text-[10px] font-medium text-emerald-600/90 dark:text-emerald-400/90 ml-0.5">
+                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 ml-0.5">
                               ({day.diffPct}%)
                             </span>
                           )}
@@ -264,7 +267,7 @@ export default function DailyTrendComparison({
                           <ArrowUpRight className="w-3.5 h-3.5" />
                           +{formatCurrency(day.diff)}
                           {day.diffPct !== null && (
-                            <span className="text-[10px] font-medium text-rose-600/90 dark:text-rose-400/90 ml-0.5">
+                            <span className="text-xs font-medium text-rose-600 dark:text-rose-400 ml-0.5">
                               (+{day.diffPct}%)
                             </span>
                           )}
@@ -281,7 +284,7 @@ export default function DailyTrendComparison({
                   <div className="mt-2.5 space-y-1.5">
                     {/* This Week Row */}
                     <div className="flex items-center gap-2">
-                      <span className="w-14 text-[10px] font-medium text-zinc-400 dark:text-zinc-500 shrink-0">
+                      <span className="w-14 text-xs font-medium text-zinc-400 dark:text-zinc-500 shrink-0">
                         {dict.thisWeek}
                       </span>
                       <div className="flex-1 h-2 bg-zinc-100 dark:bg-zinc-800/80 rounded-full overflow-hidden">
@@ -297,21 +300,21 @@ export default function DailyTrendComparison({
                         />
                       </div>
                       <span
-                        className={`w-24 text-right text-[11px] font-bold tabular-nums shrink-0 ${
+                        className={`w-24 text-right text-xs font-bold tabular-nums shrink-0 ${
                           day.isFuture
-                            ? "text-zinc-400 dark:text-zinc-600 font-normal"
+                            ? "text-zinc-400 dark:text-zinc-400 font-normal"
                             : day.thisAmt > 0
                             ? "text-zinc-900 dark:text-white"
                             : "text-zinc-400 dark:text-zinc-500 font-normal"
                         }`}
                       >
-                        {day.isFuture ? "—" : formatCurrency(day.thisAmt)}
+                        {day.isFuture ? "-" : formatCurrency(day.thisAmt)}
                       </span>
                     </div>
 
                     {/* Last Week Row */}
                     <div className="flex items-center gap-2">
-                      <span className="w-14 text-[10px] font-medium text-zinc-400 dark:text-zinc-500 shrink-0">
+                      <span className="w-14 text-xs font-medium text-zinc-400 dark:text-zinc-500 shrink-0">
                         {dict.lastWeek}
                       </span>
                       <div className="flex-1 h-2 bg-zinc-100 dark:bg-zinc-800/80 rounded-full overflow-hidden">
@@ -325,7 +328,7 @@ export default function DailyTrendComparison({
                         />
                       </div>
                       <span
-                        className={`w-24 text-right text-[11px] tabular-nums shrink-0 font-medium ${
+                        className={`w-24 text-right text-xs tabular-nums shrink-0 font-medium ${
                           day.lastAmt > 0
                             ? "text-zinc-600 dark:text-zinc-300"
                             : "text-zinc-400 dark:text-zinc-500"
@@ -388,7 +391,7 @@ export default function DailyTrendComparison({
 
                     {/* Day label */}
                     <span
-                      className={`text-[10px] ${
+                      className={`text-xs ${
                         day.isToday
                           ? "font-bold text-emerald-600 dark:text-emerald-400"
                           : isSelected
@@ -412,34 +415,34 @@ export default function DailyTrendComparison({
                       {selectedDay.fullDayName}, {selectedDay.dateFormatted}
                     </p>
                     {selectedDay.isToday && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-500 text-white">
+                      <span className="px-1.5 py-0.5 rounded-full text-xs font-bold bg-emerald-600 text-white">
                         {dict.today}
                       </span>
                     )}
                     {selectedDay.isFuture && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[9px] font-medium bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                      <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
                         {dict.upcoming}
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">
+                  <span className="text-xs font-medium text-zinc-400">
                     {dict.selectedDayDetails}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div className="rounded-lg bg-white dark:bg-zinc-900 p-2.5 border border-zinc-200/60 dark:border-zinc-800">
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                       {dict.thisWeek}
                     </p>
                     <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
                       {selectedDay.isFuture
-                        ? "—"
+                        ? "-"
                         : formatCurrency(selectedDay.thisAmt)}
                     </p>
                   </div>
                   <div className="rounded-lg bg-white dark:bg-zinc-900 p-2.5 border border-zinc-200/60 dark:border-zinc-800">
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                       {dict.lastWeek}
                     </p>
                     <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 mt-0.5">
@@ -450,7 +453,7 @@ export default function DailyTrendComparison({
 
                 {!selectedDay.isFuture && (
                   <div className="mt-2.5 pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between text-xs">
-                    <span className="text-zinc-500 dark:text-zinc-400 text-[11px]">
+                    <span className="text-zinc-500 dark:text-zinc-400 text-xs">
                       {dict.thisWeek} {dict.vs} {dict.lastWeek}:
                     </span>
                     {selectedDay.diff < 0 ? (

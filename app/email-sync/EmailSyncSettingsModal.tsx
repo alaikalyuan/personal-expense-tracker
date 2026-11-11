@@ -23,6 +23,7 @@ import {
 import { formatMoney } from "@/utils/money";
 import { useTranslation } from "@/utils/i18n/context";
 import type { CategoryKey } from "@/utils/i18n/dictionaries";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface EmailSyncSettingsModalProps {
   isOpen: boolean;
@@ -162,8 +163,8 @@ Rp 5.000,00`);
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+    <ModalOverlay
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={onClose}
     >
       <div
@@ -180,7 +181,7 @@ Rp 5.000,00`);
               <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 {t.emailSync.modalTitle}
               </h2>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {t.emailSync.modalSubtitle}
               </p>
             </div>
@@ -243,7 +244,7 @@ Rp 5.000,00`);
                 <label className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                   {t.emailSync.modeTitle}
                 </label>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-2.5">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2.5">
                   {t.emailSync.modeDesc}
                 </p>
 
@@ -263,7 +264,7 @@ Rp 5.000,00`);
                       </span>
                       {mode === "review" && <Check className="h-4 w-4 text-amber-600" />}
                     </div>
-                    <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                       {t.emailSync.modeReviewDesc}
                     </p>
                   </button>
@@ -283,7 +284,7 @@ Rp 5.000,00`);
                       </span>
                       {mode === "auto" && <Check className="h-4 w-4 text-amber-600" />}
                     </div>
-                    <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                       {t.emailSync.modeAutoDesc}
                     </p>
                   </button>
@@ -295,7 +296,7 @@ Rp 5.000,00`);
                 <label className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                   {t.emailSync.sakuTitle}
                 </label>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-2">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">
                   {t.emailSync.sakuDesc}
                 </p>
                 <select
@@ -322,7 +323,7 @@ Rp 5.000,00`);
                     type="button"
                     onClick={handleRegenerateToken}
                     disabled={isPending}
-                    className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 cursor-pointer"
+                    className="flex items-center gap-1 text-xs font-semibold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 cursor-pointer"
                   >
                     <RefreshCw className="h-2.5 w-2.5" />
                     <span>{t.emailSync.resetToken}</span>
@@ -357,7 +358,7 @@ Rp 5.000,00`);
                           Buka Link Konfirmasi ↗
                         </a>
                       ) : (
-                        <span className="font-mono font-bold tracking-wider">{settings.lastVerificationCode}</span>
+                        <span className="font-mono font-bold">{settings.lastVerificationCode}</span>
                       )}
                     </div>
                     <button
@@ -365,7 +366,7 @@ Rp 5.000,00`);
                       onClick={() => {
                         navigator.clipboard.writeText(settings.lastVerificationCode!);
                       }}
-                      className="text-[11px] font-bold text-emerald-700 hover:underline dark:text-emerald-400 cursor-pointer shrink-0 ml-2"
+                      className="text-xs font-bold text-emerald-700 hover:underline dark:text-emerald-400 cursor-pointer shrink-0 ml-2"
                     >
                       {t.emailSync.copyCodeBtn}
                     </button>
@@ -378,7 +379,7 @@ Rp 5.000,00`);
                 <h4 className="font-bold text-zinc-800 dark:text-zinc-200 mb-2">
                   {t.emailSync.gmailGuideTitle}
                 </h4>
-                <ol className="list-decimal space-y-1.5 pl-4 text-zinc-600 dark:text-zinc-400 text-[11px]">
+                <ol className="list-decimal space-y-1.5 pl-4 text-zinc-600 dark:text-zinc-400 text-xs">
                   <li>{t.emailSync.gmailStep1}</li>
                   <li>
                     {t.emailSync.gmailStep2}{" "}
@@ -397,7 +398,7 @@ Rp 5.000,00`);
                   type="button"
                   onClick={handleSaveSettings}
                   disabled={isPending}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-amber-600 py-3 text-xs font-bold text-white shadow-xs hover:bg-amber-700 active:scale-98 disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600 cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-amber-600 py-3 text-xs font-bold text-zinc-950 shadow-xs hover:bg-amber-700 active:scale-98 disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600 cursor-pointer"
                 >
                   {isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -416,14 +417,14 @@ Rp 5.000,00`);
                   <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                     {t.emailSync.pasteTitle}
                   </h4>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {t.emailSync.pasteDesc}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={loadSampleEmail}
-                  className="rounded-xl border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 cursor-pointer"
+                  className="rounded-xl border border-zinc-200 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 cursor-pointer"
                 >
                   {t.emailSync.loadSampleBtn}
                 </button>
@@ -462,10 +463,10 @@ Rp 5.000,00`);
                   <div className="font-bold mb-1">
                     {pasteResult.success ? `✅ ${t.emailSync.extractSuccess}` : `❌ ${t.emailSync.extractFailed}`}
                   </div>
-                  <p className="text-[11px] mb-2">{pasteResult.message}</p>
+                  <p className="text-xs mb-2">{pasteResult.message}</p>
 
                   {pasteResult.result && (
-                    <div className="rounded-xl bg-white/80 p-3 space-y-1 text-[11px] dark:bg-zinc-900/80">
+                    <div className="rounded-xl bg-white/80 p-3 space-y-1 text-xs dark:bg-zinc-900/80">
                       <div>
                         <strong>{t.emailSync.merchantLabel}:</strong> {pasteResult.result.merchantName}
                       </div>
@@ -489,6 +490,6 @@ Rp 5.000,00`);
           )}
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

@@ -23,6 +23,7 @@ import { createSplitBillFromSubscription } from "@/app/subscriptions/actions";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/utils/i18n/context";
 import AiHeaderButton from "@/app/ai/AiHeaderButton";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 export interface HistoryBillRecord {
   id: string;
@@ -219,7 +220,7 @@ export default function SplitBillHistoryClient({
       {/* Metrics Banner */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="p-3.5 sm:p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
-          <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">
+          <span className="text-xs font-semibold text-zinc-400 block">
             {t.splitBill.totalBills}
           </span>
           <span className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 mt-0.5 block">
@@ -228,7 +229,7 @@ export default function SplitBillHistoryClient({
         </div>
 
         <div className="p-3.5 sm:p-4 rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/20 shadow-2xs">
-          <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider block">
+          <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 block">
             {t.splitBill.unpaid}
           </span>
           <span className="text-lg sm:text-xl font-black text-amber-900 dark:text-amber-200 mt-0.5 block">
@@ -237,7 +238,7 @@ export default function SplitBillHistoryClient({
         </div>
 
         <div className="p-3.5 sm:p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/20 shadow-2xs">
-          <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">
+          <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 block">
             {t.splitBill.paid}
           </span>
           <span className="text-lg sm:text-xl font-black text-emerald-900 dark:text-emerald-200 mt-0.5 block">
@@ -258,7 +259,7 @@ export default function SplitBillHistoryClient({
             </div>
             <Link
               href="/subscriptions"
-              className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
+              className="text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
             >
               {t.splitBill.manageLink} &rarr;
             </Link>
@@ -277,7 +278,7 @@ export default function SplitBillHistoryClient({
                     <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
                       {sub.name}
                     </p>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                       {formatCurrency(perPerson)}{t.splitBill.perPersonShort} • {t.splitBill.scheduleLabel}: {sub.next_renewal_date}
                     </p>
                   </div>
@@ -285,7 +286,7 @@ export default function SplitBillHistoryClient({
                     type="button"
                     onClick={() => handleGenerateSplitFromSub(sub)}
                     disabled={triggeringSubId === sub.id}
-                    className="shrink-0 flex items-center gap-1 rounded-xl bg-purple-600 text-white hover:bg-purple-500 dark:bg-purple-500 dark:hover:bg-purple-400 dark:text-zinc-950 px-2.5 py-1.5 text-[11px] font-semibold transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                    className="shrink-0 flex items-center gap-1 rounded-xl bg-purple-600 text-white hover:bg-purple-500 dark:bg-purple-500 dark:hover:bg-purple-400 dark:text-zinc-950 px-2.5 py-1.5 text-xs font-semibold transition-all cursor-pointer shadow-xs disabled:opacity-50"
                   >
                     <Sparkles className="w-3 h-3" />
                     <span>{triggeringSubId === sub.id ? t.splitBill.creatingBillBtn : t.splitBill.createBillBtn}</span>
@@ -374,18 +375,18 @@ export default function SplitBillHistoryClient({
                     <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
                       {b.title}
                     </h3>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
                       {b.category}
                     </span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                  <p className="text-xs text-zinc-400 mt-0.5">
                     {formatDate(b.created_at, "d MMM yyyy")} · {b.split_participants?.length || 0} {t.splitBill.peopleCount}
                   </p>
                 </div>
 
                 {/* Status Badge */}
                 <span
-                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border shrink-0 ${
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${
                     b.isSettled
                       ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
                       : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
@@ -398,7 +399,7 @@ export default function SplitBillHistoryClient({
               {/* Card Mid Row: Amounts */}
               <div className="flex items-baseline justify-between pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
                 <div>
-                  <span className="text-[10px] text-zinc-400 block font-medium">
+                  <span className="text-xs text-zinc-400 block font-medium">
                     {t.splitBill.totalBill}
                   </span>
                   <span className="text-base font-black text-zinc-900 dark:text-zinc-50">
@@ -407,7 +408,7 @@ export default function SplitBillHistoryClient({
                 </div>
 
                 <div className="text-right">
-                  <span className="text-[10px] text-zinc-400 block font-medium">
+                  <span className="text-xs text-zinc-400 block font-medium">
                     {t.splitBill.yourShareHost}
                   </span>
                   <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
@@ -428,7 +429,7 @@ export default function SplitBillHistoryClient({
                 </div>
 
                 {!b.isSettled && b.unpaidParticipants.length > 0 && (
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {t.splitBill.waitingFor}:{" "}
                     <span className="font-semibold text-amber-700 dark:text-amber-400">
                       {b.unpaidParticipants.map((p) => p.name).join(", ")}
@@ -465,10 +466,10 @@ export default function SplitBillHistoryClient({
 
       {/* Delete Confirmation Modal */}
       {deletingBillId && billToDelete && (
-        <div
+        <ModalOverlay
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 backdrop-blur-xs animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 animate-fade-in"
         >
           <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
             <div className="flex items-start gap-3">
@@ -509,7 +510,7 @@ export default function SplitBillHistoryClient({
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

@@ -115,7 +115,7 @@ export default async function SakuDetailPage(props: SakuDetailPageProps) {
         <header className="flex items-center justify-between">
           <Link
             href="/saku"
-            className="flex items-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+            className="-ml-2 flex min-h-11 items-center gap-1.5 px-2 text-sm font-bold text-ink-soft hover:text-ink"
           >
             <ChevronLeft className="w-4 h-4" />
             <span>Semua Saku</span>
@@ -151,7 +151,7 @@ export default async function SakuDetailPage(props: SakuDetailPageProps) {
                     {wallet.name}
                   </h1>
                   {wallet.is_primary && (
-                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                    <span className="px-1.5 py-0.5 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
                       Utama
                     </span>
                   )}
@@ -166,27 +166,27 @@ export default async function SakuDetailPage(props: SakuDetailPageProps) {
           {/* Budget stats */}
           <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
             <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
-              <span className="text-[10px] uppercase font-bold text-zinc-400">
+              <span className="text-xs font-bold text-zinc-400">
                 Terpakai Minggu Ini
               </span>
               <div className="text-base font-black text-zinc-900 dark:text-zinc-100 mt-0.5">
                 Rp {currentWeekSpend.toLocaleString("id-ID")}
               </div>
               {weeklyBudget > 0 && (
-                <div className="text-[10px] text-zinc-400 mt-0.5">
+                <div className="text-xs text-zinc-400 mt-0.5">
                   dari limit Rp {weeklyBudget.toLocaleString("id-ID")}
                 </div>
               )}
             </div>
 
             <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50">
-              <span className="text-[10px] uppercase font-bold text-zinc-400">
+              <span className="text-xs font-bold text-zinc-400">
                 Total Transaksi
               </span>
               <div className="text-base font-black text-zinc-900 dark:text-zinc-100 mt-0.5">
                 {expenses.length} Catatan
               </div>
-              <div className="text-[10px] text-zinc-400 mt-0.5">
+              <div className="text-xs text-zinc-400 mt-0.5">
                 {monthlyBudget > 0 ? `Limit bln: Rp ${monthlyBudget.toLocaleString("id-ID")}` : "Tanpa limit bulanan"}
               </div>
             </div>
@@ -196,7 +196,7 @@ export default async function SakuDetailPage(props: SakuDetailPageProps) {
         {/* Expenses List */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+            <h2 className="text-xs font-bold text-zinc-400">
               Pengeluaran di Saku Ini
             </h2>
             <span className="text-xs text-zinc-400 font-medium">

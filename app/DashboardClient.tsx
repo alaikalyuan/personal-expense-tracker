@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import UserMenu from "./UserMenu";
 import TrackingStreak from "./TrackingStreak";
 import { StreakData } from "@/utils/streak";
-import { ShieldAlert, Sparkles, CreditCard, CheckCircle2 } from "lucide-react";
+import { ShieldAlert, CreditCard, CheckCircle2, TriangleAlert, Mail, ChevronDown, ChevronRight } from "lucide-react";
 import InstallPrompt from "./InstallPrompt";
 import CadenceToggle from "./CadenceToggle";
 import ProjectedBurnCard from "./ProjectedBurnCard";
@@ -30,7 +30,6 @@ import { calculateExemptTotals, isExpenseExempt } from "@/utils/exemptions";
 import UpgradeAccountModal from "./UpgradeAccountModal";
 import SakuSwitcher from "./SakuSwitcher";
 import { WalletBalance } from "@/utils/wallets/server";
-import AiAdvisorCard from "./AiAdvisorCard";
 import AiHeaderButton from "@/app/ai/AiHeaderButton";
 import { paySubscription } from "@/app/subscriptions/actions";
 
@@ -97,6 +96,9 @@ export default function DashboardClient({
   const [authModalError, setAuthModalError] = useState<string | null>(initialAuthError || null);
   const [mergedToastCount, setMergedToastCount] = useState<number>(initialMergedCount);
   const [subToastMessage, setSubToastMessage] = useState<string | null>(null);
+  const [subErrorMessage, setSubErrorMessage] = useState<string | null>(null);
+  const [pendingEmailCount, setPendingEmailCount] = useState(pendingEmailTransactions.length);
+  const [showEmailReview, setShowEmailReview] = useState(false);
   const { t, formatDate, getCategoryLabel, formatCurrency } = useTranslation();
 
   useEffect(() => {
@@ -177,9 +179,6 @@ export default function DashboardClient({
   // Day index & pacing
   const todayDayIndex = (now.getDay() + 6) % 7 + 1;
   const elapsedDays = isMonth ? currentDay : todayDayIndex;
-  const daysRemaining = isMonth
-    ? Math.max(totalDaysInMonth - currentDay, 0)
-    : Math.max(7 - todayDayIndex + 1, 1);
   const avgDailySpend = regularTotal / Math.max(elapsedDays, 1);
 
   // Largest spend
@@ -269,7 +268,7 @@ export default function DashboardClient({
 
       return {
         weekLabel: `W${i + 1}`,
-        dateRange: `${startDay}–${endDay} ${formatDate(chunkStartDate, "MMM")}`,
+        dateRange: `${startDay}-${endDay}${formatDate(chunkStartDate, "MMM")}`,
         amount: chunkTotal,
         isCurrent,
         isFuture,
@@ -381,23 +380,79 @@ export default function DashboardClient({
         setSubToastMessage(null);
       }, 4500);
     } catch (err: unknown) {
-      alert((err as Error).message);
+      setSubErrorMessage(err instanceof Error ? err.message : t.home.saveFailed);
+      setTimeout(() => setSubErrorMessage(null), 4500);
     }
   };
 
+  // The day's summary: how much of today's share of the budget is still unspent.
+  const todayStr = useMemo(() => format(now, "yyyy-MM-dd"), [now]);
+  const todayRegular = useMemo(() => {
+    const todays = activeExpenses.filter((item) => {
+      const d = item.spent_at.includes("T") ? item.spent_at.split("T")[0] : item.spent_at;
+      return d === todayStr;
+    });
+    return calculateExemptTotals(todays).regularTotal;
+  }, [activeExpenses, todayStr]);
+
+  const daysLeft = isMonth ? Math.max(totalDaysInMonth - currentDay + 1, 1) : Math.max(7 - todayDayIndex + 1, 1);
+  const periodRemaining = activeBudget - regularTotal;
+  const todayShare = (activeBudget - (regularTotal - todayRegular)) / daysLeft;
+  const leftToday = Math.round(todayShare - todayRegular);
+  const hasBudget = activeBudget > 0;
+  const overToday = hasBudget && !isOverBudget && leftToday < 0;
+
+  let focalLabel = t.home.leftToday;
+  let focalAmount = Math.max(leftToday, 0);
+  let focalTone = "text-ink";
+  let statusText = "";
+  let statusTone = "text-ok";
+  let StatusIcon = CheckCircle2;
+
+  if (!hasBudget) {
+    focalLabel = t.home.spentToday;
+    focalAmount = todayRegular;
+  } else if (isOverBudget) {
+    focalAmount = 0;
+    focalTone = "text-danger";
+    statusText = t.home.statusOverPeriod.replace("{amount}", formatCurrency(Math.abs(periodRemaining)));
+    statusTone = "text-danger";
+    StatusIcon = TriangleAlert;
+  } else if (overToday) {
+    focalLabel = t.home.overToday;
+    focalAmount = Math.abs(leftToday);
+    focalTone = "text-accent-strong";
+    statusText =
+      daysLeft > 1
+        ? t.home.statusOverToday.replace("{amount}", formatCurrency(Math.round(periodRemaining / (daysLeft - 1))))
+        : t.home.statusLastDay;
+    statusTone = "text-accent-strong";
+    StatusIcon = TriangleAlert;
+  } else {
+    statusText =
+      daysLeft > 1
+        ? t.home.statusSafe
+            .replace("{amount}", formatCurrency(periodRemaining))
+            .replace("{days}", String(daysLeft))
+        : t.home.statusLastDay;
+  }
+
+  const noticeRow =
+    "flex min-h-12 w-full items-center gap-3 rounded-xl border border-line bg-card px-3 text-left text-sm font-semibold text-ink hover:bg-paper active:bg-line";
+
   return (
-    <main className="max-w-md mx-auto p-4 pb-48 flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex justify-between items-center pt-2">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="font-bold tracking-tight text-lg">{t.dashboard.title}</h1>
-          <p className="text-[11px] text-zinc-500">
+    <main className="mx-auto flex max-w-md flex-col gap-5 px-4 pb-28 pt-4">
+      {/* Header: today's date is the page title */}
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold text-ink">{formatDate(now, "EEEE, d MMM")}</h1>
+          <p className="truncate text-xs text-ink-soft">
             {isMonth
-              ? `${formatDate(startOfMonthDate, "d MMM")} – ${formatDate(now, "d MMM yyyy")} (${currentDay}/${totalDaysInMonth} ${t.dashboard.dayOfMonth})`
-              : `${formatDate(startOfWeekDate, "d MMM")} – ${formatDate(endOfWeekDate, "d MMM yyyy")}`}
+              ? `${formatDate(startOfMonthDate, "d MMM")} - ${formatDate(endOfMonthDate, "d MMM")} · ${currentDay}/${totalDaysInMonth} ${t.dashboard.dayOfMonth}`
+              : `${formatDate(startOfWeekDate, "d MMM")} - ${formatDate(endOfWeekDate, "d MMM")}`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {isGuest ? (
             <button
               type="button"
@@ -407,16 +462,13 @@ export default function DashboardClient({
                 setIsUpgradeModalOpen(true);
               }}
               aria-label={t.guest.bannerAction}
-              className="group flex h-8 items-center gap-1.5 rounded-xl border border-amber-300/80 bg-amber-50/90 px-2.5 text-xs font-semibold text-amber-900 shadow-2xs hover:border-amber-400 hover:bg-amber-100 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70 active:scale-95 transition-all cursor-pointer"
+              className="flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-accent bg-card px-3 text-sm font-bold text-accent-strong hover:bg-paper active:bg-line"
             >
-              <ShieldAlert className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span className="tracking-tight">{t.guest.guestButton}</span>
+              <ShieldAlert className="h-5 w-5" aria-hidden="true" />
+              <span>{t.guest.guestButton}</span>
             </button>
           ) : (
-            <TrackingStreak
-              streakData={streakData}
-              isOverBudget={isOverBudget}
-            />
+            <TrackingStreak streakData={streakData} isOverBudget={isOverBudget} />
           )}
           <AiHeaderButton />
           <UserMenu
@@ -429,146 +481,132 @@ export default function DashboardClient({
             }}
           />
         </div>
-      </div>
+      </header>
 
-      {/* Saku Switcher & Cadence Switcher (Side by Side) */}
-      <div className="flex items-center justify-between gap-2 -mt-2">
-        <div>
-          {multiSakuEnabled && wallets.length > 1 && (
-            <SakuSwitcher
-              wallets={wallets}
-              selectedSakuId={selectedSakuId}
-              multiSakuEnabled={multiSakuEnabled}
-            />
-          )}
-        </div>
+      <div className="flex flex-col gap-2">
+        {multiSakuEnabled && wallets.length > 1 && (
+          <SakuSwitcher wallets={wallets} selectedSakuId={selectedSakuId} multiSakuEnabled={multiSakuEnabled} />
+        )}
         <CadenceToggle currentCadence={cadence} onChange={setCadence} />
       </div>
 
-      {/* PWA Install Banner */}
-      <InstallPrompt />
-
-      {/* Pending Email QRIS Transactions Banner */}
-      {!isGuest && (
-        <PendingTransactionsBanner
-          initialTransactions={pendingEmailTransactions}
-          spendingWallets={wallets.filter((w) => w.kind === "spending")}
-        />
-      )}
-
-      {/* Upcoming Subscriptions Renewal Banner (for subscriptions due soon) */}
-      {soonDueSubscriptions.length > 0 && (
-        <Link
-          href="/subscriptions"
-          className="rounded-2xl border border-pink-500/30 bg-pink-500/10 p-3.5 dark:border-pink-500/20 dark:bg-pink-500/10 flex items-center justify-between gap-3 transition-all hover:bg-pink-500/15"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-pink-500/20 text-pink-600 dark:text-pink-400">
-              <CreditCard className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                {soonDueSubscriptions.length} {t.subscriptions.upcomingDueBanner}
-              </p>
-              <p className="text-[11px] text-zinc-600 dark:text-zinc-400 truncate">
-                {soonDueSubscriptions.map((s) => s.name).join(", ")}
-              </p>
-            </div>
-          </div>
-          <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 shrink-0">
-            {t.subscriptions.viewDetails} &rarr;
-          </span>
-        </Link>
-      )}
-
-      {/* Hero Spent Summary */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-linear-to-b dark:from-zinc-900 dark:to-zinc-950 dark:shadow-sm">
-        <div className="flex items-baseline justify-between">
+      {/* The day's summary: the one focal number on this screen, on a torn receipt. */}
+      <div className="receipt">
+        <section aria-labelledby="day-summary" className="receipt-edge flex flex-col gap-4 rounded-t-2xl bg-card px-5 pb-8 pt-5">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              {isMonth ? t.dashboard.spentThisMonth : t.dashboard.spentThisWeek}
-            </p>
-            <p className="mt-1 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-              {formatCurrency(activePeriodTotal)}
-            </p>
-          </div>
-        </div>
-
-        {/* Budget Progress & Allowance Pace */}
-        <BudgetProgress
-          period={cadence}
-          weeklyTotal={activePeriodTotal}
-          weeklyBudget={activeBudget}
-          daysRemaining={daysRemaining}
-          regularTotal={regularTotal}
-          exemptTotal={exemptTotal}
-          exemptCount={exemptCount}
-          unexemptAnomaly={
-            unexemptAnomaly
-              ? {
-                  id: unexemptAnomaly.id,
-                  name: unexemptAnomaly.name,
-                  amount: Number(unexemptAnomaly.amount),
-                }
-              : null
-          }
-          projectedSubscriptionsTotal={projectedSubscriptionsTotal}
-          dueSubscriptions={dueSubscriptions}
-          onPaySubscription={handlePaySubscription}
-        />
-
-        {/* Micro-Stats Shelf */}
-        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-zinc-200/80 pt-4 dark:border-zinc-800/80">
-          {/* Daily Average */}
-          <div>
-            <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-500 dark:text-zinc-400">
-              {t.dashboard.dailyAvg}
-            </p>
-            <p className="mt-0.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-              {formatCurrency(Math.round(avgDailySpend))}
-            </p>
-            <p className="mt-0.5 text-[10px] text-zinc-500">
-              {isMonth
-                ? `${currentDay}/${totalDaysInMonth} ${t.dashboard.dayOfMonth}`
-                : `${todayDayIndex} ${t.dashboard.dayOfSeven}`}
-            </p>
+            <h2 id="day-summary" className="text-sm font-semibold text-ink-soft">
+              {focalLabel}
+            </h2>
+            <p className={`mt-1 text-4xl font-extrabold tracking-tight ${focalTone}`}>{formatCurrency(focalAmount)}</p>
+            {statusText && (
+              <p className={`mt-2 flex items-center gap-1.5 text-sm font-semibold ${statusTone}`}>
+                <StatusIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{statusText}</span>
+              </p>
+            )}
           </div>
 
-          {/* Top Category */}
-          <div className="border-l border-zinc-200/80 pl-2 dark:border-zinc-800/60">
-            <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-500 dark:text-zinc-400">
-              {t.dashboard.topCategory}
-            </p>
-            <p
-              className="mt-0.5 truncate text-xs font-semibold text-zinc-800 dark:text-zinc-200"
-              title={topCategoryName}
-            >
-              {topCategoryName}
-            </p>
-            <p className="mt-0.5 truncate text-[10px] text-zinc-500">
-              {formatCurrency(Number(topCategory[1]))}
-            </p>
+          <div className="border-t border-dashed border-line pt-3">
+            <BudgetProgress
+              period={cadence}
+              weeklyTotal={activePeriodTotal}
+              weeklyBudget={activeBudget}
+              regularTotal={regularTotal}
+              exemptTotal={exemptTotal}
+              exemptCount={exemptCount}
+              unexemptAnomaly={
+                unexemptAnomaly
+                  ? {
+                      id: unexemptAnomaly.id,
+                      name: unexemptAnomaly.name,
+                      amount: Number(unexemptAnomaly.amount),
+                    }
+                  : null
+              }
+              projectedSubscriptionsTotal={projectedSubscriptionsTotal}
+              dueSubscriptions={dueSubscriptions}
+              onPaySubscription={handlePaySubscription}
+            />
           </div>
-
-          {/* Max Spend */}
-          <div className="border-l border-zinc-200/80 pl-2 dark:border-zinc-800/60">
-            <p className="text-[10px] uppercase font-medium tracking-wider text-zinc-500 dark:text-zinc-400">
-              {t.dashboard.largest}
-            </p>
-            <p className="mt-0.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-              {formatCurrency(largestSpend)}
-            </p>
-            <p
-              className="mt-0.5 truncate text-[10px] text-zinc-500"
-              title={largestExpense?.name ?? t.common.none}
-            >
-              {largestExpense?.name ?? t.common.none}
-            </p>
-          </div>
-        </div>
+        </section>
       </div>
 
-      {/* Projected Monthly Burn Rate Card (Visible in Monthly Cadence) */}
+      {/* Notices: one line each, details on tap */}
+      {(pendingEmailCount > 0 || soonDueSubscriptions.length > 0) && (
+        <div className="flex flex-col gap-2">
+          {!isGuest && pendingEmailCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowEmailReview((prev) => !prev)}
+              aria-expanded={showEmailReview}
+              className={noticeRow}
+            >
+              <Mail className="h-5 w-5 shrink-0 text-accent-strong" aria-hidden="true" />
+              <span className="min-w-0 flex-1">{t.home.emailPending.replace("{count}", String(pendingEmailCount))}</span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-ink-soft transition-transform ${showEmailReview ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
+          )}
+          {!isGuest && showEmailReview && (
+            <PendingTransactionsBanner
+              initialTransactions={pendingEmailTransactions}
+              spendingWallets={wallets.filter((w) => w.kind === "spending")}
+              onCountChange={setPendingEmailCount}
+            />
+          )}
+          {soonDueSubscriptions.length > 0 && (
+            <Link href="/subscriptions" className={noticeRow}>
+              <CreditCard className="h-5 w-5 shrink-0 text-accent-strong" aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">
+                  {t.home.subsDue.replace("{count}", String(soonDueSubscriptions.length))}
+                </span>
+                <span className="block truncate text-xs font-medium text-ink-soft">
+                  {soonDueSubscriptions.map((s) => s.name).join(", ")}
+                </span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-ink-soft" aria-hidden="true" />
+            </Link>
+          )}
+        </div>
+      )}
+
+      <InstallPrompt />
+
+      {/* Today's expenses sit directly under the summary */}
+      <ExpenseList
+        expenses={activeExpenses}
+        showPeriodToggle={true}
+        dashboardPeriod={cadence}
+        title={t.dashboard.recentEntries}
+        weeklyBudget={activeBudget}
+        startDateStr={activeStartStr}
+        endDateStr={activeEndStr}
+        wallets={wallets}
+      />
+
+      {/* Insights come last: useful, but not what the student opened the app for */}
+      <dl className="rounded-2xl border border-line bg-card px-4">
+        <div className="flex items-baseline justify-between gap-3 border-b border-dashed border-line py-3">
+          <dt className="text-sm text-ink-soft">{t.dashboard.dailyAvg}</dt>
+          <dd className="text-sm font-bold text-ink">{formatCurrency(Math.round(avgDailySpend))}</dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-3 border-b border-dashed border-line py-3">
+          <dt className="shrink-0 text-sm text-ink-soft">{t.dashboard.topCategory}</dt>
+          <dd className="min-w-0 truncate text-sm font-bold text-ink">
+            {topCategoryName} · {formatCurrency(Number(topCategory[1]))}
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-3 py-3">
+          <dt className="shrink-0 text-sm text-ink-soft">{t.dashboard.largest}</dt>
+          <dd className="min-w-0 truncate text-sm font-bold text-ink">
+            {largestExpense ? `${largestExpense.name} · ${formatCurrency(largestSpend)}` : t.common.none}
+          </dd>
+        </div>
+      </dl>
+
       {isMonth && (
         <ProjectedBurnCard
           monthTotal={activePeriodTotal}
@@ -581,15 +619,6 @@ export default function DashboardClient({
         />
       )}
 
-      {/* AI Financial Advisor Insights Card */}
-      <AiAdvisorCard
-        activePeriodTotal={activePeriodTotal}
-        activeBudget={activeBudget}
-        topCategoryName={topCategoryName}
-        isOverBudget={isOverBudget}
-      />
-
-      {/* Breakdown Card */}
       <BreakdownCard
         period={cadence}
         dailyData={dailyData}
@@ -598,19 +627,7 @@ export default function DashboardClient({
         weeklyTotal={activePeriodTotal}
       />
 
-      {/* Expense Log */}
-      <ExpenseList
-        expenses={activeExpenses}
-        showPeriodToggle={true}
-        dashboardPeriod={cadence}
-        title={t.dashboard.recentEntries}
-        weeklyBudget={activeBudget}
-        startDateStr={activeStartStr}
-        endDateStr={activeEndStr}
-        wallets={wallets}
-      />
-
-      {/* Guest Upgrade Modal (the welcome screen lives in GuestLanding, before a session exists) */}
+      {/* The welcome screen lives in GuestLanding, before a session exists */}
       <UpgradeAccountModal
         isOpen={isUpgradeModalOpen}
         onClose={() => {
@@ -621,26 +638,27 @@ export default function DashboardClient({
         initialError={authModalError}
       />
 
-      {/* Merged guest expenses toast */}
-      {mergedToastCount > 0 && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-zinc-900 px-4 py-2.5 text-xs font-semibold text-white shadow-2xl dark:bg-zinc-100 dark:text-zinc-950 animate-modal-in flex items-center gap-2 border border-zinc-700/50 dark:border-zinc-300">
-          <Sparkles className="w-4 h-4 text-amber-400 dark:text-amber-500 shrink-0" />
-          <span>
-            {t.guest.mergedToast.replace("{count}", String(mergedToastCount))}
-          </span>
-        </div>
-      )}
-
-      {/* Subscription paid toast */}
-      {subToastMessage && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-2xl animate-fade-in flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-100 shrink-0" />
-          <span>{subToastMessage}</span>
-        </div>
-      )}
-
-      {/* Bottom spacer for clearance above floating navbar and gradient */}
-      <div className="h-8 shrink-0" aria-hidden="true" />
+      {/* Toasts sit above the bottom bar and are announced to screen readers */}
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex flex-col items-center gap-2 px-4">
+        {mergedToastCount > 0 && (
+          <p className="flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-card animate-modal-in">
+            <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{t.guest.mergedToast.replace("{count}", String(mergedToastCount))}</span>
+          </p>
+        )}
+        {subToastMessage && (
+          <p className="flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-card animate-fade-in">
+            <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{subToastMessage}</span>
+          </p>
+        )}
+        {subErrorMessage && (
+          <p role="alert" className="flex items-center gap-2 rounded-xl bg-danger px-4 py-3 text-sm font-semibold text-card animate-fade-in">
+            <TriangleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{subErrorMessage}</span>
+          </p>
+        )}
+      </div>
     </main>
   );
 }

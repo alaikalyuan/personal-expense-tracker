@@ -4,33 +4,33 @@ export default function ArchiveLoading() {
       {/* Header */}
       <div className="flex justify-between items-center pt-2">
         <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-xl bg-zinc-800 border border-zinc-800" />
+          <div className="h-8 w-8 rounded-xl bg-line border border-line" />
           <div className="space-y-1.5">
-            <div className="h-6 w-28 bg-zinc-800 rounded-md" />
-            <div className="h-3 w-40 bg-zinc-800/70 rounded-xs" />
+            <div className="h-6 w-28 bg-line rounded-md" />
+            <div className="h-3 w-40 bg-line rounded-xs" />
           </div>
         </div>
-        <div className="h-8 w-8 rounded-xl bg-zinc-800 border border-zinc-800" />
+        <div className="h-8 w-8 rounded-xl bg-line border border-line" />
       </div>
 
       {/* Historical Summary Banner */}
-      <div className="rounded-2xl border border-zinc-800 bg-linear-to-b from-zinc-900 to-zinc-950 p-4 shadow-sm space-y-3">
-        <div className="h-2.5 w-32 bg-zinc-800 rounded-xs" />
+      <div className="rounded-2xl border border-line bg-card p-4 shadow-sm space-y-3">
+        <div className="h-2.5 w-32 bg-line rounded-xs" />
 
         <div className="grid grid-cols-3 gap-2 pt-1">
           <div className="space-y-1.5">
-            <div className="h-2.5 w-16 bg-zinc-800/70 rounded-xs" />
-            <div className="h-4 w-20 bg-zinc-800 rounded-xs" />
+            <div className="h-2.5 w-16 bg-line rounded-xs" />
+            <div className="h-4 w-20 bg-line rounded-xs" />
           </div>
 
-          <div className="border-l border-zinc-800/80 pl-2.5 space-y-1.5">
-            <div className="h-2.5 w-16 bg-zinc-800/70 rounded-xs" />
-            <div className="h-4 w-20 bg-zinc-800 rounded-xs" />
+          <div className="border-l border-line pl-2.5 space-y-1.5">
+            <div className="h-2.5 w-16 bg-line rounded-xs" />
+            <div className="h-4 w-20 bg-line rounded-xs" />
           </div>
 
-          <div className="border-l border-zinc-800/80 pl-2.5 space-y-1.5">
-            <div className="h-2.5 w-14 bg-zinc-800/70 rounded-xs" />
-            <div className="h-4 w-16 bg-zinc-800 rounded-xs" />
+          <div className="border-l border-line pl-2.5 space-y-1.5">
+            <div className="h-2.5 w-14 bg-line rounded-xs" />
+            <div className="h-4 w-16 bg-line rounded-xs" />
           </div>
         </div>
       </div>
@@ -40,14 +40,14 @@ export default function ArchiveLoading() {
         {[1, 2, 3].map((item) => (
           <div
             key={item}
-            className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3"
+            className="rounded-2xl border border-line bg-card p-4 space-y-3"
           >
             <div className="flex justify-between items-center">
               <div className="space-y-1.5">
-                <div className="h-4 w-36 bg-zinc-800 rounded-xs" />
-                <div className="h-2.5 w-24 bg-zinc-800/60 rounded-xs" />
+                <div className="h-4 w-36 bg-line rounded-xs" />
+                <div className="h-2.5 w-24 bg-line rounded-xs" />
               </div>
-              <div className="h-5 w-24 bg-zinc-800 rounded-md" />
+              <div className="h-5 w-24 bg-line rounded-md" />
             </div>
           </div>
         ))}

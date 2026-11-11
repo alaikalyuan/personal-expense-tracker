@@ -92,9 +92,9 @@ export default function SakuHubClient({
         </header>
 
         {/* Hero Card: Total Net Worth */}
-        <div className="rounded-3xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white/95 dark:bg-zinc-900/95 p-6 shadow-sm relative overflow-hidden backdrop-blur-md">
+        <div className="rounded-3xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white/95 dark:bg-zinc-900/95 p-6 shadow-sm relative overflow-hidden">
           <div className="relative z-10">
-            <span className="text-[11px] uppercase tracking-wider font-bold text-zinc-400 dark:text-zinc-400">
+            <span className="text-xs font-bold text-zinc-400 dark:text-zinc-400">
               {t.saku.netWorth}
             </span>
             <div className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100 mt-1">
@@ -125,7 +125,7 @@ export default function SakuHubClient({
             <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <Plus className="w-4 h-4 stroke-[2.5]" />
             </div>
-            <span className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
+            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
               {t.saku.addSaku}
             </span>
           </button>
@@ -141,7 +141,7 @@ export default function SakuHubClient({
             <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center">
               <ArrowLeftRight className="w-4 h-4 stroke-[2.5]" />
             </div>
-            <span className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
+            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
               {t.saku.transfer}
             </span>
           </button>
@@ -157,7 +157,7 @@ export default function SakuHubClient({
             <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center">
               <Coins className="w-4 h-4 stroke-[2.5]" />
             </div>
-            <span className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">
+            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
               {t.saku.recordIncome}
             </span>
           </button>
@@ -166,7 +166,7 @@ export default function SakuHubClient({
         {/* Section 1: Saku Belanja */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+            <h2 className="text-xs font-bold text-zinc-400">
               {t.saku.spendingSakus} ({spendingWallets.length})
             </h2>
           </div>
@@ -187,7 +187,7 @@ export default function SakuHubClient({
         {/* Section 2: Saku Tabungan */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+            <h2 className="text-xs font-bold text-zinc-400">
               {t.saku.stashSakus} ({stashWallets.length})
             </h2>
           </div>

@@ -7,6 +7,6 @@ export async function getThemeServer(): Promise<Theme> {
   if (themeCookie === "light" || themeCookie === "dark") {
     return themeCookie;
   }
-  return "dark";
+  return "light";
 }
 

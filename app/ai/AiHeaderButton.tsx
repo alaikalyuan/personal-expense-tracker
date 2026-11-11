@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { useAiAssistant } from "./AiAssistantProvider";
 import { useTranslation } from "@/utils/i18n/context";
 
@@ -8,6 +8,7 @@ interface AiHeaderButtonProps {
   className?: string;
 }
 
+/** The single entry point to the assistant: a chat bubble, because it opens a chat. */
 export default function AiHeaderButton({ className = "" }: AiHeaderButtonProps) {
   const { openAi, isAiEnabled } = useAiAssistant();
   const { t } = useTranslation();
@@ -19,11 +20,9 @@ export default function AiHeaderButton({ className = "" }: AiHeaderButtonProps) 
       type="button"
       onClick={() => openAi()}
       aria-label={t.aiAdvisor.cardTitle}
-      title={t.aiAdvisor.cardTitle}
-      className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 dark:hover:bg-teal-500/30 active:scale-95 transition-all shadow-2xs cursor-pointer ${className}`}
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink hover:bg-paper active:bg-line ${className}`}
     >
-      <Sparkles className="w-4 h-4" />
-      <span className="sr-only">{t.aiAdvisor.cardTitle}</span>
+      <MessageCircle className="h-5 w-5" aria-hidden="true" />
     </button>
   );
 }

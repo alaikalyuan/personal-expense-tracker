@@ -50,6 +50,7 @@ interface FormItem {
 }
 
 import type { Wallet } from "@/utils/wallets/server";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface SplitBillCreatorProps {
   creatorName: string;
@@ -374,6 +375,16 @@ export default function SplitBillCreator({
     const newId = `part-${Date.now()}`;
     const newPart: FormParticipant = { id: newId, name: trimmed, isCreator: false };
     setParticipants([...participants, newPart]);
+    // An item shared by everyone so far stays shared by everyone, so the host
+    // is not charged for the whole bill just because friends were added later.
+    const currentIds = participants.map((p) => p.id);
+    setItems((prev) =>
+      prev.map((it) =>
+        currentIds.every((pId) => it.assignedParticipantIds.includes(pId))
+          ? { ...it, assignedParticipantIds: [...it.assignedParticipantIds, newId] }
+          : it
+      )
+    );
     setFriendNameInput("");
     setErrorMsg("");
   };
@@ -385,10 +396,11 @@ export default function SplitBillCreator({
 
     // Remove from assigned items
     setItems((prev) =>
-      prev.map((it) => ({
-        ...it,
-        assignedParticipantIds: it.assignedParticipantIds.filter((pId) => pId !== id),
-      }))
+      prev.map((it) => {
+        const kept = it.assignedParticipantIds.filter((pId) => pId !== id);
+        // Never leave an item with nobody on it: show it as shared by all who remain.
+        return { ...it, assignedParticipantIds: kept.length > 0 ? kept : remaining.map((p) => p.id) };
+      })
     );
   };
 
@@ -526,7 +538,7 @@ export default function SplitBillCreator({
           <ArrowLeft className="w-4 h-4" />
           <span>{t.splitBill.historyBack}</span>
         </Link>
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
           {t.splitBill.newSplitBadge}
         </span>
       </div>
@@ -552,7 +564,7 @@ export default function SplitBillCreator({
             <button
               type="button"
               onClick={handleRestoreDraft}
-              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg cursor-pointer"
+              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-zinc-950 font-semibold rounded-lg cursor-pointer"
             >
               {t.splitBill.restoreDraftBtn}
             </button>
@@ -584,7 +596,7 @@ export default function SplitBillCreator({
             <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
               {t.splitBill.step1Title}
             </h2>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-xs text-zinc-400">
               {t.splitBill.step1Subtitle}
             </p>
           </div>
@@ -615,7 +627,7 @@ export default function SplitBillCreator({
                 key={sug}
                 type="button"
                 onClick={() => setTitle(sug)}
-                className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-[11px] font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
               >
                 {sug}
               </button>
@@ -633,10 +645,11 @@ export default function SplitBillCreator({
             <button
               type="button"
               onClick={() => setSplitMode("itemized")}
+              aria-pressed={splitMode === "itemized"}
               className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
                 splitMode === "itemized"
-                  ? "bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-xs"
-                  : "bg-zinc-50 border-zinc-200 text-zinc-800 dark:bg-zinc-800/50 dark:border-zinc-700/80 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  ? "border-accent bg-card text-ink ring-2 ring-accent"
+                  : "border-line bg-card text-ink hover:bg-paper"
               }`}
             >
               <div>
@@ -645,7 +658,7 @@ export default function SplitBillCreator({
                     <div
                       className={`w-7 h-7 rounded-xl flex items-center justify-center ${
                         splitMode === "itemized"
-                          ? "bg-white/20 text-white dark:bg-zinc-900/10 dark:text-zinc-900"
+                          ? "bg-accent text-on-accent"
                           : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
                       }`}
                     >
@@ -654,9 +667,9 @@ export default function SplitBillCreator({
                     <div>
                       <h3 className="text-xs font-bold">{t.splitBill.modeItemizedTitle}</h3>
                       <p
-                        className={`text-[10px] font-semibold ${
+                        className={`text-xs font-semibold ${
                           splitMode === "itemized"
-                            ? "text-emerald-300 dark:text-emerald-700"
+                            ? "text-emerald-600 dark:text-emerald-400"
                             : "text-emerald-600 dark:text-emerald-400"
                         }`}
                       >
@@ -665,13 +678,13 @@ export default function SplitBillCreator({
                     </div>
                   </div>
                   {splitMode === "itemized" && (
-                    <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-accent-strong shrink-0 mt-0.5" />
                   )}
                 </div>
                 <p
-                  className={`text-[11px] mt-2 leading-relaxed ${
+                  className={`text-xs mt-2 leading-relaxed ${
                     splitMode === "itemized"
-                      ? "text-zinc-300 dark:text-zinc-600"
+                      ? "text-ink-soft"
                       : "text-zinc-500 dark:text-zinc-400"
                   }`}
                 >
@@ -684,10 +697,11 @@ export default function SplitBillCreator({
             <button
               type="button"
               onClick={() => setSplitMode("equal")}
+              aria-pressed={splitMode === "equal"}
               className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
                 splitMode === "equal"
-                  ? "bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-xs"
-                  : "bg-zinc-50 border-zinc-200 text-zinc-800 dark:bg-zinc-800/50 dark:border-zinc-700/80 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  ? "border-accent bg-card text-ink ring-2 ring-accent"
+                  : "border-line bg-card text-ink hover:bg-paper"
               }`}
             >
               <div>
@@ -696,7 +710,7 @@ export default function SplitBillCreator({
                     <div
                       className={`w-7 h-7 rounded-xl flex items-center justify-center ${
                         splitMode === "equal"
-                          ? "bg-white/20 text-white dark:bg-zinc-900/10 dark:text-zinc-900"
+                          ? "bg-accent text-on-accent"
                           : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
                       }`}
                     >
@@ -705,9 +719,9 @@ export default function SplitBillCreator({
                     <div>
                       <h3 className="text-xs font-bold">{t.splitBill.modeEqualTitle}</h3>
                       <p
-                        className={`text-[10px] font-semibold ${
+                        className={`text-xs font-semibold ${
                           splitMode === "equal"
-                            ? "text-blue-300 dark:text-blue-700"
+                            ? "text-blue-600 dark:text-blue-400"
                             : "text-blue-600 dark:text-blue-400"
                         }`}
                       >
@@ -716,13 +730,13 @@ export default function SplitBillCreator({
                     </div>
                   </div>
                   {splitMode === "equal" && (
-                    <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-accent-strong shrink-0 mt-0.5" />
                   )}
                 </div>
                 <p
-                  className={`text-[11px] mt-2 leading-relaxed ${
+                  className={`text-xs mt-2 leading-relaxed ${
                     splitMode === "equal"
-                      ? "text-zinc-300 dark:text-zinc-600"
+                      ? "text-ink-soft"
                       : "text-zinc-500 dark:text-zinc-400"
                   }`}
                 >
@@ -744,7 +758,7 @@ export default function SplitBillCreator({
             <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
               {t.splitBill.step2Title}
             </h2>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-xs text-zinc-400">
               {t.splitBill.step2Subtitle.replace("{count}", String(participants.length))}
             </p>
           </div>
@@ -788,7 +802,7 @@ export default function SplitBillCreator({
             >
               <span>{p.name}</span>
               {p.isCreator ? (
-                <span className="text-[10px] opacity-75 font-semibold">({t.splitBill.hostBadge})</span>
+                <span className="text-xs opacity-75 font-semibold">({t.splitBill.hostBadge})</span>
               ) : (
                 <button
                   type="button"
@@ -815,7 +829,7 @@ export default function SplitBillCreator({
               <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 {splitMode === "itemized" ? t.splitBill.step3Title : t.splitBill.totalBillTitle}
               </h2>
-              <p className="text-[11px] text-zinc-400">
+              <p className="text-xs text-zinc-400">
                 {splitMode === "itemized"
                   ? t.splitBill.step3SubtitleItemized
                   : t.splitBill.step3SubtitleEqual}
@@ -908,7 +922,7 @@ export default function SplitBillCreator({
 
                 {/* Price input */}
                 <div className="relative w-32 sm:w-40">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-zinc-400">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400">
                     {currencySymbol}
                   </span>
                   <input
@@ -938,13 +952,13 @@ export default function SplitBillCreator({
               {splitMode === "itemized" && (
                 <div className="pt-1.5 border-t border-zinc-100 dark:border-zinc-800/80">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                       {t.splitBill.assignedToLabel}
                     </span>
                     <button
                       type="button"
                       onClick={() => assignItemToAll(item.id)}
-                      className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
+                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
                     >
                       {t.splitBill.assignAllBtn.replace("{count}", String(participants.length))}
                     </button>
@@ -958,7 +972,7 @@ export default function SplitBillCreator({
                           key={p.id}
                           type="button"
                           onClick={() => toggleItemParticipant(item.id, p.id)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer flex items-center gap-1 ${
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1 ${
                             isAssigned
                               ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-2xs font-semibold"
                               : "bg-white text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100"
@@ -998,7 +1012,7 @@ export default function SplitBillCreator({
             <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
               {t.splitBill.step4Title}
             </h2>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-xs text-zinc-400">
               {t.splitBill.step4Subtitle}
             </p>
           </div>
@@ -1022,14 +1036,15 @@ export default function SplitBillCreator({
                   key={p.id}
                   type="button"
                   onClick={() => setTaxPreset(p.id as typeof taxPreset)}
+                  aria-pressed={active}
                   className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
                     active
-                      ? "bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100 shadow-xs"
-                      : "bg-zinc-50 border-zinc-200 text-zinc-700 dark:bg-zinc-800/60 dark:border-zinc-700 dark:text-zinc-300 hover:bg-zinc-100"
+                      ? "border-accent bg-card text-ink ring-2 ring-accent"
+                      : "border-line bg-card text-ink hover:bg-paper"
                   }`}
                 >
                   <p className="text-xs font-bold">{p.label}</p>
-                  <p className="text-[10px] opacity-75">{p.desc}</p>
+                  <p className="text-xs text-ink-soft">{p.desc}</p>
                 </button>
               );
             })}
@@ -1057,7 +1072,7 @@ export default function SplitBillCreator({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
           {/* Service Charge */}
           <div>
-            <label className="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
               {t.splitBill.servicePercentageLabel}
             </label>
             <div className="relative">
@@ -1079,11 +1094,11 @@ export default function SplitBillCreator({
 
           {/* Delivery / Extra Fee */}
           <div>
-            <label className="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
               {t.splitBill.extraFeeInputLabel}
             </label>
             <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-zinc-400">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400">
                 {currencySymbol}
               </span>
               <input
@@ -1100,11 +1115,11 @@ export default function SplitBillCreator({
 
           {/* Discount / Voucher */}
           <div>
-            <label className="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
               {t.splitBill.discountInputLabel}
             </label>
             <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-emerald-500">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 -{currencySymbol}
               </span>
               <input
@@ -1142,7 +1157,7 @@ export default function SplitBillCreator({
                 key={r.step}
                 type="button"
                 onClick={() => setRoundingStep(r.step)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   roundingStep === r.step
                     ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-bold"
                     : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -1165,7 +1180,7 @@ export default function SplitBillCreator({
             <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
               {t.splitBill.step5Title}
             </h2>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-xs text-zinc-400">
               {t.splitBill.step5Subtitle}
             </p>
           </div>
@@ -1197,7 +1212,7 @@ export default function SplitBillCreator({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
                 {t.splitBill.accountNumberLabel}
               </label>
               <input
@@ -1210,7 +1225,7 @@ export default function SplitBillCreator({
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
                 {t.splitBill.accountNameLabel}
               </label>
               <input
@@ -1300,7 +1315,7 @@ export default function SplitBillCreator({
 
       {/* SECTION 7: Live Summary Card */}
       <section className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-xs space-y-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+        <h3 className="text-xs font-bold text-zinc-400">
           {t.splitBill.realtimeSummaryTitle}
         </h3>
 
@@ -1346,7 +1361,7 @@ export default function SplitBillCreator({
 
         {/* Per-participant shares list */}
         <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80">
-          <p className="text-[11px] font-semibold text-zinc-500 mb-2">
+          <p className="text-xs font-semibold text-zinc-500 mb-2">
             {t.splitBill.estimatedOwedPerPerson}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -1355,7 +1370,7 @@ export default function SplitBillCreator({
                 key={p.participantId}
                 className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/70 dark:border-zinc-700/60"
               >
-                <p className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300 truncate">
+                <p className="text-xs font-medium text-zinc-600 dark:text-zinc-300 truncate">
                   {p.name} {p.isCreator && `(${t.splitBill.hostBadge})`}
                 </p>
                 <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
@@ -1369,9 +1384,9 @@ export default function SplitBillCreator({
 
       {/* Floating Bottom Actions Bar with bottom margin */}
       <div className="fixed bottom-4 sm:bottom-6 inset-x-0 z-40 px-3 sm:px-4 max-w-md mx-auto pointer-events-none pb-[env(safe-area-inset-bottom)]">
-        <div className="pointer-events-auto rounded-2xl sm:rounded-3xl border border-zinc-200/90 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-4 py-3 shadow-xl sm:shadow-2xl shadow-zinc-950/15 dark:shadow-black/70 flex items-center justify-between gap-3">
+        <div className="pointer-events-auto rounded-2xl sm:rounded-3xl border border-zinc-200/90 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 px-4 py-3 shadow-xl sm:shadow-2xl shadow-zinc-950/15 dark:shadow-black/70 flex items-center justify-between gap-3">
           <div>
-            <span className="text-[10px] text-zinc-400 block">{t.splitBill.totalBill}</span>
+            <span className="text-xs text-zinc-400 block">{t.splitBill.totalBill}</span>
             <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-zinc-50">
               {formatRupiah(calculation.grandTotal)}
             </span>
@@ -1434,7 +1449,7 @@ export default function SplitBillCreator({
 
       {/* Replace vs Append Modal for Scanned Receipt */}
       {showReplaceDialog && pendingScannedDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in">
+        <ModalOverlay className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in">
           <div className="w-full max-w-sm rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-2xl space-y-4">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -1487,7 +1502,7 @@ export default function SplitBillCreator({
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

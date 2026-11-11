@@ -69,7 +69,7 @@ export default function InstallPrompt() {
   }
 
   return (
-    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-50 p-3.5 shadow-md backdrop-blur-xs flex items-center justify-between gap-3 animate-fade-in dark:bg-emerald-950/20 dark:shadow-lg">
+    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-50 p-3.5 shadow-md flex items-center justify-between gap-3 animate-fade-in dark:bg-emerald-950/20 dark:shadow-lg">
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30">
           <Download className="w-4 h-4" />
@@ -78,7 +78,7 @@ export default function InstallPrompt() {
           <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
             {t.install.title}
           </p>
-          <p className="text-[11px] text-zinc-600 dark:text-zinc-400 truncate">
+          <p className="text-xs text-zinc-600 dark:text-zinc-400 truncate">
             {t.install.subtitle}
           </p>
         </div>
@@ -88,7 +88,7 @@ export default function InstallPrompt() {
         <button
           type="button"
           onClick={handleInstallClick}
-          className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400 active:scale-95 px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer shadow-sm"
+          className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:text-zinc-950 dark:hover:bg-emerald-400 active:scale-95 px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer shadow-sm"
         >
           {t.install.install}
         </button>

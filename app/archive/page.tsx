@@ -161,9 +161,9 @@ export default async function ArchivePage() {
               <Archive className="w-4 h-4 text-amber-500 dark:text-amber-400" />
               {t.archive.title}
             </h1>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{t.archive.subtitle}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t.archive.subtitle}</p>
             {activeWallet && (
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 mt-1">
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-700 dark:text-emerald-300 mt-1">
                 <span>{activeWallet.emoji}</span>
                 <span>{activeWallet.name}</span>
               </div>
@@ -177,31 +177,31 @@ export default async function ArchivePage() {
       {/* Historical Overview Banner */}
       {archivedWeeks.length > 0 && (
         <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-linear-to-b dark:from-zinc-900 dark:to-zinc-950 dark:shadow-sm">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
             {t.archive.historicalSummary}
           </p>
 
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div>
-              <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.archive.totalSpent}</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{t.archive.totalSpent}</p>
               <p className="mt-0.5 text-xs font-bold text-zinc-900 dark:text-white truncate">
                 {formatCurrencyServer(totalArchivedSpend, currency)}
               </p>
             </div>
 
             <div className="border-l border-zinc-200/80 pl-2.5 dark:border-zinc-800/80">
-              <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.archive.weeklyAvg}</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{t.archive.weeklyAvg}</p>
               <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">
                 {formatCurrencyServer(avgArchivedSpend, currency)}
               </p>
             </div>
 
             <div className="border-l border-zinc-200/80 pl-2.5 dark:border-zinc-800/80">
-              <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.archive.history}</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{t.archive.history}</p>
               <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
                 {archivedWeeks.length} {archivedWeeks.length === 1 ? t.archive.weekCount : t.archive.weeksCount}
               </p>
-              <p className="text-[9px] text-zinc-500">{totalEntries} {totalEntries === 1 ? t.archive.entryCount : t.archive.entriesCount}</p>
+              <p className="text-xs text-zinc-500">{totalEntries} {totalEntries === 1 ? t.archive.entryCount : t.archive.entriesCount}</p>
             </div>
           </div>
         </div>

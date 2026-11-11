@@ -4,7 +4,10 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { AiProposal } from "@/utils/ai/tools";
 import { useTranslation } from "@/utils/i18n/context";
 import { usePathname } from "next/navigation";
-import AiAssistantSheet from "./AiAssistantSheet";
+import dynamic from "next/dynamic";
+
+// The chat sheet pulls in the markdown renderer, so it loads on first open.
+const AiAssistantSheet = dynamic(() => import("./AiAssistantSheet"), { ssr: false });
 import { getDailyAiUsageAction, resetDailyAiUsageAction } from "@/app/ai/actions";
 
 export interface AiMessage {
@@ -76,6 +79,10 @@ export function AiAssistantProvider({
   }, []);
 
   const [isOpen, setIsOpen] = useState(false);
+  const [sheetLoaded, setSheetLoaded] = useState(false);
+
+  // Once opened, the sheet stays mounted so its close animation and state survive.
+  if (isOpen && !sheetLoaded) setSheetLoaded(true);
   const [messages, setMessages] = useState<AiMessage[]>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -368,7 +375,7 @@ export function AiAssistantProvider({
       }}
     >
       {children}
-      {isAiEnabled && <AiAssistantSheet />}
+      {isAiEnabled && sheetLoaded && <AiAssistantSheet />}
     </AiAssistantContext.Provider>
   );
 }

@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { getTodayString } from "@/utils/date";
 import { attachExemptTag } from "@/utils/exemptions";
-import { getPrimaryWallets } from "@/utils/wallets/server";
+import { getPrimaryWallets, syncMultiSakuCookie } from "@/utils/wallets/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function login(formData: FormData) {
@@ -64,6 +64,7 @@ export async function login(formData: FormData) {
     }
   }
 
+  if (newUserId) await syncMultiSakuCookie(supabase, newUserId);
   revalidatePath("/", "layout");
   if (mergedCount > 0) {
     redirect(`/?merged=${mergedCount}`);
@@ -124,6 +125,7 @@ export async function signup(formData: FormData) {
     }
   }
 
+  if (newUserId) await syncMultiSakuCookie(supabase, newUserId);
   revalidatePath("/", "layout");
   if (mergedCount > 0) {
     redirect(`/?merged=${mergedCount}`);
@@ -271,6 +273,7 @@ export async function modalLogin(formData: FormData) {
     }
   }
 
+  if (newUserId) await syncMultiSakuCookie(supabase, newUserId);
   revalidatePath("/", "layout");
   return { success: true, mergedCount };
 }
@@ -1187,4 +1190,4 @@ export async function deleteSavingsHistoryEntry(entryId: string) {
   }
 
   revalidatePath("/savings");
-}
+}

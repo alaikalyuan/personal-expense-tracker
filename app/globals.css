@@ -2,27 +2,313 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Warung design tokens. See DESIGN.md for the reason behind each value.
+ * New code uses the semantic names (bg-paper, bg-card, text-ink, text-ink-soft,
+ * border-line, bg-accent, text-on-accent, text-ok, text-danger).
+ */
 :root {
-  --background: #f4f4f5;
-  --foreground: #09090b;
+  --paper: #fff8ec;
+  --card: #ffffff;
+  --ink: #2b2118;
+  --ink-soft: #6b5a48;
+  --line: #ead9bd;
+  --accent: #e8590c;
+  --accent-strong: #c2470a;
+  --on-accent: #17110b;
+  --ok: #2f7d4f;
+  --ok-soft: #edf7f0;
+  --danger: #b3261e;
+  --danger-soft: #fdf0ee;
+  /* Muted text steps used by older screens: dark enough on paper, light enough on brown. */
+  --muted-400: #7f6e57;
+  --muted-500: #6b5a48;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
 }
 
 .dark {
-  --background: #09090b;
-  --foreground: #f4f4f5;
+  --paper: #1a130d;
+  --card: #261d15;
+  --ink: #f6ebdd;
+  --ink-soft: #c4b29b;
+  --line: #3d3024;
+  --accent: #f98229;
+  --accent-strong: #ffa65c;
+  --on-accent: #17110b;
+  --ok: #7fc596;
+  --ok-soft: #1a412c;
+  --danger: #ee9085;
+  --danger-soft: #5f1b17;
+  --muted-400: #ae9d85;
+  --muted-500: #b5a48c;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-on-accent: var(--on-accent);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+/*
+ * Palette remap. The app was written against 14 Tailwind color families.
+ * Until every screen is moved to the semantic names above, each family is
+ * pointed at one of four Warung ramps so no screen can show an off-palette hue:
+ *   zinc (and the cool families)  -> warm paper and ink neutrals
+ *   amber, orange, yellow         -> tangerine (the single accent)
+ *   emerald, teal, green          -> leaf (within budget, success)
+ *   rose, red                     -> brick (over budget, destructive)
+ */
+@theme {
+  --color-zinc-50: #fffcf6;
+  --color-zinc-100: #fff8ec;
+  --color-zinc-200: #efe3cc;
+  --color-zinc-300: #ddcdb0;
+  --color-zinc-400: var(--muted-400);
+  --color-zinc-500: var(--muted-500);
+  --color-zinc-600: #5e4e3c;
+  --color-zinc-700: #45382a;
+  --color-zinc-800: #33291e;
+  --color-zinc-900: #241c14;
+  --color-zinc-950: #17110b;
+
+  --color-amber-50: #fff3e6;
+  --color-amber-100: #ffe3c7;
+  --color-amber-200: #ffc894;
+  --color-amber-300: #ffa65c;
+  --color-amber-400: #f98229;
+  --color-amber-500: #e8590c;
+  --color-amber-600: #c2470a;
+  --color-amber-700: #9a3a0b;
+  --color-amber-800: #7a300d;
+  --color-amber-900: #5e270e;
+  --color-amber-950: #3a1606;
+
+  --color-emerald-50: #edf7f0;
+  --color-emerald-100: #d5eddc;
+  --color-emerald-200: #aedcbc;
+  --color-emerald-300: #7fc596;
+  --color-emerald-400: #4fa871;
+  --color-emerald-500: #378f59;
+  --color-emerald-600: #2f7d4f;
+  --color-emerald-700: #25633f;
+  --color-emerald-800: #1f4f34;
+  --color-emerald-900: #1a412c;
+  --color-emerald-950: #0d2618;
+
+  --color-rose-50: #fdf0ee;
+  --color-rose-100: #fbddd9;
+  --color-rose-200: #f6bbb3;
+  --color-rose-300: #ee9085;
+  --color-rose-400: #e0655a;
+  --color-rose-500: #c03c31;
+  --color-rose-600: #b3261e;
+  --color-rose-700: #8f1f19;
+  --color-rose-800: #751d18;
+  --color-rose-900: #5f1b17;
+  --color-rose-950: #360b09;
+
+  --color-orange-50: var(--color-amber-50);
+  --color-orange-100: var(--color-amber-100);
+  --color-orange-200: var(--color-amber-200);
+  --color-orange-300: var(--color-amber-300);
+  --color-orange-400: var(--color-amber-400);
+  --color-orange-500: var(--color-amber-500);
+  --color-orange-600: var(--color-amber-600);
+  --color-orange-700: var(--color-amber-700);
+  --color-orange-800: var(--color-amber-800);
+  --color-orange-900: var(--color-amber-900);
+  --color-orange-950: var(--color-amber-950);
+
+  --color-yellow-50: var(--color-amber-50);
+  --color-yellow-100: var(--color-amber-100);
+  --color-yellow-200: var(--color-amber-200);
+  --color-yellow-300: var(--color-amber-300);
+  --color-yellow-400: var(--color-amber-400);
+  --color-yellow-500: var(--color-amber-500);
+  --color-yellow-600: var(--color-amber-600);
+  --color-yellow-700: var(--color-amber-700);
+  --color-yellow-800: var(--color-amber-800);
+  --color-yellow-900: var(--color-amber-900);
+  --color-yellow-950: var(--color-amber-950);
+
+  --color-teal-50: var(--color-emerald-50);
+  --color-teal-100: var(--color-emerald-100);
+  --color-teal-200: var(--color-emerald-200);
+  --color-teal-300: var(--color-emerald-300);
+  --color-teal-400: var(--color-emerald-400);
+  --color-teal-500: var(--color-emerald-500);
+  --color-teal-600: var(--color-emerald-600);
+  --color-teal-700: var(--color-emerald-700);
+  --color-teal-800: var(--color-emerald-800);
+  --color-teal-900: var(--color-emerald-900);
+  --color-teal-950: var(--color-emerald-950);
+
+  --color-green-50: var(--color-emerald-50);
+  --color-green-100: var(--color-emerald-100);
+  --color-green-200: var(--color-emerald-200);
+  --color-green-300: var(--color-emerald-300);
+  --color-green-400: var(--color-emerald-400);
+  --color-green-500: var(--color-emerald-500);
+  --color-green-600: var(--color-emerald-600);
+  --color-green-700: var(--color-emerald-700);
+  --color-green-800: var(--color-emerald-800);
+  --color-green-900: var(--color-emerald-900);
+  --color-green-950: var(--color-emerald-950);
+
+  --color-red-50: var(--color-rose-50);
+  --color-red-100: var(--color-rose-100);
+  --color-red-200: var(--color-rose-200);
+  --color-red-300: var(--color-rose-300);
+  --color-red-400: var(--color-rose-400);
+  --color-red-500: var(--color-rose-500);
+  --color-red-600: var(--color-rose-600);
+  --color-red-700: var(--color-rose-700);
+  --color-red-800: var(--color-rose-800);
+  --color-red-900: var(--color-rose-900);
+  --color-red-950: var(--color-rose-950);
+
+  --color-blue-50: var(--color-zinc-50);
+  --color-blue-100: var(--color-zinc-100);
+  --color-blue-200: var(--color-zinc-200);
+  --color-blue-300: var(--color-zinc-300);
+  --color-blue-400: var(--color-zinc-400);
+  --color-blue-500: var(--color-zinc-500);
+  --color-blue-600: var(--color-zinc-600);
+  --color-blue-700: var(--color-zinc-700);
+  --color-blue-800: var(--color-zinc-800);
+  --color-blue-900: var(--color-zinc-900);
+  --color-blue-950: var(--color-zinc-950);
+
+  --color-indigo-50: var(--color-zinc-50);
+  --color-indigo-100: var(--color-zinc-100);
+  --color-indigo-200: var(--color-zinc-200);
+  --color-indigo-300: var(--color-zinc-300);
+  --color-indigo-400: var(--color-zinc-400);
+  --color-indigo-500: var(--color-zinc-500);
+  --color-indigo-600: var(--color-zinc-600);
+  --color-indigo-700: var(--color-zinc-700);
+  --color-indigo-800: var(--color-zinc-800);
+  --color-indigo-900: var(--color-zinc-900);
+  --color-indigo-950: var(--color-zinc-950);
+
+  --color-violet-50: var(--color-zinc-50);
+  --color-violet-100: var(--color-zinc-100);
+  --color-violet-200: var(--color-zinc-200);
+  --color-violet-300: var(--color-zinc-300);
+  --color-violet-400: var(--color-zinc-400);
+  --color-violet-500: var(--color-zinc-500);
+  --color-violet-600: var(--color-zinc-600);
+  --color-violet-700: var(--color-zinc-700);
+  --color-violet-800: var(--color-zinc-800);
+  --color-violet-900: var(--color-zinc-900);
+  --color-violet-950: var(--color-zinc-950);
+
+  --color-purple-50: var(--color-zinc-50);
+  --color-purple-100: var(--color-zinc-100);
+  --color-purple-200: var(--color-zinc-200);
+  --color-purple-300: var(--color-zinc-300);
+  --color-purple-400: var(--color-zinc-400);
+  --color-purple-500: var(--color-zinc-500);
+  --color-purple-600: var(--color-zinc-600);
+  --color-purple-700: var(--color-zinc-700);
+  --color-purple-800: var(--color-zinc-800);
+  --color-purple-900: var(--color-zinc-900);
+  --color-purple-950: var(--color-zinc-950);
+
+  --color-pink-50: var(--color-zinc-50);
+  --color-pink-100: var(--color-zinc-100);
+  --color-pink-200: var(--color-zinc-200);
+  --color-pink-300: var(--color-zinc-300);
+  --color-pink-400: var(--color-zinc-400);
+  --color-pink-500: var(--color-zinc-500);
+  --color-pink-600: var(--color-zinc-600);
+  --color-pink-700: var(--color-zinc-700);
+  --color-pink-800: var(--color-zinc-800);
+  --color-pink-900: var(--color-zinc-900);
+  --color-pink-950: var(--color-zinc-950);
+
+  --color-cyan-50: var(--color-zinc-50);
+  --color-cyan-100: var(--color-zinc-100);
+  --color-cyan-200: var(--color-zinc-200);
+  --color-cyan-300: var(--color-zinc-300);
+  --color-cyan-400: var(--color-zinc-400);
+  --color-cyan-500: var(--color-zinc-500);
+  --color-cyan-600: var(--color-zinc-600);
+  --color-cyan-700: var(--color-zinc-700);
+  --color-cyan-800: var(--color-zinc-800);
+  --color-cyan-900: var(--color-zinc-900);
+  --color-cyan-950: var(--color-zinc-950);
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The rules below are deliberately outside any cascade layer so they win over
+ * utility classes such as outline-none and text-xs that are still in old screens.
+ */
+
+/* Every focusable element gets a visible ring for keyboard users. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Enabled controls show a pointer, disabled ones show not-allowed. */
+a[href],
+button,
+summary,
+select,
+label[for],
+[role="button"],
+[role="tab"],
+[role="switch"],
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"],
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+
+/* 16px inputs on touch devices stop iOS from zooming the page on focus. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* The torn receipt edge under the day's summary: the Warung identity motif. */
+.receipt-edge {
+  --tooth: 10px;
+  mask:
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--tooth) 51% repeat-x,
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--tooth) / 2) no-repeat;
 }
 
 @keyframes fadeIn {
@@ -53,3 +339,58 @@ body {
   animation: modalIn 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Gives the torn receipt edge a visible outline; a border cannot follow the mask. */
+.receipt {
+  filter: drop-shadow(0 1px 1.5px rgb(43 33 24 / 0.22));
+}
+
+.dark .receipt {
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.6));
+}
+
+/*
+ * Touch targets. Older screens still have controls drawn smaller than 44px.
+ * On touch devices each one gets an invisible, centered hit area of at least
+ * 44 by 44 pixels, so it is easy to tap without changing how the screen looks.
+ * Kept in the base layer so positioning utilities (absolute, fixed) still win.
+ */
+@layer base {
+  @media (pointer: coarse) {
+    button,
+    a[href],
+    summary,
+    [role="button"],
+    [role="switch"],
+    [role="tab"] {
+      position: relative;
+    }
+
+    button::after,
+    a[href]::after,
+    summary::after,
+    [role="button"]::after,
+    [role="switch"]::after,
+    [role="tab"]::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 100%;
+      height: 100%;
+      min-width: 44px;
+      min-height: 44px;
+      transform: translate(-50%, -50%);
+    }
+  }
+}

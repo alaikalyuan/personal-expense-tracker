@@ -5,6 +5,7 @@ import { X, Check } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { createWallet, updateWallet } from "./actions";
 import { WalletBalance } from "@/utils/wallets/server";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface SakuFormModalProps {
   isOpen: boolean;
@@ -105,7 +106,7 @@ function SakuFormModalContent({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+    <ModalOverlay className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fade-in">
       <div className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800">
@@ -157,7 +158,7 @@ function SakuFormModalContent({
                     <span>👛</span>
                     <span>Saku Belanja</span>
                   </div>
-                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 leading-tight">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-tight">
                     Untuk jajan & anggaran rutin
                   </p>
                 </button>
@@ -178,7 +179,7 @@ function SakuFormModalContent({
                     <span>🏦</span>
                     <span>Saku Tabungan</span>
                   </div>
-                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 leading-tight">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-tight">
                     Untuk simpanan & target
                   </p>
                 </button>
@@ -198,12 +199,12 @@ function SakuFormModalContent({
             </label>
             <div className="flex gap-2">
               <div className="relative">
-                <button
-                  type="button"
-                  className="w-11 h-11 flex items-center justify-center text-xl rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                <span
+                  aria-hidden="true"
+                  className="w-11 h-11 flex items-center justify-center text-xl rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50"
                 >
                   {emoji}
-                </button>
+                </span>
               </div>
               <input
                 type="text"
@@ -218,7 +219,7 @@ function SakuFormModalContent({
 
           {/* Emoji Preset Chips */}
           <div>
-            <label className="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
               Pilih Emoji
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -241,7 +242,7 @@ function SakuFormModalContent({
 
           {/* Color Palette */}
           <div>
-            <label className="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
               Pilih Warna Tema
             </label>
             <div className="flex flex-wrap gap-2">
@@ -288,7 +289,7 @@ function SakuFormModalContent({
                   <div className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
                     {t.saku.trackBalance}
                   </div>
-                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400">
                     {t.saku.trackBalanceDesc}
                   </div>
                 </div>
@@ -303,7 +304,7 @@ function SakuFormModalContent({
               {/* Budgets */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     {t.saku.weeklyBudget}
                   </label>
                   <input
@@ -317,7 +318,7 @@ function SakuFormModalContent({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     {t.saku.monthlyBudget}
                   </label>
                   <input
@@ -354,6 +355,6 @@ function SakuFormModalContent({
           </div>
         </form>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

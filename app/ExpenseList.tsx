@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Pencil, Trash2, X, Search, Share2, RotateCcw, Tag } from "lucide-react";
+import { useState, useMemo, useId } from "react";
+import { Trash2, X, Search, Share2, Tag, ChevronRight } from "lucide-react";
+import dynamic from "next/dynamic";
 import { updateExpense, deleteExpense } from "@/app/actions";
 import { useTranslation } from "@/utils/i18n/context";
 import { isExpenseExempt, cleanNote, attachExemptTag } from "@/utils/exemptions";
 import { CATEGORY_KEYS } from "@/utils/i18n/dictionaries";
 import { getTodayString, getNowInTimezone } from "@/utils/date";
 import { format, parseISO, subDays } from "date-fns";
-import ExportShareModal from "./ExportShareModal";
+import Dialog from "@/app/ui/Dialog";
+import Button from "@/app/ui/Button";
+import { MoneyField, SelectField, TextField } from "@/app/ui/Field";
+
+// Loaded only when the share sheet is first opened.
+const ExportShareModal = dynamic(() => import("./ExportShareModal"), { ssr: false });
 
 export interface ExpenseItem {
   id: string;
@@ -21,15 +27,6 @@ export interface ExpenseItem {
   wallet_id?: string | null;
 }
 
-const categoryColors: Record<string, string> = {
-  "Food & Dining": "border-l-green-500 dark:border-l-green-500",
-  Transportation: "border-l-blue-500 dark:border-l-blue-500",
-  Utilities: "border-l-yellow-500 dark:border-l-yellow-500",
-  Academics: "border-l-purple-500 dark:border-l-purple-500",
-  Entertainment: "border-l-pink-500 dark:border-l-pink-500",
-  Others: "border-l-zinc-500 dark:border-l-zinc-500",
-};
-
 interface ExpenseListProps {
   expenses: ExpenseItem[];
   showPeriodToggle?: boolean;
@@ -40,6 +37,8 @@ interface ExpenseListProps {
   dashboardPeriod?: "week" | "month";
   wallets?: Array<{ id: string; name: string; emoji?: string }>;
 }
+
+const dateOf = (item: ExpenseItem) => (item.spent_at.includes("T") ? item.spent_at.split("T")[0] : item.spent_at);
 
 export default function ExpenseList({
   expenses,
@@ -52,139 +51,112 @@ export default function ExpenseList({
   wallets = [],
 }: ExpenseListProps) {
   const { t, formatDate, getCategoryLabel, formatCurrency, currencySymbol, currency } = useTranslation();
+  const searchId = useId();
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
+  const [editAmount, setEditAmount] = useState("");
   const [editIsExempt, setEditIsExempt] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<"today" | "week">("today");
 
-  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportLoaded, setExportLoaded] = useState(false);
 
-  const closeModal = () => {
-    if (isDeleting || isUpdating) return;
-    setError(null);
-    setEditingExpense(null);
-  };
+  const busy = isDeleting || isUpdating;
+  const all = useMemo(() => expenses || [], [expenses]);
 
   const todayStr = useMemo(() => getTodayString(), []);
-  const yesterdayStr = useMemo(
-    () => format(subDays(getNowInTimezone(), 1), "yyyy-MM-dd"),
-    []
-  );
+  const yesterdayStr = useMemo(() => format(subDays(getNowInTimezone(), 1), "yyyy-MM-dd"), []);
+  const todayExpenses = useMemo(() => all.filter((item) => dateOf(item) === todayStr), [all, todayStr]);
 
-  const getItemDateStr = (item: ExpenseItem) => {
-    return item.spent_at.includes("T")
-      ? item.spent_at.split("T")[0]
-      : item.spent_at;
-  };
+  const hasActiveFilter = searchQuery.trim() !== "" || selectedCategory !== null;
 
-  const todayExpenses = useMemo(() => {
-    return (expenses || []).filter((item) => getItemDateStr(item) === todayStr);
-  }, [expenses, todayStr]);
-
-  // Base set of expenses for the active period
+  // A search always looks through the whole period, never only today.
   const baseExpenses = useMemo(() => {
-    if (!showPeriodToggle) return expenses || [];
-    return period === "today" ? todayExpenses : expenses || [];
-  }, [showPeriodToggle, period, todayExpenses, expenses]);
+    if (!showPeriodToggle || hasActiveFilter) return all;
+    return period === "today" ? todayExpenses : all;
+  }, [showPeriodToggle, hasActiveFilter, period, todayExpenses, all]);
 
-  // Category counts within current period
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    baseExpenses.forEach((item) => {
+    all.forEach((item) => {
       counts[item.category] = (counts[item.category] || 0) + 1;
     });
     return counts;
-  }, [baseExpenses]);
+  }, [all]);
 
-  // Filtered expenses based on search query and category
   const filteredExpenses = useMemo(() => {
     let result = baseExpenses;
     const q = searchQuery.trim().toLowerCase();
-
     if (q) {
       result = result.filter(
-        (item) =>
-          item.name.toLowerCase().includes(q) ||
-          (item.note && item.note.toLowerCase().includes(q))
+        (item) => item.name.toLowerCase().includes(q) || (item.note && item.note.toLowerCase().includes(q))
       );
     }
-
     if (selectedCategory) {
       result = result.filter((item) => item.category === selectedCategory);
     }
-
     return result;
   }, [baseExpenses, searchQuery, selectedCategory]);
 
-  const hasActiveFilter = searchQuery.trim() !== "" || selectedCategory !== null;
+  const filteredTotal = useMemo(
+    () => filteredExpenses.reduce((acc, curr) => acc + Number(curr.amount), 0),
+    [filteredExpenses]
+  );
+
+  const groups = useMemo(() => {
+    const map = new Map<string, { dateStr: string; label: string; total: number; items: ExpenseItem[] }>();
+    filteredExpenses.forEach((item) => {
+      const dateStr = dateOf(item);
+      if (!map.has(dateStr)) {
+        const parsed = parseISO(dateStr);
+        const label =
+          dateStr === todayStr
+            ? t.common.today
+            : dateStr === yesterdayStr
+            ? t.common.yesterday
+            : `${formatDate(parsed, "EEEE")}, ${formatDate(parsed, "d MMM")}`;
+        map.set(dateStr, { dateStr, label, total: 0, items: [] });
+      }
+      const group = map.get(dateStr)!;
+      group.total += Number(item.amount);
+      group.items.push(item);
+    });
+    return Array.from(map.values());
+  }, [filteredExpenses, todayStr, yesterdayStr, formatDate, t.common.today, t.common.yesterday]);
 
   const resetFilters = () => {
     setSearchQuery("");
     setSelectedCategory(null);
   };
 
-  const filteredTotal = useMemo(() => {
-    return filteredExpenses.reduce((acc, curr) => acc + Number(curr.amount), 0);
-  }, [filteredExpenses]);
+  const openEdit = (item: ExpenseItem) => {
+    setError(null);
+    setConfirmingDelete(false);
+    setEditingExpense(item);
+    setEditAmount(String(item.amount));
+    setEditIsExempt(isExpenseExempt(item));
+  };
 
-  const groupedWeekExpenses = useMemo(() => {
-    const groups: {
-      dateStr: string;
-      dayName: string;
-      formattedDate: string;
-      isToday: boolean;
-      isYesterday: boolean;
-      totalAmount: number;
-      items: ExpenseItem[];
-    }[] = [];
-
-    const groupMap = new Map<string, (typeof groups)[0]>();
-
-    filteredExpenses.forEach((item) => {
-      const dateStr = getItemDateStr(item);
-      if (!groupMap.has(dateStr)) {
-        const isToday = dateStr === todayStr;
-        const isYesterday = dateStr === yesterdayStr;
-        const parsedDate = parseISO(dateStr);
-        const dayName = formatDate(parsedDate, "EEEE");
-        const formattedDate = formatDate(parsedDate, "d MMM");
-
-        const group = {
-          dateStr,
-          dayName,
-          formattedDate,
-          isToday,
-          isYesterday,
-          totalAmount: 0,
-          items: [],
-        };
-        groupMap.set(dateStr, group);
-        groups.push(group);
-      }
-
-      const group = groupMap.get(dateStr)!;
-      group.totalAmount += Number(item.amount);
-      group.items.push(item);
-    });
-
-    return groups;
-  }, [filteredExpenses, todayStr, yesterdayStr, formatDate]);
+  const closeModal = () => {
+    if (busy) return;
+    setError(null);
+    setConfirmingDelete(false);
+    setEditingExpense(null);
+  };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t.expenses.deleteConfirm)) {
-      return;
-    }
     try {
       setIsDeleting(true);
       setError(null);
       await deleteExpense(id);
-      closeModal();
+      setConfirmingDelete(false);
+      setEditingExpense(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.expenses.failedToDelete);
     } finally {
@@ -192,15 +164,16 @@ export default function ExpenseList({
     }
   };
 
-  const handleUpdate = async (formData: FormData) => {
+  const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     try {
       setIsUpdating(true);
       setError(null);
       const rawNote = (formData.get("note") as string)?.trim() || "";
-      const updatedNote = attachExemptTag(rawNote, editIsExempt);
-      formData.set("note", updatedNote);
+      formData.set("note", attachExemptTag(rawNote, editIsExempt));
       await updateExpense(formData);
-      closeModal();
+      setEditingExpense(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.expenses.failedToUpdate);
     } finally {
@@ -208,554 +181,348 @@ export default function ExpenseList({
     }
   };
 
-  const renderExpenseCard = (item: ExpenseItem) => {
+  // One line of the receipt: the whole row opens the edit dialog.
+  const renderRow = (item: ExpenseItem, showDate: boolean) => {
     const isExempt = isExpenseExempt(item);
-    const cleanedNote = cleanNote(item.note);
-
+    const note = cleanNote(item.note);
     return (
-      <div
-        key={item.id}
-        className={`flex items-center justify-between rounded-xl border border-zinc-200/80 border-l-4 bg-white p-3.5 shadow-2xs transition-colors hover:bg-zinc-50/80 dark:border-zinc-800/80 dark:bg-zinc-900/30 dark:hover:bg-zinc-900/50 ${
-          categoryColors[item.category] || "border-l-zinc-500"
-        }`}
-      >
-        <div className="flex-1 pr-3">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{item.name}</p>
-            {isExempt && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                <Tag className="w-2.5 h-2.5 text-amber-500" />
-                {t.expenses.oneOffBadge}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            {item.category && (
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">{getCategoryLabel(item.category)}</span>
-            )}
-            <span className="text-[10px] text-zinc-300 dark:text-zinc-600">•</span>
-            <span className="text-xs text-zinc-500">
-              {formatDate(item.spent_at, "MMM d, yyyy")}
+      <li key={item.id} className="border-b border-dashed border-line last:border-b-0">
+        <button
+          type="button"
+          onClick={() => openEdit(item)}
+          aria-label={t.home.editAria.replace("{name}", item.name)}
+          className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-paper active:bg-line"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1.5">
+              <span className="truncate text-sm font-semibold text-ink">{item.name}</span>
+              {isExempt && (
+                <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-accent-strong">
+                  <Tag className="h-3 w-3" aria-hidden="true" />
+                  {t.expenses.oneOffBadge}
+                </span>
+              )}
             </span>
-          </div>
-          {cleanedNote && (
-            <p className="text-[11px] text-zinc-500 italic mt-0.5 line-clamp-1">
-              &ldquo;{cleanedNote}&rdquo;
-            </p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          {Number(item.amount) === 0 ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-              {formatCurrency(0)} 🎉
+            <span className="block truncate text-xs text-ink-soft">
+              {getCategoryLabel(item.category)}
+              {showDate && ` · ${formatDate(item.spent_at, "d MMM")}`}
+              {note && ` · ${note}`}
             </span>
-          ) : (
-            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              {formatCurrency(Number(item.amount))}
-            </span>
-          )}
-
-          {/* Accessible, Non-Distracting Edit Button */}
-          <button
-            type="button"
-            onClick={() => {
-              setError(null);
-              setEditingExpense(item);
-              setEditIsExempt(isExpenseExempt(item));
-            }}
-            aria-label={`Edit ${item.name}`}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+          </span>
+          <span className="shrink-0 text-sm font-bold text-ink">{formatCurrency(Number(item.amount))}</span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-ink-soft" aria-hidden="true" />
+        </button>
+      </li>
     );
   };
 
+  const emptyCard = (message: string, action?: { label: string; onClick: () => void }) => (
+    <div className="rounded-2xl border border-dashed border-line p-6 text-center">
+      <p className="text-sm text-ink-soft">{message}</p>
+      {action && (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="mt-2 min-h-11 rounded-xl px-3 text-sm font-semibold text-accent-strong hover:bg-paper active:bg-line"
+        >
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+
+  const showingToday = showPeriodToggle && period === "today" && !hasActiveFilter;
+
+  let body: React.ReactNode;
+  if (filteredExpenses.length === 0) {
+    if (hasActiveFilter) {
+      body = emptyCard(t.expenses.noMatchingExpenses, { label: t.expenses.clearSearch, onClick: resetFilters });
+    } else if (showingToday && all.length > 0) {
+      body = emptyCard(t.dashboard.noExpensesToday, {
+        label: `${t.dashboard.viewWeekExpenses} (${all.length})`,
+        onClick: () => setPeriod("week"),
+      });
+    } else {
+      body = emptyCard(t.dashboard.noExpenses);
+    }
+  } else if (showingToday) {
+    body = (
+      <ul className="overflow-hidden rounded-2xl border border-line bg-card">
+        {filteredExpenses.map((item) => renderRow(item, false))}
+      </ul>
+    );
+  } else {
+    body = (
+      <div className="flex flex-col gap-4">
+        {groups.map((group) => (
+          <section key={group.dateStr} className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between px-1 text-xs">
+              <h3 className="font-semibold text-ink-soft">{group.label}</h3>
+              <span className="font-semibold text-ink-soft">{formatCurrency(group.total)}</span>
+            </div>
+            <ul className="overflow-hidden rounded-2xl border border-line bg-card">
+              {group.items.map((item) => renderRow(item, false))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    );
+  }
+
+  const iconButton =
+    "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink-soft hover:bg-paper hover:text-ink active:bg-line";
+  const segment = (active: boolean) =>
+    `flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold ${
+      active ? "bg-card text-ink" : "text-ink-soft hover:text-ink"
+    }`;
+
   return (
     <>
-      <div className="flex flex-col gap-3">
-        {/* Header: Title + Action Buttons (Search Toggle, Export/Share, Segmented Period Toggle) */}
-        <div className="flex items-center justify-between select-none gap-2">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            {title || t.dashboard.recentEntries}
-          </h2>
-
-          <div className="flex items-center gap-1.5">
-            {/* Filter & Search Toggle Button */}
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-ink">{title || t.dashboard.recentEntries}</h2>
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setIsFilterOpen((prev) => !prev)}
-              aria-label="Toggle search and filters"
-              aria-expanded={isFilterOpen}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-medium transition-all cursor-pointer relative ${
-                isFilterOpen || hasActiveFilter
-                  ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/60 dark:text-blue-300"
-                  : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-              }`}
+              aria-label={t.home.searchToggle}
+              aria-expanded={isFilterOpen || hasActiveFilter}
+              className={`${iconButton} ${isFilterOpen || hasActiveFilter ? "border-ink text-ink" : ""}`}
             >
-              <Search className="w-3.5 h-3.5" />
-              {hasActiveFilter && (
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
-              )}
+              <Search className="h-4.5 w-4.5" aria-hidden="true" />
             </button>
-
-            {/* Export & Share Button */}
             <button
               type="button"
-              onClick={() => setIsExportOpen(true)}
+              onClick={() => {
+                setExportLoaded(true);
+                setIsExportOpen(true);
+              }}
               aria-label={t.expenses.shareExport}
-              title={t.expenses.shareExport}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition-all cursor-pointer shadow-2xs"
+              className={iconButton}
             >
-              <Share2 className="w-3.5 h-3.5" />
+              <Share2 className="h-4.5 w-4.5" aria-hidden="true" />
             </button>
-
-            {/* Segmented Period Toggle */}
-            {showPeriodToggle && (
-              <div className="flex rounded-lg bg-zinc-100 dark:bg-zinc-950 p-1 border border-zinc-200 dark:border-zinc-800 text-xs shrink-0 animate-fade-in">
-                <button
-                  type="button"
-                  onClick={() => setPeriod("today")}
-                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
-                    period === "today"
-                      ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
-                      : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-                  }`}
-                >
-                  {t.dashboard.tabToday}
-                  <span
-                    className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
-                      period === "today"
-                        ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100"
-                        : "bg-zinc-200/70 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                    }`}
-                  >
-                    {todayExpenses.length}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPeriod("week")}
-                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
-                    period === "week"
-                      ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
-                      : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-                  }`}
-                >
-                  {dashboardPeriod === "month" ? t.dashboard.tabThisMonth : t.dashboard.tabThisWeek}
-                  <span
-                    className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
-                      period === "week"
-                        ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100"
-                        : "bg-zinc-200/70 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                    }`}
-                  >
-                    {(expenses || []).length}
-                  </span>
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Expandable Search & Category Filter Bar */}
+        {showPeriodToggle && !hasActiveFilter && (
+          <div role="group" aria-label={t.home.periodLabel} className="flex rounded-xl border border-line bg-paper p-1">
+            <button type="button" aria-pressed={period === "today"} onClick={() => setPeriod("today")} className={segment(period === "today")}>
+              {t.dashboard.tabToday}
+              <span className="text-xs font-medium text-ink-soft">{todayExpenses.length}</span>
+            </button>
+            <button type="button" aria-pressed={period === "week"} onClick={() => setPeriod("week")} className={segment(period === "week")}>
+              {dashboardPeriod === "month" ? t.dashboard.tabThisMonth : t.dashboard.tabThisWeek}
+              <span className="text-xs font-medium text-ink-soft">{all.length}</span>
+            </button>
+          </div>
+        )}
+
         {(isFilterOpen || hasActiveFilter) && (
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-zinc-200/90 bg-white/90 p-3 shadow-2xs backdrop-blur-xs dark:border-zinc-800/90 dark:bg-zinc-900/70 animate-fade-in">
-            {/* Search Input */}
-            <div className="relative flex items-center">
-              <Search className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 absolute left-3 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t.expenses.searchPlaceholder}
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50/70 pl-8.5 pr-8 py-2 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 p-0.5 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+          <div className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-3">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={searchId} className="text-sm font-semibold text-ink">
+                {t.home.searchLabel}
+              </label>
+              <div className="relative">
+                <input
+                  id={searchId}
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t.expenses.searchPlaceholder}
+                  className="min-h-11 w-full rounded-xl border border-line bg-paper px-3 pr-12 text-base text-ink placeholder:text-ink-soft/70 hover:border-ink-soft"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    aria-label={t.home.clearSearchAria}
+                    className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-xl text-ink-soft hover:text-ink"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Category Filter Pills (Horizontal Scroll) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-              <button
-                type="button"
-                onClick={() => setSelectedCategory(null)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
-                  selectedCategory === null
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-xs"
-                    : "border border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/80"
-                }`}
-              >
-                <span>{t.expenses.allCategories}</span>
-                <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
-                    selectedCategory === null
-                      ? "bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900"
-                      : "bg-zinc-200/70 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                  }`}
-                >
-                  {baseExpenses.length}
-                </span>
-              </button>
-
-              {CATEGORY_KEYS.map((catKey) => {
-                const count = categoryCounts[catKey] || 0;
+            <div role="group" aria-label={t.expenses.categoryLabel} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+              {[null, ...CATEGORY_KEYS].map((catKey) => {
                 const isSelected = selectedCategory === catKey;
+                const count = catKey ? categoryCounts[catKey] || 0 : all.length;
                 return (
                   <button
-                    key={catKey}
+                    key={catKey ?? "all"}
                     type="button"
-                    onClick={() =>
-                      setSelectedCategory(isSelected ? null : catKey)
-                    }
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-xs"
-                        : "border border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/80"
+                    aria-pressed={isSelected}
+                    onClick={() => setSelectedCategory(isSelected ? null : catKey)}
+                    className={`flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold ${
+                      isSelected ? "border-ink bg-ink text-card" : "border-line bg-card text-ink hover:bg-paper active:bg-line"
                     }`}
                   >
-                    <span>{getCategoryLabel(catKey)}</span>
-                    {count > 0 && (
-                      <span
-                        className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
-                          isSelected
-                            ? "bg-zinc-800 text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900"
-                            : "bg-zinc-200/70 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                        }`}
-                      >
-                        {count}
-                      </span>
-                    )}
+                    <span>{catKey ? getCategoryLabel(catKey) : t.expenses.allCategories}</span>
+                    <span className={`text-xs font-medium ${isSelected ? "text-card" : "text-ink-soft"}`}>{count}</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Active Filter Summary Bar */}
             {hasActiveFilter && (
-              <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-zinc-200/60 dark:border-zinc-800/60 text-zinc-500 dark:text-zinc-400">
-                <span>
+              <div className="flex items-center justify-between gap-2 border-t border-line pt-2 text-sm text-ink-soft">
+                <span aria-live="polite">
                   {t.expenses.showingFiltered
                     .replace("{count}", String(filteredExpenses.length))
-                    .replace("{total}", String(baseExpenses.length))}
-                  {" • "}
-                  <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    {formatCurrency(filteredTotal)}
-                  </strong>
+                    .replace("{total}", String(all.length))}
+                  {" · "}
+                  <strong className="font-bold text-ink">{formatCurrency(filteredTotal)}</strong>
                 </span>
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="flex items-center gap-1 text-blue-600 hover:text-blue-500 dark:text-blue-400 font-semibold cursor-pointer"
+                  className="min-h-11 shrink-0 rounded-xl px-2 font-semibold text-accent-strong hover:bg-paper active:bg-line"
                 >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>{t.expenses.clearSearch}</span>
+                  {t.expenses.clearSearch}
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* Main Content: Either Mode-based or Plain List */}
-        {!showPeriodToggle ? (
-          // Plain list for archive / simple contexts
-          filteredExpenses.length === 0 ? (
-            hasActiveFilter ? (
-              <div className="rounded-2xl border border-dashed border-zinc-200/90 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/30 p-6 text-center animate-fade-in">
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {t.expenses.noMatchingExpenses}
-                </p>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>{t.expenses.clearSearch}</span>
-                </button>
-              </div>
-            ) : (
-              <p className="text-sm text-zinc-500 py-8 text-center">
-                {t.dashboard.noExpenses}
-              </p>
-            )
-          ) : (
-            <div className="flex flex-col gap-2">
-              {filteredExpenses.map((item) => renderExpenseCard(item))}
-            </div>
-          )
-        ) : period === "today" ? (
-          // Today view
-          filteredExpenses.length > 0 ? (
-            <div className="flex flex-col gap-2 animate-fade-in">
-              {filteredExpenses.map((item) => renderExpenseCard(item))}
-            </div>
-          ) : hasActiveFilter ? (
-            <div className="rounded-2xl border border-dashed border-zinc-200/90 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/30 p-6 text-center animate-fade-in">
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {t.expenses.noMatchingExpenses}
-              </p>
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>{t.expenses.clearSearch}</span>
-              </button>
-            </div>
-          ) : !expenses || expenses.length === 0 ? (
-            <p className="text-sm text-zinc-500 py-8 text-center">
-              {t.dashboard.noExpenses}
-            </p>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-zinc-200/90 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/30 p-6 text-center animate-fade-in">
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {t.dashboard.noExpensesToday}
-              </p>
-              <button
-                type="button"
-                onClick={() => setPeriod("week")}
-                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
-              >
-                <span>
-                  {t.dashboard.viewWeekExpenses} ({expenses.length})
-                </span>
-                <span aria-hidden="true">&rarr;</span>
-              </button>
-            </div>
-          )
-        ) : (
-          // This Week view (Non-collapsible date-grouped)
-          filteredExpenses.length === 0 ? (
-            hasActiveFilter ? (
-              <div className="rounded-2xl border border-dashed border-zinc-200/90 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/30 p-6 text-center animate-fade-in">
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {t.expenses.noMatchingExpenses}
-                </p>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>{t.expenses.clearSearch}</span>
-                </button>
-              </div>
-            ) : (
-              <p className="text-sm text-zinc-500 py-8 text-center">
-                {t.dashboard.noExpenses}
-              </p>
-            )
-          ) : (
-            <div className="flex flex-col gap-4 animate-fade-in">
-              {groupedWeekExpenses.map((group) => (
-                <div key={group.dateStr} className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between px-1">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                      {group.isToday ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                          {t.common.today}
-                        </span>
-                      ) : group.isYesterday ? (
-                        <span className="text-zinc-900 dark:text-zinc-100 font-semibold">
-                          {t.common.yesterday}
-                        </span>
-                      ) : (
-                        <span>{group.dayName}</span>
-                      )}
-                      <span className="text-[10px] text-zinc-300 dark:text-zinc-600">•</span>
-                      <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
-                        {group.formattedDate}
-                      </span>
-                    </div>
-                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                      {formatCurrency(group.totalAmount)}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {group.items.map((item) => renderExpenseCard(item))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        )}
-      </div>
+        {body}
+      </section>
 
-      {/* Edit & Delete Modal */}
-      {editingExpense && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              closeModal();
-            }
-          }}
-        >
-          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-modal-in">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-200/80 dark:border-zinc-800/80">
-              <div>
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  {t.expenses.editTitle}
-                </h3>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                  {t.expenses.editSubtitle}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeModal}
-                disabled={isDeleting || isUpdating}
-                aria-label={t.common.close}
-                className="p-1 text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Dialog
+        isOpen={editingExpense !== null}
+        onClose={closeModal}
+        busy={busy}
+        title={t.expenses.editTitle}
+        description={t.expenses.editSubtitle}
+        closeLabel={t.common.close}
+        footer={
+          confirmingDelete ? (
+            <>
+              <Button block onClick={() => setConfirmingDelete(false)} disabled={busy}>
+                {t.common.cancel}
+              </Button>
+              <Button block variant="danger" onClick={() => editingExpense && handleDelete(editingExpense.id)} disabled={busy}>
+                {isDeleting ? t.common.deleting : t.home.deleteYes}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="danger" onClick={() => setConfirmingDelete(true)} disabled={busy} aria-label={t.common.delete}>
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button block onClick={closeModal} disabled={busy}>
+                {t.common.cancel}
+              </Button>
+              <Button block variant="primary" type="submit" form="edit-expense-form" disabled={busy}>
+                {isUpdating ? t.common.saving : t.common.save}
+              </Button>
+            </>
+          )
+        }
+      >
+        {editingExpense && (
+          <form id="edit-expense-form" key={editingExpense.id} onSubmit={handleUpdate} className="flex flex-col gap-4">
+            <input type="hidden" name="id" value={editingExpense.id} />
 
+            {confirmingDelete && (
+              <p role="alert" className="rounded-xl border border-danger bg-danger-soft p-3 text-sm font-medium text-danger">
+                {t.home.deleteAsk}
+              </p>
+            )}
             {error && (
-              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950/40 p-2.5 text-xs text-rose-600 dark:text-rose-300">
+              <p role="alert" className="rounded-xl border border-danger bg-danger-soft p-3 text-sm font-medium text-danger">
                 {error}
-              </div>
+              </p>
             )}
 
-            <form
-              key={editingExpense.id}
-              action={handleUpdate}
-              className="flex flex-col gap-3 pt-3"
-            >
-              <input type="hidden" name="id" value={editingExpense.id} />
+            {currency === "IDR" ? (
+              <MoneyField
+                label={t.home.amountLabel}
+                name="amount"
+                value={editAmount}
+                onChange={setEditAmount}
+                prefix={currencySymbol}
+                required
+                autoFocus
+              />
+            ) : (
+              <TextField
+                label={`${t.home.amountLabel} (${currencySymbol})`}
+                name="amount"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+                defaultValue={editingExpense.amount}
+                required
+              />
+            )}
 
-              <div className="flex gap-2">
-                <div className="flex w-1/2 items-center rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:focus-within:border-zinc-500">
-                  <span className="mr-2 text-sm font-semibold text-zinc-400">
-                    {currencySymbol}
-                  </span>
-                  <input
-                    name="amount"
-                    type="number"
-                    inputMode={currency === "IDR" ? "numeric" : "decimal"}
-                    step={currency === "IDR" ? "1" : "0.01"}
-                    defaultValue={editingExpense.amount}
-                    required
-                    className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-zinc-400 text-zinc-900 dark:placeholder:text-zinc-500 dark:text-zinc-100"
-                  />
-                </div>
+            <TextField
+              label={t.home.nameLabel}
+              name="name"
+              type="text"
+              defaultValue={editingExpense.name}
+              placeholder={t.expenses.namePlaceholder}
+              required
+            />
 
-                <select
-                  name="category"
-                  defaultValue={editingExpense.category}
-                  className="w-1/2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-zinc-400 text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:border-zinc-500 dark:text-zinc-100"
-                >
-                  {CATEGORY_KEYS.map((catKey) => (
-                    <option key={catKey} value={catKey}>
-                      {getCategoryLabel(catKey)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <input
+            <div className="grid grid-cols-2 gap-3">
+              <SelectField label={t.expenses.categoryLabel} name="category" defaultValue={editingExpense.category}>
+                {CATEGORY_KEYS.map((catKey) => (
+                  <option key={catKey} value={catKey}>
+                    {getCategoryLabel(catKey)}
+                  </option>
+                ))}
+              </SelectField>
+              <TextField
+                label={t.home.dateLabel}
                 name="spent_at"
                 type="date"
-                defaultValue={
-                  editingExpense.spent_at.includes("T")
-                    ? editingExpense.spent_at.split("T")[0]
-                    : editingExpense.spent_at
-                }
+                defaultValue={dateOf(editingExpense)}
                 required
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 scheme-light dark:scheme-dark outline-none focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-500"
+                className="scheme-light dark:scheme-dark"
               />
+            </div>
 
+            <TextField
+              label={t.home.noteLabel}
+              name="note"
+              type="text"
+              defaultValue={cleanNote(editingExpense.note)}
+              placeholder={t.expenses.notePlaceholder}
+            />
+
+            <label className="flex min-h-11 items-start gap-3 rounded-xl border border-line p-3">
               <input
-                name="name"
-                type="text"
-                defaultValue={editingExpense.name}
-                placeholder={t.expenses.namePlaceholder}
-                required
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-zinc-400 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:text-zinc-100"
+                type="checkbox"
+                checked={editIsExempt}
+                onChange={(e) => setEditIsExempt(e.target.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-(--accent)"
               />
+              <span>
+                <span className="block text-sm font-semibold text-ink">{t.expenses.oneOffCheckbox}</span>
+                <span className="block text-xs text-ink-soft">{t.expenses.oneOffHelp}</span>
+              </span>
+            </label>
+          </form>
+        )}
+      </Dialog>
 
-              <input
-                name="note"
-                type="text"
-                defaultValue={cleanNote(editingExpense.note)}
-                placeholder={t.expenses.notePlaceholder}
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-zinc-400 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:text-zinc-100"
-              />
-
-              {/* One-off Exemption Toggle */}
-              <div className="flex items-start gap-2.5 rounded-xl border border-zinc-200/80 bg-zinc-50/50 p-2.5 dark:border-zinc-800/70 dark:bg-zinc-950/40">
-                <input
-                  type="checkbox"
-                  id="editIsExempt"
-                  checked={editIsExempt}
-                  onChange={(e) => setEditIsExempt(e.target.checked)}
-                  className="rounded border-zinc-300 text-amber-500 focus:ring-amber-500 h-4 w-4 mt-0.5 cursor-pointer"
-                />
-                <label htmlFor="editIsExempt" className="text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
-                  <p className="font-semibold text-xs text-zinc-900 dark:text-zinc-100">{t.expenses.oneOffCheckbox}</p>
-                  <p className="text-[10px] text-zinc-500">{t.expenses.oneOffHelp}</p>
-                </label>
-              </div>
-
-              {/* Action Buttons: Delete & Save */}
-              <div className="flex items-center justify-between pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 mt-1">
-                <button
-                  type="button"
-                  disabled={isDeleting || isUpdating}
-                  onClick={() => handleDelete(editingExpense.id)}
-                  className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100 active:scale-95 transition-all cursor-pointer disabled:opacity-50 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-400 dark:hover:bg-rose-950/50"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  {isDeleting ? t.common.deleting : t.common.delete}
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    disabled={isDeleting || isUpdating}
-                    className="rounded-xl border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/50 transition-colors disabled:opacity-50 cursor-pointer"
-                  >
-                    {t.common.cancel}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isDeleting || isUpdating}
-                    className="rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 px-4 py-2 text-xs font-semibold active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {isUpdating ? t.common.saving : t.expenses.saveChanges}
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
+      {exportLoaded && (
+        <ExportShareModal
+          isOpen={isExportOpen}
+          onClose={() => setIsExportOpen(false)}
+          expenses={all}
+          weeklyBudget={weeklyBudget}
+          startDateStr={startDateStr}
+          endDateStr={endDateStr}
+          wallets={wallets}
+        />
       )}
-
-      {/* Export & Share Modal */}
-      <ExportShareModal
-        isOpen={isExportOpen}
-        onClose={() => setIsExportOpen(false)}
-        expenses={expenses || []}
-        weeklyBudget={weeklyBudget}
-        startDateStr={startDateStr}
-        endDateStr={endDateStr}
-        wallets={wallets}
-      />
     </>
   );
 }
-

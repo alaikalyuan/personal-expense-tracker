@@ -52,7 +52,7 @@ export default function BreakdownCard({
   weeklyTotal,
 }: BreakdownCardProps) {
   const { t, getCategoryLabel, formatCurrency } = useTranslation();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<"bar" | "category">("bar");
   const isMonth = period === "month";
 
@@ -85,98 +85,67 @@ export default function BreakdownCard({
       : null;
 
   return (
-    <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs backdrop-blur-xs transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">
-      {/* Header with Retract / Expand Controls */}
-      <div className="flex items-center justify-between select-none gap-2">
-        <div
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="cursor-pointer group flex-1 min-w-0 pr-1"
-        >
-          <div className="flex items-center gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-700 group-hover:text-zinc-900 dark:text-zinc-300 dark:group-hover:text-zinc-100 transition-colors">
-              {t.breakdown.title}
-            </h3>
-            
-          </div>
-          <p className="text-[10px] text-zinc-500 mt-0.5 truncate">
-            {isExpanded
-              ? activeTab === "bar"
-                ? isMonth
-                  ? t.breakdown.monthActivitySubtitle
-                  : t.breakdown.pastSevenDays
-                : `${t.breakdown.totalAmount} ${formatCurrency(weeklyTotal)}`
-              : isMonth
-              ? t.breakdown.monthActivitySubtitle
-              : t.breakdown.summarySubtitle}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* Segmented Toggle */}
-          {isExpanded && (
-            <div className="flex rounded-lg bg-zinc-100 dark:bg-zinc-950 p-1 border border-zinc-200 dark:border-zinc-800 text-xs animate-fade-in">
-              <button
-                type="button"
-                onClick={() => setActiveTab("bar")}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
-                  activeTab === "bar"
-                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
-                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-                }`}
-              >
-                {isMonth ? (
-                  <CalendarRange className="w-3.5 h-3.5" />
-                ) : (
-                  <Calendar className="w-3.5 h-3.5" />
-                )}
-                {isMonth ? t.breakdown.tabWeekly : t.breakdown.tabDaily}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("category")}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
-                  activeTab === "category"
-                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
-                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-                }`}
-              >
-                <PieChart className="w-3.5 h-3.5" />
-                {t.breakdown.tabCategories}
-              </button>
-            </div>
-          )}
-
-          {/* Collapse / Expand Button */}
-          <button
-            type="button"
-            onClick={() => setIsExpanded(!isExpanded)}
-            aria-label={isExpanded ? t.breakdown.hideBreakdownAria : t.breakdown.showBreakdownAria}
-            className={`flex items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer shrink-0 ${
-              isExpanded
-                ? "h-7 w-7 p-1.5"
-                : "gap-1.5 py-1 px-2.5 text-xs font-medium"
-            }`}
-          >
-            {!isExpanded && <span>{t.breakdown.show}</span>}
-            <ChevronDown
-              className={`w-3.5 h-3.5 transition-transform duration-300 ${
-                isExpanded ? "rotate-180" : "rotate-0"
-              }`}
-            />
-          </button>
-        </div>
-      </div>
-
-      {/* Retractable Content with Smooth Height Animation */}
-      <div
-        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
-          isExpanded
-            ? "grid-rows-[1fr] opacity-100"
-            : "grid-rows-[0fr] opacity-0 pointer-events-none"
-        }`}
+    <section className="rounded-2xl border border-line bg-card">
+      {/* The whole header row opens and closes the card. */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        aria-expanded={isExpanded}
+        className="flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl px-4 text-left hover:bg-paper active:bg-line"
       >
-        <div className="overflow-hidden">
-          <div className="pt-3 mt-3 border-t border-zinc-200/80 dark:border-zinc-800/80">
+        <span className="min-w-0">
+          <span className="block text-base font-bold text-ink">
+            {isMonth ? t.home.insightsMonth : t.home.insightsWeek}
+          </span>
+          {!isExpanded && (
+            <span className="block truncate text-xs text-ink-soft">
+              {t.breakdown.totalAmount} {formatCurrency(weeklyTotal)}
+            </span>
+          )}
+        </span>
+        <ChevronDown
+          className={`h-5 w-5 shrink-0 text-ink-soft transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        />
+      </button>
+
+      {isExpanded && (
+        <div className="px-4">
+          <div role="group" aria-label={t.breakdown.title} className="flex rounded-xl border border-line bg-paper p-1">
+            <button
+              type="button"
+              aria-pressed={activeTab === "bar"}
+              onClick={() => setActiveTab("bar")}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold ${
+                activeTab === "bar" ? "bg-card text-ink" : "text-ink-soft hover:text-ink"
+              }`}
+            >
+              {isMonth ? (
+                <CalendarRange className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Calendar className="h-4 w-4" aria-hidden="true" />
+              )}
+              {isMonth ? t.breakdown.tabWeekly : t.breakdown.tabDaily}
+            </button>
+            <button
+              type="button"
+              aria-pressed={activeTab === "category"}
+              onClick={() => setActiveTab("category")}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold ${
+                activeTab === "category" ? "bg-card text-ink" : "text-ink-soft hover:text-ink"
+              }`}
+            >
+              <PieChart className="h-4 w-4" aria-hidden="true" />
+              {t.breakdown.tabCategories}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Content is only rendered while the card is open. */}
+      <div className={isExpanded ? "px-4 pb-4" : "hidden"}>
+        <div>
+          <div className="pt-3">
             {/* Tab 1: Mini Bar Chart (Daily for week, Weekly for month) */}
             {activeTab === "bar" && (
               <div className="animate-fade-in">
@@ -203,7 +172,7 @@ export default function BreakdownCard({
                           >
                             <div className="h-5 flex items-center justify-center">
                               <span
-                                className={`text-[10px] font-medium leading-none transition-all truncate ${
+                                className={`text-xs font-medium leading-none transition-all truncate ${
                                   isSelected
                                     ? "opacity-100 text-zinc-900 dark:text-zinc-200 font-semibold"
                                     : "opacity-0 group-hover:opacity-100 text-zinc-500 dark:text-zinc-400"
@@ -235,7 +204,7 @@ export default function BreakdownCard({
                             </div>
 
                             <span
-                              className={`text-[10px] pt-0.5 ${
+                              className={`text-xs pt-0.5 ${
                                 week.isCurrent
                                   ? "font-bold text-emerald-600 dark:text-emerald-400"
                                   : isSelected
@@ -251,11 +220,11 @@ export default function BreakdownCard({
                     </div>
 
                     {selectedWeek && (
-                      <div className="mt-3 flex items-center justify-between border-t border-zinc-200/80 dark:border-zinc-800/60 pt-2.5 text-[11px]">
+                      <div className="mt-3 flex items-center justify-between border-t border-zinc-200/80 dark:border-zinc-800/60 pt-2.5 text-xs">
                         <span className="text-zinc-500 dark:text-zinc-400">
                           {selectedWeek.weekLabel} ({selectedWeek.dateRange})
                           {selectedWeek.isCurrent && (
-                            <span className="ml-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                            <span className="ml-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                               ({t.dashboard.tabThisWeek})
                             </span>
                           )}
@@ -266,7 +235,7 @@ export default function BreakdownCard({
                       </div>
                     )}
                     {peakWeek && peakWeek.amount > 0 && (
-                      <p className="mt-1 text-[10px] text-zinc-500 text-center">
+                      <p className="mt-1 text-xs text-zinc-500 text-center">
                         {t.breakdown.peakDay}: {peakWeek.weekLabel} ({formatCurrency(peakWeek.amount)})
                       </p>
                     )}
@@ -295,7 +264,7 @@ export default function BreakdownCard({
                           >
                             <div className="h-5 flex items-center justify-center">
                               <span
-                                className={`text-[10px] font-medium leading-none transition-all truncate ${
+                                className={`text-xs font-medium leading-none transition-all truncate ${
                                   isSelected
                                     ? "opacity-100 text-zinc-900 dark:text-zinc-200 font-semibold"
                                     : "opacity-0 group-hover:opacity-100 text-zinc-500 dark:text-zinc-400"
@@ -327,7 +296,7 @@ export default function BreakdownCard({
                             </div>
 
                             <span
-                              className={`text-[10px] pt-0.5 ${
+                              className={`text-xs pt-0.5 ${
                                 day.isToday
                                   ? "font-bold text-emerald-600 dark:text-emerald-400"
                                   : isSelected
@@ -343,11 +312,11 @@ export default function BreakdownCard({
                     </div>
 
                     {selectedDay && (
-                      <div className="mt-3 flex items-center justify-between border-t border-zinc-200/80 dark:border-zinc-800/60 pt-2.5 text-[11px]">
+                      <div className="mt-3 flex items-center justify-between border-t border-zinc-200/80 dark:border-zinc-800/60 pt-2.5 text-xs">
                         <span className="text-zinc-500 dark:text-zinc-400">
                           {selectedDay.formattedDate}
                           {selectedDay.isToday && (
-                            <span className="ml-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                            <span className="ml-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                               ({t.common.today})
                             </span>
                           )}
@@ -358,7 +327,7 @@ export default function BreakdownCard({
                       </div>
                     )}
                     {peakDay && peakDay.amount > 0 && (
-                      <p className="mt-1 text-[10px] text-zinc-500 text-center">
+                      <p className="mt-1 text-xs text-zinc-500 text-center">
                         {t.breakdown.peakDay}: {peakDay.dayName} ({formatCurrency(peakDay.amount)})
                       </p>
                     )}
@@ -388,7 +357,7 @@ export default function BreakdownCard({
                       </span>
                       <span className="font-medium text-zinc-900 dark:text-zinc-200">
                         {formatCurrency(item.amount)}{" "}
-                        <span className="text-zinc-500 text-[10px]">
+                        <span className="text-zinc-500 text-xs">
                           ({item.percentage}%)
                         </span>
                       </span>
@@ -409,6 +378,6 @@ export default function BreakdownCard({
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

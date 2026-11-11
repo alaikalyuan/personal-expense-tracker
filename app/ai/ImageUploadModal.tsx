@@ -25,6 +25,7 @@ import {
 import { useTranslation } from "@/utils/i18n/context";
 import { useImageExtract, ExtractStep } from "@/utils/ai/useImageExtract";
 import { ExtractedDocument } from "@/utils/ai/vision";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 export interface ImageUploadModalProps {
   isOpen: boolean;
@@ -487,7 +488,7 @@ export function ImageUploadModal({
   if (!isOpen || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-2 sm:p-4 backdrop-blur-xs animate-fade-in">
+    <ModalOverlay className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-2 sm:p-4 animate-fade-in">
       <div
         className={`relative flex flex-col w-full max-w-xl rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xl overflow-hidden transition-all ${
           modalStep === "edit"
@@ -599,7 +600,7 @@ export function ImageUploadModal({
             {activeTool === "annotate" && (
               <div className="shrink-0 flex items-center justify-between bg-zinc-100/90 dark:bg-zinc-900/95 border-b border-zinc-200/80 dark:border-zinc-800 px-3.5 sm:px-4 py-1.5 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-zinc-600 dark:text-zinc-300 font-medium">
+                  <span className="text-xs text-zinc-600 dark:text-zinc-300 font-medium">
                     {locale === "id" ? "Warna:" : "Color:"}
                   </span>
                   {[
@@ -625,7 +626,7 @@ export function ImageUploadModal({
                   type="button"
                   onClick={() => setStrokes((prev) => prev.slice(0, -1))}
                   disabled={strokes.length === 0}
-                  className="flex items-center gap-1 text-[11px] text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white disabled:opacity-40 cursor-pointer"
+                  className="flex items-center gap-1 text-xs text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white disabled:opacity-40 cursor-pointer"
                 >
                   <Undo2 className="w-3.5 h-3.5" />
                   <span>{locale === "id" ? "Urungkan" : "Undo"}</span>
@@ -799,7 +800,7 @@ export function ImageUploadModal({
                       ? "atau klik untuk memilih dari perangkat (PNG, JPG, WebP)"
                       : "or click to browse files (PNG, JPG, WebP)"}
                   </p>
-                  <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-zinc-200/60 dark:bg-zinc-800/80 px-2.5 py-1 text-[11px] text-zinc-600 dark:text-zinc-400 font-medium">
+                  <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-zinc-200/60 dark:bg-zinc-800/80 px-2.5 py-1 text-xs text-zinc-600 dark:text-zinc-400 font-medium">
                     <span>{locale === "id" ? "Bisa tekan Ctrl+V untuk tempel" : "Or press Ctrl+V to paste"}</span>
                   </div>
                 </div>
@@ -915,10 +916,10 @@ export function ImageUploadModal({
               <div className="flex flex-col space-y-4 animate-fade-in">
                 <div className="flex items-center gap-2 pb-1 border-b border-zinc-100 dark:border-zinc-800">
                   <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400">
+                  <h3 className="text-xs font-bold text-teal-700 dark:text-teal-400">
                     {locale === "id" ? "Hasil Terdeteksi" : "Detected Result"}
                   </h3>
-                  <span className="ml-auto rounded-full bg-teal-500/10 px-2 py-0.5 text-[10px] font-semibold text-teal-700 dark:text-teal-300">
+                  <span className="ml-auto rounded-full bg-teal-500/10 px-2 py-0.5 text-xs font-semibold text-teal-700 dark:text-teal-300">
                     {extractedDoc.kind === "receipt"
                       ? "Struk Belanja"
                       : extractedDoc.kind === "transaction_list" || (extractedDoc.transactions && extractedDoc.transactions.length > 1)
@@ -945,7 +946,7 @@ export function ImageUploadModal({
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] font-medium text-zinc-500 uppercase">
+                      <span className="text-xs font-medium text-zinc-500">
                         {locale === "id" ? "Total Terbaca" : "Total Detected"}
                       </span>
                       <div className="text-base font-extrabold text-teal-600 dark:text-teal-400">
@@ -958,7 +959,7 @@ export function ImageUploadModal({
                   {((extractedDoc.transactions && extractedDoc.transactions.length > 0) ||
                     (extractedDoc.items && extractedDoc.items.length > 0)) && (
                     <div className="mt-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-800/80 space-y-1.5 max-h-52 overflow-y-auto no-scrollbar">
-                      <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                      <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                         {extractedDoc.transactions && extractedDoc.transactions.length > 1
                           ? locale === "id"
                             ? `Transaksi Terdeteksi (${extractedDoc.transactions.length}):`
@@ -978,7 +979,7 @@ export function ImageUploadModal({
                                   {tx.name}
                                 </span>
                                 {tx.date && (
-                                  <span className="text-[10px] text-zinc-400 block">
+                                  <span className="text-xs text-zinc-400 block">
                                     {tx.date}
                                   </span>
                                 )}
@@ -1015,22 +1016,22 @@ export function ImageUploadModal({
 
                   {/* Subtotal, Tax, Service charge metadata if present */}
                   {(extractedDoc.taxAmount || extractedDoc.serviceAmount || extractedDoc.discountAmount) && (
-                    <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/80 grid grid-cols-3 gap-2 text-[11px] text-zinc-500">
+                    <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/80 grid grid-cols-3 gap-2 text-xs text-zinc-500">
                       {extractedDoc.taxAmount ? (
                         <div>
-                          <span className="block text-[10px] text-zinc-400">Pajak (Tax):</span>
+                          <span className="block text-xs text-zinc-400">Pajak (Tax):</span>
                           <span className="font-medium text-zinc-700 dark:text-zinc-300">{formatCurrency(extractedDoc.taxAmount)}</span>
                         </div>
                       ) : null}
                       {extractedDoc.serviceAmount ? (
                         <div>
-                          <span className="block text-[10px] text-zinc-400">Layanan:</span>
+                          <span className="block text-xs text-zinc-400">Layanan:</span>
                           <span className="font-medium text-zinc-700 dark:text-zinc-300">{formatCurrency(extractedDoc.serviceAmount)}</span>
                         </div>
                       ) : null}
                       {extractedDoc.discountAmount ? (
                         <div>
-                          <span className="block text-[10px] text-zinc-400">Diskon:</span>
+                          <span className="block text-xs text-zinc-400">Diskon:</span>
                           <span className="font-medium text-emerald-600">-{formatCurrency(extractedDoc.discountAmount)}</span>
                         </div>
                       ) : null}
@@ -1070,7 +1071,7 @@ export function ImageUploadModal({
           </div>
         )}
       </div>
-    </div>,
+    </ModalOverlay>,
     document.body
   );
 }

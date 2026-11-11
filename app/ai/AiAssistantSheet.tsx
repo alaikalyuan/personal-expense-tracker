@@ -278,7 +278,7 @@ export default function AiAssistantSheet() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="ai-assistant-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-zinc-950/60 backdrop-blur-xs animate-fade-in"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-zinc-950/60 animate-fade-in"
     >
       <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col h-[90vh] sm:h-[82vh] overflow-hidden">
         {/* Header */}
@@ -292,13 +292,7 @@ export default function AiAssistantSheet() {
                 <h3 id="ai-assistant-title" className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                   {t.aiAdvisor.modalTitle}
                 </h3>
-                <span className="rounded-full bg-teal-500/10 px-2 py-0.5 text-[10px] font-semibold text-teal-600 dark:bg-teal-500/20 dark:text-teal-400">
-                  {t.aiAdvisor.cardBadge}
-                </span>
               </div>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                deepseek-chat
-              </p>
             </div>
           </div>
 
@@ -363,7 +357,7 @@ export default function AiAssistantSheet() {
                     }`}
                   />
                 </svg>
-                <span className="text-[11px] font-semibold tabular-nums">
+                <span className="text-xs font-semibold tabular-nums">
                   {displayCount}/{displayLimit}
                 </span>
               </button>
@@ -435,11 +429,8 @@ export default function AiAssistantSheet() {
                   <span className="font-semibold text-xs">
                     {hasPersonalKey ? t.aiAdvisor.tierUnlimitedLabel : t.aiAdvisor.tierFreeLabel}
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-                    {hasPersonalKey ? "BYOK" : "FREE TIER"}
-                  </span>
                 </div>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
                   {hasPersonalKey
                     ? locale === "id"
                       ? "Anda menggunakan DeepSeek API Key pribadi. Kuota obrolan dan pencatatan tidak dibatasi per hari."
@@ -453,21 +444,21 @@ export default function AiAssistantSheet() {
             <div className="grid grid-cols-3 gap-2 mb-3">
               {/* Tile 1: Used messages */}
               <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xs">
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium block">
+                <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium block">
                   {t.aiAdvisor.usedLabel}
                 </span>
                 <span className="text-base font-bold text-zinc-900 dark:text-white tabular-nums block mt-0.5">
                   {displayCount}
-                  <span className="text-[10px] text-zinc-400 font-normal ml-0.5">/ {displayLimit}</span>
+                  <span className="text-xs text-zinc-400 font-normal ml-0.5">/ {displayLimit}</span>
                 </span>
-                <span className="text-[10px] text-zinc-400 truncate block mt-0.5">
+                <span className="text-xs text-zinc-400 truncate block mt-0.5">
                   {locale === "id" ? "kuota terpakai (foto: 5)" : "quota used (photo: 5)"}
                 </span>
               </div>
 
               {/* Tile 2: Remaining */}
               <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xs">
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium block">
+                <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium block">
                   {t.aiAdvisor.remainingLabel}
                 </span>
                 <span
@@ -483,7 +474,7 @@ export default function AiAssistantSheet() {
                 >
                   {hasPersonalKey ? "∞ Unlimited" : displayRemaining}
                 </span>
-                <span className="text-[10px] text-zinc-400 truncate block mt-0.5">
+                <span className="text-xs text-zinc-400 truncate block mt-0.5">
                   {hasPersonalKey
                     ? locale === "id"
                       ? "tanpa batas"
@@ -496,11 +487,11 @@ export default function AiAssistantSheet() {
 
               {/* Tile 3: Usage Rate */}
               <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xs">
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium block">
+                <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium block">
                   {t.aiAdvisor.usageRateLabel}
                 </span>
                 <span className="text-base font-bold text-zinc-900 dark:text-white tabular-nums block mt-0.5">
-                  {hasPersonalKey ? "BYOK" : `${usageRate}%`}
+                  {hasPersonalKey ? "∞" : `${usageRate}%`}
                 </span>
                 <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-1.5">
                   <div
@@ -522,7 +513,7 @@ export default function AiAssistantSheet() {
             {/* Reset Time Info Row */}
             <div className="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-100/80 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60 mb-3.5">
               <Clock className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-              <div className="flex-1 flex flex-wrap items-center justify-between gap-1 text-[11px]">
+              <div className="flex-1 flex flex-wrap items-center justify-between gap-1 text-xs">
                 <span className="text-zinc-600 dark:text-zinc-400 font-medium">
                   {t.aiAdvisor.resetTimeLabel}:
                 </span>
@@ -538,10 +529,10 @@ export default function AiAssistantSheet() {
             {isDevMode && (
               <div className="mb-3.5 p-2.5 rounded-xl border border-dashed border-amber-300 dark:border-amber-700/80 bg-amber-50/70 dark:bg-amber-950/25 flex items-center justify-between gap-2 animate-fade-in">
                 <div className="flex items-center gap-2">
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider bg-amber-500/20 text-amber-700 dark:text-amber-300 uppercase">
+                  <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300">
                     DEV
                   </span>
-                  <span className="text-[11px] text-amber-800 dark:text-amber-300">
+                  <span className="text-xs text-amber-800 dark:text-amber-300">
                     {locale === "id"
                       ? "Reset limit pemakaian harian ke 0"
                       : "Reset daily usage limit to 0"}
@@ -551,7 +542,7 @@ export default function AiAssistantSheet() {
                   type="button"
                   disabled={isResettingLimit}
                   onClick={handleResetLimit}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-500 hover:bg-amber-600 active:scale-95 text-white transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs shrink-0"
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-600 active:scale-95 text-zinc-950 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs shrink-0"
                 >
                   <RotateCcw className={`w-3 h-3 ${isResettingLimit ? "animate-spin" : ""}`} />
                   {isResettingLimit
@@ -564,20 +555,20 @@ export default function AiAssistantSheet() {
             {/* API Key Configuration Section */}
             <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800">
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200">
+                <label className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
                   {t.aiAdvisor.apiKeyLabel}
                 </label>
                 <a
                   href="https://platform.deepseek.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 font-medium"
+                  className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 font-medium"
                 >
                   platform.deepseek.com
                   <ExternalLink className="w-2.5 h-2.5" />
                 </a>
               </div>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-2">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">
                 {t.aiAdvisor.apiKeyHint}
               </p>
               <div className="flex gap-2">
@@ -606,7 +597,7 @@ export default function AiAssistantSheet() {
                 )}
               </div>
               {keyToast && (
-                <p className="mt-1.5 text-[11px] text-teal-600 dark:text-teal-400 flex items-center gap-1">
+                <p className="mt-1.5 text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1">
                   <Check className="w-3 h-3" /> {keyToast}
                 </p>
               )}
@@ -672,7 +663,7 @@ export default function AiAssistantSheet() {
                           </tr>
                         ),
                         th: ({ children }) => (
-                          <th className="px-3 py-2 font-semibold text-zinc-900 dark:text-zinc-100 text-[11px] uppercase tracking-wider whitespace-nowrap">
+                          <th className="px-3 py-2 font-semibold text-zinc-900 dark:text-zinc-100 text-xs whitespace-nowrap">
                             {children}
                           </th>
                         ),
@@ -723,7 +714,7 @@ export default function AiAssistantSheet() {
                           </blockquote>
                         ),
                         code: ({ children }) => (
-                          <code className="rounded bg-zinc-200/80 dark:bg-zinc-700 px-1 py-0.5 font-mono text-[11px] text-teal-600 dark:text-teal-400">
+                          <code className="rounded bg-zinc-200/80 dark:bg-zinc-700 px-1 py-0.5 font-mono text-xs text-teal-600 dark:text-teal-400">
                             {children}
                           </code>
                         ),
@@ -764,7 +755,7 @@ export default function AiAssistantSheet() {
               </div>
               <div className="rounded-2xl rounded-tl-xs px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/60 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                 <Loader2 className="w-3.5 h-3.5 text-teal-500 animate-spin" />
-                <span className="text-[11px] font-medium">
+                <span className="text-xs font-medium">
                   {extractStatus || statusLabel || t.aiAdvisor.thinking}
                 </span>
               </div>
@@ -782,7 +773,7 @@ export default function AiAssistantSheet() {
               type="button"
               disabled={isLoading || isExtracting || isDailyLimitReached}
               onClick={() => sendMessage(chip)}
-              className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-teal-500/50 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-teal-500/50 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {chip}
             </button>
@@ -793,7 +784,7 @@ export default function AiAssistantSheet() {
         <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           {/* Image error banner */}
           {imageExtractError && (
-            <div className="mb-2 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/30 p-2 text-[11px] text-rose-600 dark:text-rose-400">
+            <div className="mb-2 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/30 p-2 text-xs text-rose-600 dark:text-rose-400">
               <div className="flex items-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                 <span>{imageExtractError}</span>
@@ -817,10 +808,10 @@ export default function AiAssistantSheet() {
                 className="w-12 h-12 rounded-lg object-cover border border-zinc-200 dark:border-zinc-700"
               />
               <div className="pr-2">
-                <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 block truncate max-w-[140px]">
+                <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200 block truncate max-w-[140px]">
                   {attachedFile?.name || "Foto Struk"}
                 </span>
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                <span className="text-xs text-zinc-400 dark:text-zinc-500">
                   {attachedFile ? `${Math.round(attachedFile.size / 1024)} KB` : "Gambar"}
                 </span>
               </div>
@@ -844,7 +835,7 @@ export default function AiAssistantSheet() {
                   <p className="font-semibold text-rose-900 dark:text-rose-200">
                     {t.aiAdvisor.dailyLimitReached}
                   </p>
-                  <p className="text-[11px] text-rose-700/90 dark:text-rose-400 mt-0.5">
+                  <p className="text-xs text-rose-700/90 dark:text-rose-400 mt-0.5">
                     {locale === "id"
                       ? "Kuota 20 pesan/scan server hari ini telah habis. Masukkan API key pribadi untuk lanjut tanpa batas."
                       : "Daily free quota of 20 units reached. Add a personal API key to chat unlimitedly."}
@@ -854,7 +845,7 @@ export default function AiAssistantSheet() {
               <button
                 type="button"
                 onClick={() => setShowKeyConfig(true)}
-                className="shrink-0 px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer"
+                className="shrink-0 px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer"
               >
                 {locale === "id" ? "Gunakan Kunci" : "Use Key"}
               </button>
@@ -926,7 +917,7 @@ export default function AiAssistantSheet() {
           </form>
 
           {/* Disclaimer footer */}
-          <p className="mt-2 text-[10px] text-center text-zinc-400 dark:text-zinc-500">
+          <p className="mt-2 text-xs text-center text-zinc-400 dark:text-zinc-500">
             {t.aiAdvisor.disclaimer}
           </p>
         </div>

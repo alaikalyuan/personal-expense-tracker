@@ -72,17 +72,17 @@ export default function ProjectedBurnCard({
             <Flame className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xs font-semibold text-zinc-900 dark:text-white uppercase tracking-wider">
+            <h3 className="text-xs font-semibold text-zinc-900 dark:text-white">
               {t.burnRate.cardTitle}
             </h3>
-            <p className="text-[10px] text-zinc-500">
+            <p className="text-xs text-zinc-500">
               {elapsedDays} / {totalDays} {t.dashboard.dayOfMonth}
             </p>
           </div>
         </div>
 
         <span
-          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
             paceStatus === "safe"
               ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/40"
               : paceStatus === "warning"
@@ -105,7 +105,7 @@ export default function ProjectedBurnCard({
 
       {/* Main Projected Amount Banner */}
       <div className="rounded-xl bg-zinc-50 p-3.5 border border-zinc-200/60 dark:bg-zinc-900/80 dark:border-zinc-800/70">
-        <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+        <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
           {t.burnRate.projectedEndMonth}
         </p>
         <div className="mt-1 flex items-baseline justify-between gap-2 flex-wrap">
@@ -124,7 +124,7 @@ export default function ProjectedBurnCard({
             </span>
           )}
         </div>
-        <p className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">
+        <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
           {isProjectedOver
             ? `${t.burnRate.projectedExceedNote} ${formatCurrency(projectedDiff)}.`
             : `${t.burnRate.projectedSafeNote} ${formatCurrency(projectedDiff)}.`}
@@ -134,7 +134,7 @@ export default function ProjectedBurnCard({
       {/* Velocity vs Safe Pace micro-shelf */}
       <div className="grid grid-cols-2 gap-3 pt-1">
         <div className="rounded-xl border border-zinc-200/70 bg-white/50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900/40">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+          <p className="text-xs font-medium text-zinc-500">
             {t.burnRate.dailyVelocity}
           </p>
           <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
@@ -143,7 +143,7 @@ export default function ProjectedBurnCard({
         </div>
 
         <div className="rounded-xl border border-zinc-200/70 bg-white/50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900/40">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+          <p className="text-xs font-medium text-zinc-500">
             {t.burnRate.targetDailyPace}
           </p>
           <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
@@ -155,7 +155,7 @@ export default function ProjectedBurnCard({
       {/* MoM Pacing Comparison Badge */}
       {priorMtdSpend > 0 && (
         <div className="flex items-center justify-between border-t border-zinc-200/70 pt-3 dark:border-zinc-800/70 text-xs">
-          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
             {t.burnRate.momVsSameTime}
           </span>
           <div className="flex items-center gap-1 font-semibold text-xs">

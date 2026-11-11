@@ -17,9 +17,10 @@ export const config = {
      * - icons/ (PWA icons)
      * - robots.txt, sitemap.xml, llms.txt (crawler files must never hit auth)
      * - sw.js (browsers refuse to register a service worker served behind a redirect)
+     * - offline.html (the service worker caches it at install, before any session exists)
      * - static file extensions (.svg, .png, .jpg, .webmanifest, etc.)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|manifest\\.webmanifest|icons|robots\\.txt|sitemap\\.xml|llms\\.txt|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|webmanifest)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest\\.webmanifest|icons|robots\\.txt|sitemap\\.xml|llms\\.txt|sw\\.js|offline\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|webmanifest)$).*)",
   ],
 };
 
