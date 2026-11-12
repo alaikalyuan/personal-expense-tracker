@@ -110,14 +110,14 @@ export function saveInputMode(mode: "standard" | "quick_type"): void {
 }
 
 export function getStoredKeepBatch(): boolean {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") return false;
   try {
     const val = localStorage.getItem(KEEP_BATCH_STORAGE_KEY);
     if (val !== null) return val === "true";
   } catch {
     // ignore
   }
-  return true;
+  return false;
 }
 
 export function saveKeepBatch(keep: boolean): void {

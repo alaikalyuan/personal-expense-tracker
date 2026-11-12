@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import type { Viewport } from "next";
 import BottomNav from "./BottomNav";
@@ -7,16 +7,13 @@ import ServiceWorkerRegister from "./ServiceWorkerRegister";
 import { LanguageProvider } from "@/utils/i18n/context";
 import { getLocaleServer, getCurrencyServer } from "@/utils/i18n/server";
 import { ThemeProvider } from "@/utils/theme/context";
-import { getThemeServer } from "@/utils/theme/server";
+import { getThemeServer, getPaletteServer } from "@/utils/theme/server";
+import { PAPER, THEME_BOOT_SCRIPT } from "@/utils/theme/palette";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -29,17 +26,20 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "SakuTrack : Student Budget Tracker",
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#09090b",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1, // Prevents unwanted auto-zoom on mobile text inputs
-};
+export async function generateViewport(): Promise<Viewport> {
+  const [theme, palette] = await Promise.all([getThemeServer(), getPaletteServer()]);
+  // Hybrid depends on the visitor's clock; the client corrects the color after load.
+  return {
+    themeColor: PAPER[palette === "hybrid" ? "orange" : palette][theme],
+    width: "device-width",
+    initialScale: 1,
+  };
+}
 
 import { cookies } from "next/headers";
 import { FEATURE_MULTI_SAKU_ENABLED } from "@/utils/wallets/config";
@@ -50,10 +50,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const multiSakuEnabled =
     FEATURE_MULTI_SAKU_ENABLED && cookieStore.get("MULTI_SAKU_ENABLED")?.value === "true";
   const aiModeEnabled = cookieStore.get("AI_MODE_ENABLED")?.value !== "false";
+  const signedIn = cookieStore.getAll().some((cookie) => cookie.name.includes("-auth-token"));
 
-  const [locale, theme, currency] = await Promise.all([
+  const [locale, theme, palette, currency] = await Promise.all([
     getLocaleServer(),
     getThemeServer(),
+    getPaletteServer(),
     getCurrencyServer(),
   ]);
 
@@ -62,22 +64,23 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       lang={locale}
       className={theme === "dark" ? "dark" : ""}
       style={{ colorScheme: theme }}
+      data-palette={palette === "orange" || palette === "hybrid" ? undefined : palette}
       suppressHydrationWarning
     >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var c=document.cookie.match(/(?:^|;\\s*)THEME=([^;]+)/);var t=c?c[1]:(localStorage.getItem('theme')||'dark');if(t==='dark'){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}else{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light';}}catch(e){}})();`,
+            __html: THEME_BOOT_SCRIPT,
           }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased min-h-screen relative`}>
-        <ThemeProvider initialTheme={theme}>
+      <body className={`${jakarta.variable} font-sans bg-paper text-ink antialiased min-h-screen relative`}>
+        <ThemeProvider initialTheme={theme} initialPalette={palette}>
           <LanguageProvider initialLocale={locale} initialCurrency={currency}>
             <AiAssistantProvider initialAiEnabled={aiModeEnabled}>
               <ServiceWorkerRegister />
               {children}
-              <BottomNav initialMultiSaku={multiSakuEnabled} />
+              <BottomNav initialMultiSaku={multiSakuEnabled} signedIn={signedIn} />
             </AiAssistantProvider>
           </LanguageProvider>
         </ThemeProvider>

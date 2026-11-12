@@ -37,7 +37,7 @@ export async function POST() {
 
     const payload = {
       title: "✨ SakuTrack: Tes Notifikasi Berhasil!",
-      body: `Notifikasi PWA kamu sudah aktif.\n"${quoteObj.quote}" — ${quoteObj.author}`,
+      body: `Notifikasi PWA kamu sudah aktif.\n"${quoteObj.quote}", ${quoteObj.author}`,
       url: "/",
       tag: "sakutrack-test",
     };

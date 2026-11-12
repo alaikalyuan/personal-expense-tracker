@@ -48,6 +48,7 @@ import { useTranslation } from "@/utils/i18n/context";
 import { getTodayString } from "@/utils/date";
 import type { Wallet } from "@/utils/wallets/server";
 import AiHeaderButton from "@/app/ai/AiHeaderButton";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface SubscriptionsClientProps {
   initialSubscriptions: SubscriptionRecord[];
@@ -177,7 +178,7 @@ export default function SubscriptionsClient({
     setCategory(sub.category);
     const initialWallet = sub.pay_from_wallet_id || defaultWalletId || wallets.find((w) => w.is_primary)?.id || wallets[0]?.id || "";
     setPayFromWalletId(initialWallet);
-    setNotes("");
+    setNotes(sub.notes || "");
     setReminderDaysBefore(sub.reminder_days_before);
     setIsSplit(sub.is_split);
     setFriends(sub.split_config?.friends?.map((f) => f.name) || []);
@@ -427,7 +428,7 @@ export default function SubscriptionsClient({
             <h1 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
               {t.subscriptions.title}
             </h1>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
               {t.subscriptions.subtitle}
             </p>
           </div>
@@ -452,13 +453,13 @@ export default function SubscriptionsClient({
           <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
           <div className="flex-1">
             <p className="font-semibold">{t.subscriptions.guestBadge}</p>
-            <p className="text-[11px] text-amber-800 dark:text-amber-300/80 mt-0.5">
+            <p className="text-xs text-amber-800 dark:text-amber-300/80 mt-0.5">
               {t.subscriptions.guestDesc}
             </p>
           </div>
           <Link
             href="/login?next=/subscriptions"
-            className="rounded-lg bg-amber-600 text-white px-2.5 py-1 text-[11px] font-semibold hover:bg-amber-700 transition-colors"
+            className="rounded-lg bg-accent text-on-accent px-2.5 py-1 text-xs font-semibold hover:brightness-95 transition-colors"
           >
             {t.subscriptions.loginBtn}
           </Link>
@@ -484,21 +485,21 @@ export default function SubscriptionsClient({
       {/* Summary Cards */}
       <section className="grid grid-cols-2 gap-2.5 mb-5">
         <div className="rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-xs dark:border-zinc-800/80 dark:bg-zinc-900">
-          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{t.subscriptions.totalCostMonth}</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">{t.subscriptions.totalCostMonth}</p>
           <p className="text-base font-bold text-zinc-900 dark:text-zinc-50 mt-1">
             {formatCurrency(metrics.totalMonthly)}
           </p>
-          <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
             {subscriptions.filter((s) => s.status === "active").length} {t.subscriptions.activeCount}
           </p>
         </div>
 
         <div className="rounded-2xl border border-indigo-200/60 bg-indigo-50/50 p-3.5 shadow-xs dark:border-indigo-900/40 dark:bg-indigo-950/20">
-          <p className="text-[11px] text-indigo-700 dark:text-indigo-300">{t.subscriptions.myShareMonth}</p>
+          <p className="text-xs text-indigo-700 dark:text-indigo-300">{t.subscriptions.myShareMonth}</p>
           <p className="text-base font-bold text-indigo-950 dark:text-indigo-100 mt-1">
             {formatCurrency(metrics.myMonthlyShare)}
           </p>
-          <p className="text-[10px] text-indigo-600/80 dark:text-indigo-400/80 mt-0.5">
+          <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80 mt-0.5">
             {t.subscriptions.splitSavings.replace("{amount}", formatCurrency(metrics.friendsMonthlyShare))}
           </p>
         </div>
@@ -515,7 +516,7 @@ export default function SubscriptionsClient({
               <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                 {t.subscriptions.upcomingRenewalsCount.replace("{count}", String(metrics.upcomingRenewalsCount))}
               </p>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
                 {t.subscriptions.upcomingRenewalsDesc}
               </p>
             </div>
@@ -564,11 +565,11 @@ export default function SubscriptionsClient({
       <div className="flex flex-col gap-3">
         {filteredSubscriptions.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800 p-8 text-center bg-white/50 dark:bg-zinc-900/50">
-            <Sparkles className="w-8 h-8 mx-auto text-zinc-400 dark:text-zinc-600 mb-2 stroke-[1.5]" />
+            <Sparkles className="w-8 h-8 mx-auto text-zinc-400 dark:text-zinc-400 mb-2 stroke-[1.5]" />
             <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
               {t.subscriptions.emptyTitle}
             </p>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
               {t.subscriptions.emptyDesc}
             </p>
             <button
@@ -614,12 +615,12 @@ export default function SubscriptionsClient({
                           {sub.name}
                         </h2>
                         {isPaused && (
-                          <span className="text-[10px] bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-semibold px-1.5 py-0.5 rounded-md">
+                          <span className="text-xs bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-semibold px-1.5 py-0.5 rounded-md">
                             {t.subscriptions.pausedBadge}
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 flex-wrap">
                         <span>{sub.payment_platform}</span>
                         <span>•</span>
                         <span>{sub.category}</span>
@@ -641,7 +642,7 @@ export default function SubscriptionsClient({
                     <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
                       {formatCurrency(sub.price)}
                     </p>
-                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 capitalize">
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500 capitalize">
                       /{sub.billing_cycle === "monthly" ? t.subscriptions.perMonth : sub.billing_cycle === "yearly" ? t.subscriptions.perYear : t.subscriptions.perWeek}
                     </p>
                   </div>
@@ -651,11 +652,11 @@ export default function SubscriptionsClient({
                 {sub.is_split && (
                   <div className="mt-3 rounded-xl bg-purple-500/10 border border-purple-500/20 p-2.5 text-xs text-purple-900 dark:text-purple-200">
                     <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 font-semibold text-[11px]">
+                      <span className="flex items-center gap-1.5 font-semibold text-xs">
                         <Users className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                         <span>{t.subscriptions.splitBadge.replace("{count}", String(splitCount)).replace("{friends}", sub.split_config?.friends?.map((f) => f.name).join(", ") || "")}</span>
                       </span>
-                      <span className="font-bold text-[11px] text-purple-700 dark:text-purple-300">
+                      <span className="font-bold text-xs text-purple-700 dark:text-purple-300">
                         {formatCurrency(myShare)}{t.subscriptions.perPersonShort}
                       </span>
                     </div>
@@ -667,7 +668,7 @@ export default function SubscriptionsClient({
                   <div className="flex items-center gap-1.5 text-xs">
                     <Calendar className="w-3.5 h-3.5 text-zinc-400" />
                     <span
-                      className={`font-semibold text-[11px] ${
+                      className={`font-semibold text-xs ${
                         isToday
                           ? "text-rose-600 dark:text-rose-400 font-bold"
                           : isUpcoming
@@ -693,7 +694,7 @@ export default function SubscriptionsClient({
                         onClick={() => handlePaySubscription(sub)}
                         disabled={processingSubId === sub.id}
                         title={t.subscriptions.payNowBtn}
-                        className="flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 px-2 py-1 text-[11px] font-semibold transition-all cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 px-2 py-1 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
                       >
                         <CheckCircle2 className="w-3 h-3" />
                         <span>{processingSubId === sub.id ? "..." : t.subscriptions.payNowBtn}</span>
@@ -707,7 +708,7 @@ export default function SubscriptionsClient({
                         onClick={() => handleManualSplitBillCreation(sub)}
                         disabled={processingSubId === sub.id}
                         title={t.subscriptions.splitBillBtn}
-                        className="flex items-center gap-1 rounded-lg bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 px-2 py-1 text-[11px] font-semibold transition-all cursor-pointer"
+                        className="flex items-center gap-1 rounded-lg bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 px-2 py-1 text-xs font-semibold transition-all cursor-pointer"
                       >
                         <Receipt className="w-3 h-3" />
                         <span>{t.subscriptions.splitBillBtn}</span>
@@ -760,7 +761,7 @@ export default function SubscriptionsClient({
 
       {/* Add / Edit Subscription Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-zinc-950/60 backdrop-blur-xs animate-fade-in">
+        <ModalOverlay className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-zinc-950/60 animate-fade-in">
           <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl p-5 border border-zinc-200 dark:border-zinc-800 max-h-[90vh] overflow-y-auto shadow-2xl animate-modal-in">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
@@ -779,7 +780,7 @@ export default function SubscriptionsClient({
             {/* Quick Presets Pills (only when creating new) */}
             {!editingSub && (
               <div className="my-3.5">
-                <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 mb-2">
+                <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2">
                   {t.subscriptions.quickPresetsTitle}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -788,7 +789,7 @@ export default function SubscriptionsClient({
                       key={preset.id}
                       type="button"
                       onClick={() => selectPreset(preset)}
-                      className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                         name === preset.name
                           ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 border-zinc-900 dark:border-zinc-100"
                           : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700"
@@ -932,7 +933,7 @@ export default function SubscriptionsClient({
                     <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                       {t.subscriptions.splitAccountTitle}
                     </p>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {t.subscriptions.splitAccountDesc}
                     </p>
                   </div>
@@ -948,7 +949,7 @@ export default function SubscriptionsClient({
                   <div className="mt-3 p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-3">
                     {/* Add Friend Input */}
                     <div>
-                      <label className="block text-[11px] font-semibold text-purple-900 dark:text-purple-200 mb-1">
+                      <label className="block text-xs font-semibold text-purple-900 dark:text-purple-200 mb-1">
                         {t.subscriptions.addFriendLabel}
                       </label>
                       <div className="flex gap-1.5">
@@ -978,13 +979,13 @@ export default function SubscriptionsClient({
                     {/* Friend Tags */}
                     {friends.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
-                        <span className="text-[11px] bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 px-2 py-0.5 rounded-lg font-semibold">
+                        <span className="text-xs bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 px-2 py-0.5 rounded-lg font-semibold">
                           {t.subscriptions.hostBadge}
                         </span>
                         {friends.map((f) => (
                           <span
                             key={f}
-                            className="text-[11px] bg-white dark:bg-zinc-800 border border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-200 px-2 py-0.5 rounded-lg flex items-center gap-1 font-medium"
+                            className="text-xs bg-white dark:bg-zinc-800 border border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-200 px-2 py-0.5 rounded-lg flex items-center gap-1 font-medium"
                           >
                             <span>{f}</span>
                             <button
@@ -1000,7 +1001,7 @@ export default function SubscriptionsClient({
                     )}
 
                     {/* Breakdown Preview */}
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800 border border-purple-200 dark:border-purple-800 text-[11px]">
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800 border border-purple-200 dark:border-purple-800 text-xs">
                       <div className="flex justify-between font-semibold text-purple-950 dark:text-purple-100">
                         <span>{t.subscriptions.portionPerPerson}</span>
                         <span>
@@ -1009,14 +1010,14 @@ export default function SubscriptionsClient({
                           )}
                         </span>
                       </div>
-                      <p className="text-[10px] text-purple-700/80 dark:text-purple-300/80 mt-0.5">
+                      <p className="text-xs text-purple-700/80 dark:text-purple-300/80 mt-0.5">
                         {t.subscriptions.totalSplitDesc.replace("{total}", formatCurrency(Number(price) || 0)).replace("{count}", String(friends.length + 1))}
                       </p>
                     </div>
 
                     {/* Auto-Creation Options */}
                     <div className="space-y-1.5 pt-1">
-                      <label className="flex items-center gap-2 text-[11px] text-purple-950 dark:text-purple-200 cursor-pointer">
+                      <label className="flex items-center gap-2 text-xs text-purple-950 dark:text-purple-200 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={autoCreateSplit}
@@ -1025,7 +1026,7 @@ export default function SubscriptionsClient({
                         />
                         <span>{t.subscriptions.autoCreateSplit}</span>
                       </label>
-                      <label className="flex items-center gap-2 text-[11px] text-purple-950 dark:text-purple-200 cursor-pointer">
+                      <label className="flex items-center gap-2 text-xs text-purple-950 dark:text-purple-200 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={autoLogExpenses}
@@ -1058,7 +1059,7 @@ export default function SubscriptionsClient({
               </div>
             </form>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

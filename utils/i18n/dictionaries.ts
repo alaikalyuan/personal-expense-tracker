@@ -42,6 +42,10 @@ export interface Dictionary {
     theme: string;
     light: string;
     dark: string;
+    palette: string;
+    paletteNames: { orange: string; pink: string; blue: string; mono: string; hybrid: string };
+    hybridHint: string;
+    hybridNow: string;
     currency: string;
     quickAddAria: string;
     savings: string;
@@ -72,6 +76,56 @@ export interface Dictionary {
     dayOfMonth: string;
     noExpensesMonth: string;
     tabThisMonth: string;
+  };
+  home: {
+    leftToday: string;
+    spentToday: string;
+    overToday: string;
+    statusSafe: string;
+    statusLastDay: string;
+    statusOverToday: string;
+    statusOverPeriod: string;
+    noBudget: string;
+    setBudget: string;
+    spentOfBudgetWeek: string;
+    spentOfBudgetMonth: string;
+    budgetAmountLabel: string;
+    subsDue: string;
+    emailPending: string;
+    show: string;
+    hide: string;
+    insightsWeek: string;
+    insightsMonth: string;
+    navHome: string;
+    navSplit: string;
+    navLabel: string;
+    searchToggle: string;
+    searchLabel: string;
+    clearSearchAria: string;
+    editAria: string;
+    amountLabel: string;
+    dateLabel: string;
+    nameLabel: string;
+    noteLabel: string;
+    deleteAsk: string;
+    deleteYes: string;
+    periodLabel: string;
+    menuPages: string;
+    menuSettings: string;
+    errorTitle: string;
+    errorBody: string;
+    retry: string;
+    notFoundTitle: string;
+    notFoundBody: string;
+    backHome: string;
+    loading: string;
+    saveFailed: string;
+    signedOutHint: string;
+    tryAsGuest: string;
+    welcomePoint1: string;
+    welcomePoint2: string;
+    welcomePoint3: string;
+    minPassword: string;
   };
   breakdown: {
     title: string;
@@ -286,6 +340,7 @@ export interface Dictionary {
     trendTitle: string;
     viewBreakdown: string;
     viewChart: string;
+    daysLogged: string;
     daysLower: string;
     daysHigher: string;
     allDaysEven: string;
@@ -931,6 +986,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       theme: "Tema",
       light: "Terang",
       dark: "Gelap",
+      palette: "Warna",
+      paletteNames: { orange: "Oranye", pink: "Pink", blue: "Biru", mono: "Monokrom", hybrid: "Hybrid" },
+      hybridHint: "Ikut jam: pagi oranye, siang biru, sore pink, malam monokrom.",
+      hybridNow: "Sekarang: {name}",
       currency: "Mata Uang",
       quickAddAria: "Tambah pengeluaran",
       savings: "Tabungan",
@@ -968,6 +1027,56 @@ export const dictionaries: Record<Locale, Dictionary> = {
       dayOfMonth: "hari",
       noExpensesMonth: "Belum ada pengeluaran yang dicatat bulan ini.",
       tabThisMonth: "Bulan Ini",
+    },
+    home: {
+      leftToday: "Sisa hari ini",
+      spentToday: "Keluar hari ini",
+      overToday: "Lewat jatah hari ini",
+      statusSafe: "Aman. {amount} untuk {days} hari lagi",
+      statusLastDay: "Aman. Ini hari terakhir periode ini",
+      statusOverToday: "Besok jatahnya jadi {amount} per hari",
+      statusOverPeriod: "Sudah lewat {amount} dari budget",
+      noBudget: "Belum ada budget. Atur dulu biar ada patokan harian.",
+      setBudget: "Atur budget",
+      spentOfBudgetWeek: "{spent} dari {budget} minggu ini",
+      spentOfBudgetMonth: "{spent} dari {budget} bulan ini",
+      budgetAmountLabel: "Jumlah budget",
+      subsDue: "{count} langganan segera jatuh tempo",
+      emailPending: "{count} transaksi dari email menunggu dicatat",
+      show: "Lihat",
+      hide: "Tutup",
+      insightsWeek: "Rincian minggu ini",
+      insightsMonth: "Rincian bulan ini",
+      navHome: "Beranda",
+      navSplit: "Patungan",
+      navLabel: "Navigasi utama",
+      searchToggle: "Cari pengeluaran",
+      searchLabel: "Cari",
+      clearSearchAria: "Hapus pencarian",
+      editAria: "Ubah {name}",
+      amountLabel: "Nominal",
+      dateLabel: "Tanggal",
+      nameLabel: "Nama",
+      noteLabel: "Catatan (opsional)",
+      deleteAsk: "Hapus pengeluaran ini? Tidak bisa dibatalkan.",
+      deleteYes: "Ya, hapus",
+      periodLabel: "Periode",
+      menuPages: "Halaman",
+      menuSettings: "Pengaturan",
+      errorTitle: "Ada yang tidak beres",
+      errorBody: "Halaman ini gagal dimuat. Datamu aman.",
+      retry: "Coba lagi",
+      notFoundTitle: "Halaman tidak ditemukan",
+      notFoundBody: "Alamat ini tidak ada di SakuTrack.",
+      backHome: "Ke Beranda",
+      loading: "Memuat",
+      saveFailed: "Gagal menyimpan. Coba lagi.",
+      signedOutHint: "Masuk atau lanjut sebagai tamu untuk mulai mencatat.",
+      tryAsGuest: "Mulai tanpa akun",
+      welcomePoint1: "Catat pengeluaran dalam dua ketukan",
+      welcomePoint2: "Lihat sisa jatah hari ini, setiap hari",
+      welcomePoint3: "Bagi tagihan makan dan langganan dengan teman",
+      minPassword: "Minimal 6 karakter",
     },
     breakdown: {
       title: "Rincian",
@@ -1183,6 +1292,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       trendTitle: "Perbandingan Tren Harian",
       viewBreakdown: "Rincian",
       viewChart: "Grafik",
+      daysLogged: "hari tercatat",
       daysLower: "{count} dari {total} hari lebih hemat",
       daysHigher: "{count} dari {total} hari lebih tinggi",
       allDaysEven: "Pengeluaran harian seimbang",
@@ -1267,27 +1377,27 @@ export const dictionaries: Record<Locale, Dictionary> = {
       coreSavingsTitle: "Tabungan Pokok",
       coreSavingsSubtitle: "Saldo riil di rekening bank & simpanan utama",
       totalCoreSavings: "Total Tabungan Pokok",
-      availableForGoals: "Bebas Dialokasikan",
-      allocatedToGoals: "Terkunci di Target",
+      availableForGoals: "Bebas dipakai",
+      allocatedToGoals: "Sudah di target",
       manageCoreSavings: "Kelola Saldo",
       // Budget Surplus
       budgetSurplusTitle: "Sisa Anggaran Mingguan",
       budgetSurplusSubtitle: "Hasil disiplin belanja mingguan yang berhasil dihemat",
       availableSurplus: "Sisa Belum Dialirkan",
-      totalSurplusEarned: "Total Penghematan Anggaran",
-      sweptSurplusTotal: "Sudah Dialirkan ke Target/Tabungan",
-      sweepSurplusButton: "Alirkan Sisa Anggaran",
-      sweepModalTitle: "Alirkan Sisa Anggaran",
+      totalSurplusEarned: "Total hemat",
+      sweptSurplusTotal: "sudah dipindah",
+      sweepSurplusButton: "Pindahkan ke tabungan",
+      sweepModalTitle: "Pindahkan sisa anggaran",
       sweepModalSubtitle: "Pindahkan sisa belanja yang dihemat ke tabungan pokok atau langsung ke target pilihanmu",
       sweepDestinationLabel: "Tujuan Aliran Dana",
       sweepToCoreSavings: "Tambahkan ke Tabungan Pokok",
       sweepToGoal: "Alokasikan Langsung ke Target",
       sweepSelectGoalPlaceholder: "Pilih target impian...",
-      confirmSweep: "Alirkan Sekarang",
+      confirmSweep: "Pindahkan",
       sweepSuccess: "Sisa anggaran berhasil dialirkan!",
       noSurplusAvailable: "Belum ada sisa anggaran yang dapat dialirkan saat ini.",
       // Ongoing Week
-      ongoingWeekLabel: "Minggu Berjalan (Estimasi)",
+      ongoingWeekLabel: "Perkiraan sisa minggu ini",
       ongoingWeekNotice: "Sisa anggaran minggu ini akan difinalisasi saat minggu berakhir.",
       // Goals
       goalsTitle: "Target Tabungan",
@@ -1303,8 +1413,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       goalEmojiLabel: "Ikon",
       goalNamePlaceholder: "cth. Dana Darurat, Liburan, Laptop",
       targetAmountPlaceholder: "cth. 1.000.000",
-      allocateButton: "Alokasikan Dana",
-      withdrawButton: "Tarik ke Saldo Bebas",
+      allocateButton: "Isi target",
+      withdrawButton: "Ambil dari target",
       allocateModalTitle: "Alokasikan ke Target",
       allocateModalSubtitle: "Pindahkan sebagian dari dana tersedia ke target ini",
       withdrawModalTitle: "Tarik dari Target",
@@ -1339,7 +1449,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       ],
       zeroSavingsEncouragement: "Belum ada tabungan terkumpul saat ini. Tetap rileks dan lanjutkan pencatatan harianmu!",
       allGoodPacingEncouragement: "Terus pertahankan ritme pengeluaran yang nyaman dan terencana.",
-      manualAdjustmentButton: "Kelola Saldo Pokok",
+      manualAdjustmentButton: "Catat setor atau tarik",
       manualAdjustmentTitle: "Kelola Saldo Tabungan Pokok",
       manualAdjustmentSubtitle: "Catat saldo awal rekening, tabungan riil, atau penyesuaian dana",
       adjustmentAmountLabel: "Nominal (Rp)",
@@ -1837,6 +1947,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       theme: "Theme",
       light: "Light",
       dark: "Dark",
+      palette: "Color",
+      paletteNames: { orange: "Orange", pink: "Pink", blue: "Blue", mono: "Monochrome", hybrid: "Hybrid" },
+      hybridHint: "Follows the clock: orange in the morning, blue at midday, pink at dusk, monochrome at night.",
+      hybridNow: "Now: {name}",
       currency: "Currency",
       quickAddAria: "Add expense",
       savings: "Savings",
@@ -1874,6 +1988,56 @@ export const dictionaries: Record<Locale, Dictionary> = {
       dayOfMonth: "days",
       noExpensesMonth: "No expenses recorded this month yet.",
       tabThisMonth: "This Month",
+    },
+    home: {
+      leftToday: "Left for today",
+      spentToday: "Spent today",
+      overToday: "Over today's share",
+      statusSafe: "On track. {amount} for {days} more days",
+      statusLastDay: "On track. Last day of this period",
+      statusOverToday: "Tomorrow's share becomes {amount} a day",
+      statusOverPeriod: "{amount} over budget",
+      noBudget: "No budget yet. Set one to get a daily number.",
+      setBudget: "Set budget",
+      spentOfBudgetWeek: "{spent} of {budget} this week",
+      spentOfBudgetMonth: "{spent} of {budget} this month",
+      budgetAmountLabel: "Budget amount",
+      subsDue: "{count} subscriptions due soon",
+      emailPending: "{count} email transactions waiting to be logged",
+      show: "View",
+      hide: "Hide",
+      insightsWeek: "This week in detail",
+      insightsMonth: "This month in detail",
+      navHome: "Home",
+      navSplit: "Split",
+      navLabel: "Main navigation",
+      searchToggle: "Search expenses",
+      searchLabel: "Search",
+      clearSearchAria: "Clear search",
+      editAria: "Edit {name}",
+      amountLabel: "Amount",
+      dateLabel: "Date",
+      nameLabel: "Name",
+      noteLabel: "Note (optional)",
+      deleteAsk: "Delete this expense? This can't be undone.",
+      deleteYes: "Yes, delete",
+      periodLabel: "Period",
+      menuPages: "Pages",
+      menuSettings: "Settings",
+      errorTitle: "Something went wrong",
+      errorBody: "This page failed to load. Your data is safe.",
+      retry: "Try again",
+      notFoundTitle: "Page not found",
+      notFoundBody: "This address doesn't exist in SakuTrack.",
+      backHome: "Back to home",
+      loading: "Loading",
+      saveFailed: "Couldn't save. Try again.",
+      signedOutHint: "Log in or continue as a guest to start tracking.",
+      tryAsGuest: "Start without an account",
+      welcomePoint1: "Log an expense in two taps",
+      welcomePoint2: "See what is left to spend today, every day",
+      welcomePoint3: "Split meals and subscriptions with friends",
+      minPassword: "At least 6 characters",
     },
     breakdown: {
       title: "Breakdown",
@@ -2089,6 +2253,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       trendTitle: "Daily Trend Comparison",
       viewBreakdown: "Breakdown",
       viewChart: "Chart",
+      daysLogged: "days logged",
       daysLower: "{count} of {total} days lower",
       daysHigher: "{count} of {total} days higher",
       allDaysEven: "Daily spend is even",
@@ -2173,27 +2338,27 @@ export const dictionaries: Record<Locale, Dictionary> = {
       coreSavingsTitle: "Core Savings",
       coreSavingsSubtitle: "Real bank deposits & primary financial reserve",
       totalCoreSavings: "Total Core Savings",
-      availableForGoals: "Free to Allocate",
-      allocatedToGoals: "Locked in Goals",
+      availableForGoals: "Free to use",
+      allocatedToGoals: "In goals",
       manageCoreSavings: "Manage Balance",
       // Budget Surplus
       budgetSurplusTitle: "Weekly Budget Surplus",
       budgetSurplusSubtitle: "Disciplined spending leftovers saved from past weeks",
       availableSurplus: "Available to Transfer",
-      totalSurplusEarned: "Total Saved from Budget",
-      sweptSurplusTotal: "Transferred to Goals/Savings",
-      sweepSurplusButton: "Transfer Surplus",
-      sweepModalTitle: "Transfer Budget Surplus",
+      totalSurplusEarned: "Total saved",
+      sweptSurplusTotal: "already moved",
+      sweepSurplusButton: "Move to savings",
+      sweepModalTitle: "Move budget surplus",
       sweepModalSubtitle: "Move your disciplined spending leftovers into core savings or directly into a goal",
       sweepDestinationLabel: "Destination",
       sweepToCoreSavings: "Deposit into Core Savings",
       sweepToGoal: "Allocate Directly to a Goal",
       sweepSelectGoalPlaceholder: "Choose destination goal...",
-      confirmSweep: "Transfer Now",
+      confirmSweep: "Move",
       sweepSuccess: "Surplus successfully transferred!",
       noSurplusAvailable: "No unspent budget surplus available right now.",
       // Ongoing Week
-      ongoingWeekLabel: "Current Week (Estimated)",
+      ongoingWeekLabel: "This week so far, estimated",
       ongoingWeekNotice: "Unspent budget from this week will be finalized once the week closes.",
       // Goals
       goalsTitle: "Savings Goals",
@@ -2209,8 +2374,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       goalEmojiLabel: "Icon",
       goalNamePlaceholder: "e.g. Emergency Fund, Vacation, New Laptop",
       targetAmountPlaceholder: "e.g. 1,000,000",
-      allocateButton: "Allocate Funds",
-      withdrawButton: "Withdraw to Available",
+      allocateButton: "Add to goal",
+      withdrawButton: "Take from goal",
       allocateModalTitle: "Allocate to Goal",
       allocateModalSubtitle: "Move funds from your available savings into this goal",
       withdrawModalTitle: "Withdraw from Goal",
@@ -2245,7 +2410,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       ],
       zeroSavingsEncouragement: "No savings accumulated yet. Keep calm and take it one day at a time!",
       allGoodPacingEncouragement: "Keep up your steady, mindful pacing.",
-      manualAdjustmentButton: "Manage Balance",
+      manualAdjustmentButton: "Record deposit or withdrawal",
       manualAdjustmentTitle: "Manage Core Savings Balance",
       manualAdjustmentSubtitle: "Record base bank deposits, initial balances, or adjustments",
       adjustmentAmountLabel: "Amount (Rp)",

@@ -1,58 +1,159 @@
 "use client";
 
-import { useState, useRef, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { logout } from "@/app/actions";
 import { setMultiSakuEnabled } from "@/app/saku/actions";
-import {
-  MoreVertical,
-  Archive,
-  Wallet,
-  ArrowLeftRight,
-  PiggyBank,
-  LogOut,
-  Languages,
-  Sun,
-  Moon,
-  Sparkles,
-  Receipt,
-  CreditCard,
-  Bell,
-  Coins,
-  Layers,
-  Mail,
-} from "lucide-react";
+import { Menu, Archive, CreditCard, Bell, Mail, LogOut, UserPlus, ChevronRight, Wallet } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { useTheme } from "@/utils/theme/context";
-import {
-  CURRENCY_CODES,
-  SUPPORTED_CURRENCIES,
-  SupportedCurrency,
-} from "@/utils/money";
+import { PALETTE_CHOICES, type PaletteChoice } from "@/utils/theme/palette";
+import { CURRENCY_CODES, SUPPORTED_CURRENCIES, SupportedCurrency } from "@/utils/money";
 import { FEATURE_MULTI_SAKU_ENABLED } from "@/utils/wallets/config";
-import NotificationSettingsModal from "./NotificationSettingsModal";
-import EmailSyncSettingsModal from "@/app/email-sync/EmailSyncSettingsModal";
 import { useAiAssistant } from "@/app/ai/AiAssistantProvider";
+import Dialog from "@/app/ui/Dialog";
+
+// Settings dialogs load the first time they are opened.
+const NotificationSettingsModal = dynamic(() => import("./NotificationSettingsModal"), { ssr: false });
+const EmailSyncSettingsModal = dynamic(() => import("@/app/email-sync/EmailSyncSettingsModal"), { ssr: false });
 
 interface UserMenuProps {
   isGuest?: boolean;
   onOpenUpgrade?: (mode?: "signup" | "login") => void;
   multiSakuEnabled?: boolean;
+  /** Only the dashboard passes this: the budget row edits the period on screen. */
+  budget?: { period: "week" | "month"; amount: number; onEdit: () => void };
 }
 
-export default function UserMenu({
-  isGuest = false,
-  onOpenUpgrade,
-  multiSakuEnabled,
-}: UserMenuProps) {
+const ROW =
+  "flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-ink hover:bg-paper active:bg-line";
+
+function Switch({
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onChange}
+      className="flex h-11 w-14 shrink-0 items-center justify-center disabled:opacity-50"
+    >
+      <span
+        className={`flex h-7 w-12 items-center rounded-full border p-0.5 transition-colors ${
+          checked ? "border-ok bg-ok" : "border-ink-soft bg-card"
+        }`}
+      >
+        <span
+          className={`h-5 w-5 rounded-full transition-transform ${checked ? "translate-x-5 bg-card" : "translate-x-0 bg-ink-soft"}`}
+        />
+      </span>
+    </button>
+  );
+}
+
+// Each swatch shows its palette's accent on its paper, so it reads the same in either mode.
+const SWATCH: Record<PaletteChoice, string> = {
+  orange: "#e8590c",
+  pink: "#d6336c",
+  blue: "#1f6feb",
+  mono: "#1c1c1c",
+  // The four colors in the order the day goes through them.
+  hybrid: "conic-gradient(#e8590c 0 25%, #1f6feb 0 50%, #d6336c 0 75%, #1c1c1c 0)",
+};
+
+function PalettePicker() {
+  const { t } = useTranslation();
+  const { palette, activePalette, setPalette } = useTheme();
+  const names = t.nav.paletteNames;
+  return (
+    <div className="px-3 py-2">
+      <div className="flex items-baseline justify-between gap-3 text-sm font-semibold text-ink">
+        <span id="menu-palette">{t.nav.palette}</span>
+        <span className="text-ink-soft">{names[palette]}</span>
+      </div>
+      <div role="group" aria-labelledby="menu-palette" className="mt-2 flex flex-wrap gap-2">
+        {PALETTE_CHOICES.map((choice) => {
+          const selected = palette === choice;
+          return (
+            <button
+              key={choice}
+              type="button"
+              aria-pressed={selected}
+              aria-label={names[choice]}
+              title={names[choice]}
+              onClick={() => setPalette(choice)}
+              className={`flex h-11 w-11 items-center justify-center rounded-full border-2 ${
+                selected ? "border-ink" : "border-transparent hover:border-line"
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className="h-8 w-8 rounded-full ring-1 ring-black/10 dark:ring-white/20"
+                style={{ background: SWATCH[choice] }}
+              />
+            </button>
+          );
+        })}
+      </div>
+      {palette === "hybrid" && (
+        <p className="mt-2 text-xs leading-relaxed text-ink-soft">
+          {t.nav.hybridHint} {t.nav.hybridNow.replace("{name}", names[activePalette])}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div role="group" aria-label={label} className="flex shrink-0 rounded-xl border border-line bg-paper p-1">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          aria-pressed={value === opt.value}
+          onClick={() => onChange(opt.value)}
+          className={`min-h-11 min-w-14 rounded-lg px-3 text-sm font-semibold ${
+            value === opt.value ? "bg-card text-ink" : "text-ink-soft hover:text-ink"
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function UserMenu({ isGuest = false, onOpenUpgrade, multiSakuEnabled, budget }: UserMenuProps) {
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
-  const [isEmailSyncModalOpen, setIsEmailSyncModalOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const { locale, setLocale, currency, setCurrency, t } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
+  const [openSettings, setOpenSettings] = useState<"notifications" | "email" | null>(null);
+  const [loadedSettings, setLoadedSettings] = useState({ notifications: false, email: false });
+  const { locale, setLocale, currency, setCurrency, t, formatCurrency } = useTranslation();
   const { theme, setTheme } = useTheme();
   const { isAiEnabled, setIsAiEnabled } = useAiAssistant();
   const [isPending, startTransition] = useTransition();
@@ -68,22 +169,26 @@ export default function UserMenu({
       ? document.cookie.includes("MULTI_SAKU_ENABLED=true")
       : false);
 
+  const askToSignIn = (mode: "signup" | "login", next?: string) => {
+    setIsOpen(false);
+    if (onOpenUpgrade) {
+      onOpenUpgrade(mode);
+    } else {
+      router.push(next ? `/login?next=${next}` : `/?auth=${mode}`);
+    }
+  };
+
   const handleToggleMultiSaku = () => {
     if (isGuest) {
-      setIsOpen(false);
-      if (onOpenUpgrade) {
-        onOpenUpgrade("signup");
-      } else {
-        router.push("/?auth=signup");
-      }
+      askToSignIn("signup");
       return;
     }
-
     const nextVal = !isMultiSaku;
     setLocalOverride(nextVal);
     startTransition(async () => {
       try {
         await setMultiSakuEnabled(nextVal);
+        router.refresh();
       } catch (err) {
         console.error("Failed to toggle multi saku:", err);
         setLocalOverride(null);
@@ -91,397 +196,168 @@ export default function UserMenu({
     });
   };
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+  const showSettings = (which: "notifications" | "email") => {
+    setIsOpen(false);
+    setLoadedSettings((prev) => ({ ...prev, [which]: true }));
+    setOpenSettings(which);
+  };
+
+  const pageLink = (href: string, label: string, Icon: typeof Archive) => {
+    const current = pathname.startsWith(href);
+    if (isGuest && href === "/subscriptions") {
+      return (
+        <button type="button" onClick={() => askToSignIn("login", href)} className={ROW}>
+          <Icon className="h-5 w-5 shrink-0 text-ink-soft" aria-hidden="true" />
+          <span className="flex-1">{label}</span>
+          <span className="text-xs font-medium text-ink-soft">{t.nav.loginBadge}</span>
+        </button>
+      );
     }
+    return (
+      <Link href={href} onClick={() => setIsOpen(false)} aria-current={current ? "page" : undefined} className={ROW}>
+        <Icon className="h-5 w-5 shrink-0 text-ink-soft" aria-hidden="true" />
+        <span className="flex-1">{label}</span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-ink-soft" aria-hidden="true" />
+      </Link>
+    );
+  };
 
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleKeyDown);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
-  const isArchive = pathname.startsWith("/archive");
-  const isTracker = pathname === "/";
-  const isCompare = pathname.startsWith("/compare");
-  const isSavings = pathname.startsWith("/savings");
+  const settingRow = "flex min-h-12 items-center justify-between gap-3 px-3 text-sm font-semibold text-ink";
 
   return (
-    <div className="relative" ref={menuRef}>
+    <>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen(true)}
         aria-label={t.nav.openMenu}
-        aria-expanded={isOpen}
-        className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
+        aria-haspopup="dialog"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink hover:bg-paper active:bg-line"
       >
-        <MoreVertical className="w-4 h-4" />
+        <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
 
-      {isOpen && (
-        <div
-          role="menu"
-          className="absolute right-0 top-10 z-50 w-56 rounded-2xl border border-zinc-200 bg-white/95 p-1.5 shadow-2xl shadow-zinc-950/10 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95 dark:shadow-black/80 animate-modal-in"
-        >
-          {/* Menu Items */}
-          <div className="flex flex-col gap-0.5">
-            {!isTracker && (
-              <Link
-                href="/"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
-              >
-                <Wallet className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
-                <span>{t.nav.tracker}</span>
-              </Link>
-            )}
-
-            {isMultiSaku && !pathname.startsWith("/saku") && (
-              <Link
-                href="/saku"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
-              >
-                <Layers className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
-                <span>{t.saku.title}</span>
-              </Link>
-            )}
-
-            {!isSavings && (
-              <Link
-                href="/savings"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
-              >
-                <PiggyBank className="w-3.5 h-3.5 text-teal-500 dark:text-teal-400" />
-                <span>{t.nav.savings}</span>
-              </Link>
-            )}
-
-            {!isArchive && (
-              <Link
-                href="/archive"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
-              >
-                <Archive className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-                <span>{t.nav.archive}</span>
-              </Link>
-            )}
-
-            {!isCompare && (
-              <Link
-                href="/compare"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
-              >
-                <ArrowLeftRight className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
-                <span>{t.nav.compare}</span>
-              </Link>
-            )}
-
-            {/* Split Bill Link */}
-            {isGuest ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  if (onOpenUpgrade) {
-                    onOpenUpgrade("login");
-                  } else {
-                    router.push("/login?next=/split");
-                  }
-                }}
-                className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer w-full text-left"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Receipt className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
-                  <span>{t.nav.splitBill}</span>
-                </div>
-                <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-md">
-                  {t.nav.loginBadge}
-                </span>
-              </button>
-            ) : (
-              <Link
-                href="/split"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
-              >
-                <Receipt className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
-                <span>{t.nav.splitBill}</span>
-              </Link>
-            )}
-
-            {/* Subscriptions Link */}
-            {isGuest ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  if (onOpenUpgrade) {
-                    onOpenUpgrade("login");
-                  } else {
-                    router.push("/login?next=/subscriptions");
-                  }
-                }}
-                className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer w-full text-left"
-              >
-                <div className="flex items-center gap-2.5">
-                  <CreditCard className="w-3.5 h-3.5 text-pink-500 dark:text-pink-400" />
-                  <span>{t.nav.subscriptions}</span>
-                </div>
-                <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-md">
-                  {t.nav.loginBadge}
-                </span>
-              </button>
-            ) : (
-              <Link
-                href="/subscriptions"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors"
-              >
-                <CreditCard className="w-3.5 h-3.5 text-pink-500 dark:text-pink-400" />
-                <span>{t.nav.subscriptions}</span>
-              </Link>
-            )}
-
-            {/* Notification & Reminder Settings */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false);
-                setIsNotificationModalOpen(true);
-              }}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer w-full text-left"
-            >
-              <Bell className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400" />
-              <span>{t.nav.notifications}</span>
+      <Dialog isOpen={isOpen} onClose={() => setIsOpen(false)} title={t.nav.openMenu} closeLabel={t.common.close}>
+        <div className="-mx-2 flex flex-col gap-4">
+          <section aria-labelledby="menu-pages">
+            <h3 id="menu-pages" className="px-3 pb-1 text-xs font-semibold text-ink-soft">
+              {t.home.menuPages}
+            </h3>
+            {pageLink("/subscriptions", t.nav.subscriptions, CreditCard)}
+            {pageLink("/archive", t.nav.archive, Archive)}
+            <button type="button" onClick={() => showSettings("notifications")} className={ROW}>
+              <Bell className="h-5 w-5 shrink-0 text-ink-soft" aria-hidden="true" />
+              <span className="flex-1">{t.nav.notifications}</span>
             </button>
-
-            {/* Email QRIS Sync Settings */}
             {!isGuest && (
+              <button type="button" onClick={() => showSettings("email")} className={ROW}>
+                <Mail className="h-5 w-5 shrink-0 text-ink-soft" aria-hidden="true" />
+                <span className="flex-1">{t.nav.emailSync}</span>
+              </button>
+            )}
+          </section>
+
+          <section aria-labelledby="menu-settings" className="border-t border-line pt-3">
+            <h3 id="menu-settings" className="px-3 pb-1 text-xs font-semibold text-ink-soft">
+              {t.home.menuSettings}
+            </h3>
+            {budget && (
               <button
                 type="button"
                 onClick={() => {
                   setIsOpen(false);
-                  setIsEmailSyncModalOpen(true);
+                  budget.onEdit();
                 }}
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white transition-colors cursor-pointer w-full text-left"
+                className={ROW}
               >
-                <Mail className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-                <span>{t.nav.emailSync}</span>
+                <Wallet className="h-5 w-5 shrink-0 text-ink-soft" aria-hidden="true" />
+                <span className="flex-1">{budget.period === "month" ? t.budget.monthlyModalTitle : t.budget.modalTitle}</span>
+                <span className="text-ink-soft">{budget.amount > 0 ? formatCurrency(budget.amount) : t.home.setBudget}</span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-ink-soft" aria-hidden="true" />
               </button>
             )}
-
-            <div className="my-1 border-t border-zinc-200/80 dark:border-zinc-800/80" />
-
-            {/* Language Selector */}
-            <div className="flex items-center justify-between px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-              <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                <Languages className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
-                <span className="text-[11px]">{t.nav.language}</span>
-              </span>
-              <div className="flex items-center rounded-lg bg-zinc-100 dark:bg-zinc-950 p-0.5 border border-zinc-200 dark:border-zinc-800 text-[10px]">
-                <button
-                  type="button"
-                  onClick={() => setLocale("id")}
-                  className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
-                    locale === "id"
-                      ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
-                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
-                  }`}
-                >
-                  ID
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLocale("en")}
-                  className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
-                    locale === "en"
-                      ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
-                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
-                  }`}
-                >
-                  EN
-                </button>
-              </div>
+            <div className={settingRow}>
+              <span>{t.nav.language}</span>
+              <Segmented
+                label={t.nav.language}
+                value={locale}
+                onChange={setLocale}
+                options={[
+                  { value: "id", label: "ID" },
+                  { value: "en", label: "EN" },
+                ]}
+              />
             </div>
-
-            {/* Theme Selector */}
-            <div className="flex items-center justify-between px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-              <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                {theme === "dark" ? (
-                  <Moon className="w-3.5 h-3.5 text-amber-400" />
-                ) : (
-                  <Sun className="w-3.5 h-3.5 text-amber-500" />
-                )}
-                <span className="text-[11px]">{t.nav.theme}</span>
-              </span>
-              <div className="flex items-center rounded-lg bg-zinc-100 dark:bg-zinc-950 p-0.5 border border-zinc-200 dark:border-zinc-800 text-[10px]">
-                <button
-                  type="button"
-                  onClick={() => setTheme("light")}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
-                    theme === "light"
-                      ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
-                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
-                  }`}
-                >
-                  <Sun className="w-2.5 h-2.5" />
-                  {t.nav.light}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTheme("dark")}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
-                    theme === "dark"
-                      ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white"
-                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
-                  }`}
-                >
-                  <Moon className="w-2.5 h-2.5" />
-                  {t.nav.dark}
-                </button>
-              </div>
+            <div className={settingRow}>
+              <span>{t.nav.theme}</span>
+              <Segmented
+                label={t.nav.theme}
+                value={theme}
+                onChange={setTheme}
+                options={[
+                  { value: "light", label: t.nav.light },
+                  { value: "dark", label: t.nav.dark },
+                ]}
+              />
             </div>
-
-            {/* Currency Selector */}
-            <div className="flex items-center justify-between px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-              <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                <Coins className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
-                <span className="text-[11px]">{t.nav.currency}</span>
-              </span>
+            <PalettePicker />
+            <div className={settingRow}>
+              <label htmlFor="menu-currency">{t.nav.currency}</label>
               <select
+                id="menu-currency"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as SupportedCurrency)}
-                aria-label={t.nav.currency}
-                className="rounded-lg bg-zinc-100 dark:bg-zinc-950 px-2 py-0.5 text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 cursor-pointer focus:outline-hidden"
+                className="min-h-11 rounded-xl border border-line bg-paper px-3 text-sm font-semibold text-ink"
               >
                 {CURRENCY_CODES.map((code) => {
                   const cfg = SUPPORTED_CURRENCIES[code];
                   return (
                     <option key={code} value={code}>
-                      {cfg.flag} {cfg.code} ({cfg.symbol})
+                      {cfg.code} ({cfg.symbol})
                     </option>
                   );
                 })}
               </select>
             </div>
-
-            {/* Multi-Saku Toggle */}
             {FEATURE_MULTI_SAKU_ENABLED && (
-              <div className="flex items-center justify-between px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                  <Layers className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
-                  <span className="text-[11px]">{t.saku.multiSakuMode}</span>
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={isMultiSaku}
-                  disabled={isPending}
-                  onClick={handleToggleMultiSaku}
-                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-50 ${
-                    isMultiSaku ? "bg-emerald-600" : "bg-zinc-200 dark:bg-zinc-800"
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                      isMultiSaku ? "translate-x-4" : "translate-x-0"
-                    }`}
-                  />
-                </button>
+              <div className={settingRow}>
+                <span>{t.saku.multiSakuMode}</span>
+                <Switch checked={isMultiSaku} onChange={handleToggleMultiSaku} label={t.saku.multiSakuMode} disabled={isPending} />
               </div>
             )}
-
-            {/* AI Mode Toggle */}
-            <div className="flex items-center justify-between px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-              <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-                <Sparkles className="w-3.5 h-3.5 text-teal-500 dark:text-teal-400" />
-                <span className="text-[11px]">{t.aiAdvisor.aiModeSwitch}</span>
-              </span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isAiEnabled}
-                onClick={() => setIsAiEnabled(!isAiEnabled)}
-                aria-label={t.aiAdvisor.aiModeSwitch}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                  isAiEnabled ? "bg-teal-600" : "bg-zinc-200 dark:bg-zinc-800"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                    isAiEnabled ? "translate-x-4" : "translate-x-0"
-                  }`}
-                />
-              </button>
+            <div className={settingRow}>
+              <span>{t.aiAdvisor.aiModeSwitch}</span>
+              <Switch checked={isAiEnabled} onChange={() => setIsAiEnabled(!isAiEnabled)} label={t.aiAdvisor.aiModeSwitch} />
             </div>
+          </section>
 
-            <div className="my-1 border-t border-zinc-200/80 dark:border-zinc-800/80" />
-
-            {/* Guest Auth Action */}
+          <section className="border-t border-line pt-3">
             {isGuest ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  if (onOpenUpgrade) {
-                    onOpenUpgrade("signup");
-                  } else {
-                    router.push("/?auth=signup");
-                  }
-                }}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
+              <button type="button" onClick={() => askToSignIn("signup")} className={`${ROW} text-accent-strong`}>
+                <UserPlus className="h-5 w-5 shrink-0" aria-hidden="true" />
                 <span>{t.guest.createAccountOrSignIn}</span>
               </button>
             ) : (
               <form action={logout}>
-                <button
-                  type="submit"
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-300 transition-colors cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
+                <button type="submit" className={`${ROW} text-danger`}>
+                  <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
                   <span>{t.nav.signOut}</span>
                 </button>
               </form>
             )}
-          </div>
+          </section>
         </div>
-      )}
+      </Dialog>
 
-      {/* PWA Notification & Reminder Settings Modal */}
-      <NotificationSettingsModal
-        isOpen={isNotificationModalOpen}
-        onClose={() => setIsNotificationModalOpen(false)}
-        isGuest={isGuest}
-      />
-
-      {/* Email QRIS Sync Settings Modal */}
-      {!isGuest && (
-        <EmailSyncSettingsModal
-          isOpen={isEmailSyncModalOpen}
-          onClose={() => setIsEmailSyncModalOpen(false)}
+      {loadedSettings.notifications && (
+        <NotificationSettingsModal
+          isOpen={openSettings === "notifications"}
+          onClose={() => setOpenSettings(null)}
+          isGuest={isGuest}
         />
       )}
-    </div>
+      {loadedSettings.email && !isGuest && (
+        <EmailSyncSettingsModal isOpen={openSettings === "email"} onClose={() => setOpenSettings(null)} />
+      )}
+    </>
   );
 }
-

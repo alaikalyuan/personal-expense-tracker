@@ -16,7 +16,6 @@ import {
   ChevronUp,
   Sparkles,
   Plus,
-  Wallet,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { SavingsHistoryItem, deleteSavingsHistoryEntry } from "@/app/actions";
@@ -238,11 +237,11 @@ export default function SavingsBalanceHistory({
           <h2 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
             <History className="w-4 h-4 text-teal-600 dark:text-teal-400" />
             <span>{t.savings.balanceHistoryTitle}</span>
-            <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
               {history.length}
             </span>
           </h2>
-          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
             {t.savings.balanceHistorySubtitle}
           </p>
         </div>
@@ -252,7 +251,8 @@ export default function SavingsBalanceHistory({
             <button
               type="button"
               onClick={() => setShowChart(!showChart)}
-              className={`flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-2xs ${
+              aria-expanded={showChart}
+              className={`flex min-h-11 items-center gap-1 text-sm font-medium px-3 rounded-xl ${
                 showChart
                   ? "bg-teal-50 border border-teal-200 text-teal-700 dark:bg-teal-950/50 dark:border-teal-800 dark:text-teal-300"
                   : "bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300"
@@ -269,23 +269,15 @@ export default function SavingsBalanceHistory({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={onOpenAdjustmentModal}
-            className="flex items-center gap-1 text-[11px] font-semibold text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer active:scale-95 shadow-2xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>{t.common.add}</span>
-          </button>
         </div>
       </div>
 
       {/* Main History Container Card */}
       <div className="rounded-3xl border border-zinc-200/80 bg-white p-4 sm:p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/60 flex flex-col gap-4">
         {/* Quick Summary Inflow / Outflow / Current Balance */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div className="rounded-2xl border border-teal-100 bg-teal-50/50 p-2.5 dark:border-teal-900/30 dark:bg-teal-950/20">
-            <span className="text-[10px] font-medium text-teal-700 dark:text-teal-400 flex items-center gap-1">
+            <span className="text-xs font-medium text-teal-700 dark:text-teal-400 flex items-center gap-1">
               <ArrowDownLeft className="w-3 h-3 text-teal-500" />
               {t.savings.totalInflow}
             </span>
@@ -295,7 +287,7 @@ export default function SavingsBalanceHistory({
           </div>
 
           <div className="rounded-2xl border border-rose-100 bg-rose-50/50 p-2.5 dark:border-rose-900/30 dark:bg-rose-950/20">
-            <span className="text-[10px] font-medium text-rose-700 dark:text-rose-400 flex items-center gap-1">
+            <span className="text-xs font-medium text-rose-700 dark:text-rose-400 flex items-center gap-1">
               <ArrowUpRight className="w-3 h-3 text-rose-500" />
               {t.savings.totalOutflow}
             </span>
@@ -304,26 +296,17 @@ export default function SavingsBalanceHistory({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50 p-2.5 dark:border-zinc-800 dark:bg-zinc-800/50">
-            <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400 flex items-center gap-1">
-              <Wallet className="w-3 h-3 text-zinc-500" />
-              {t.savings.currentBalance}
-            </span>
-            <p className="mt-0.5 text-xs font-bold text-zinc-900 dark:text-white truncate">
-              {formatCurrency(coreSavings)}
-            </p>
-          </div>
         </div>
 
         {/* Visual Balance Progression Chart (Collapsible / Expandable) */}
         {showChart && chartSvgData && (
           <div className="rounded-2xl border border-zinc-200/80 bg-linear-to-b from-teal-50/40 via-white to-zinc-50/30 p-3.5 dark:border-zinc-800 dark:bg-linear-to-b dark:from-teal-950/20 dark:via-zinc-900 dark:to-zinc-950 animate-fade-in">
             <div className="flex items-center justify-between text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
-              <span className="flex items-center gap-1 text-[11px]">
+              <span className="flex items-center gap-1 text-xs">
                 <TrendingUp className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                 {t.savings.balanceTrendTitle}
               </span>
-              <span className="text-[10px] text-zinc-500 font-normal">
+              <span className="text-xs text-zinc-500 font-normal">
                 {t.savings.balanceTrendSubtitle}
               </span>
             </div>
@@ -367,7 +350,7 @@ export default function SavingsBalanceHistory({
               </svg>
             </div>
 
-            <div className="flex justify-between items-center text-[10px] text-zinc-500 mt-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-800">
+            <div className="flex justify-between items-center text-xs text-zinc-500 mt-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-800">
               <span>
                 {formatDate(chartPoints[0].date, "d MMM yyyy")}
               </span>
@@ -396,7 +379,8 @@ export default function SavingsBalanceHistory({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveFilter(tab.id)}
-                className={`flex-1 py-1 px-2 text-[10px] font-semibold rounded-xl transition-all cursor-pointer ${
+                aria-pressed={activeFilter === tab.id}
+                className={`flex-1 min-h-11 px-2 text-sm font-semibold rounded-xl ${
                   activeFilter === tab.id
                     ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
                     : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -416,15 +400,17 @@ export default function SavingsBalanceHistory({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t.savings.searchHistoryPlaceholder}
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50/70 pl-8 pr-7 py-1.5 text-xs text-zinc-800 placeholder:text-zinc-400 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 transition-colors"
+                aria-label={t.savings.searchHistoryPlaceholder}
+                className="w-full min-h-11 rounded-xl border border-zinc-200 bg-zinc-50/70 pl-8 pr-11 text-base text-zinc-800 placeholder:text-zinc-400 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 transition-colors"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 p-0.5 cursor-pointer"
+                  aria-label={t.home.clearSearchAria}
+                  className="absolute right-0 flex h-11 w-11 items-center justify-center text-ink-soft hover:text-ink"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -434,13 +420,13 @@ export default function SavingsBalanceHistory({
         {/* History Transactions List */}
         {filteredHistory.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/60 p-6 text-center dark:border-zinc-800 dark:bg-zinc-950/40">
-            <History className="w-8 h-8 text-zinc-300 dark:text-zinc-600 mx-auto mb-2" />
+            <History className="w-8 h-8 text-zinc-300 dark:text-zinc-400 mx-auto mb-2" />
             <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
               {searchQuery.trim() || activeFilter !== "all"
                 ? t.savings.noMatchingHistory
                 : t.savings.noHistoryTitle}
             </p>
-            <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
               {searchQuery.trim() || activeFilter !== "all"
                 ? t.expenses.clearSearch
                 : t.savings.noHistoryDesc}
@@ -460,7 +446,7 @@ export default function SavingsBalanceHistory({
               <button
                 type="button"
                 onClick={onOpenAdjustmentModal}
-                className="mt-3.5 inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-all cursor-pointer shadow-xs active:scale-95"
+                className="mt-3.5 inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-accent px-4 text-sm font-bold text-on-accent hover:brightness-95"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>{t.savings.addFirstEntry}</span>
@@ -492,14 +478,14 @@ export default function SavingsBalanceHistory({
                           {item.note || cfg.defaultLabel}
                         </span>
                         {item.goalName && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 font-medium shrink-0 flex items-center gap-1">
+                          <span className="text-xs px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 font-medium shrink-0 flex items-center gap-1">
                             <span>{item.goalEmoji || "🎯"}</span>
                             <span className="truncate max-w-[120px]">{item.goalName}</span>
                           </span>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                         <span>{formatDate(item.createdAt, "d MMM yyyy, HH:mm")}</span>
                         <span>•</span>
                         <span className={`font-medium ${cfg.textColor}`}>{cfg.badge}</span>
@@ -513,7 +499,7 @@ export default function SavingsBalanceHistory({
                       <p className={`text-xs ${cfg.amountColor}`}>
                         {cfg.prefix}{formatCurrency(Number(item.amount || 0))}
                       </p>
-                      <p className="text-[10px] text-zinc-500 font-medium">
+                      <p className="text-xs text-zinc-500 font-medium">
                         {t.savings.runningBalance}: {formatCurrency(Number(item.balanceAfter || 0))}
                       </p>
                     </div>
@@ -525,7 +511,7 @@ export default function SavingsBalanceHistory({
                       onClick={() => handleDeleteEntry(item)}
                       title={t.savings.deleteHistoryButton}
                       aria-label={t.savings.deleteHistoryButton}
-                      className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 transition-opacity cursor-pointer disabled:opacity-50"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft hover:bg-paper hover:text-danger disabled:opacity-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

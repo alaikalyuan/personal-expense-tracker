@@ -69,7 +69,7 @@ export default function SakuSwitcher({
         aria-expanded={isOpen}
         aria-haspopup="true"
         disabled={isPending}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 text-xs font-bold text-zinc-800 dark:text-zinc-200 shadow-2xs hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+        className="flex min-h-11 items-center gap-1.5 px-3 rounded-xl border border-line bg-card text-sm font-bold text-ink hover:bg-paper disabled:opacity-60"
       >
         <span className="text-sm shrink-0">
           {isAll ? "🌐" : currentWallet?.emoji || "👛"}
@@ -83,13 +83,13 @@ export default function SakuSwitcher({
       {isOpen && (
         <div
           role="menu"
-          className="absolute left-0 top-11 z-50 w-60 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-1.5 shadow-xl shadow-zinc-950/10 dark:shadow-black/70 backdrop-blur-md animate-modal-in"
+          className="absolute left-0 top-11 z-50 w-60 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 p-1.5 shadow-xl shadow-zinc-950/10 dark:shadow-black/70 animate-modal-in"
         >
           {/* All Sakus Option */}
           <button
             type="button"
             onClick={() => handleSelect("all")}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-left ${
+            className={`w-full flex items-center justify-between min-h-11 px-3 rounded-xl text-sm font-semibold text-left ${
               isAll
                 ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                 : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
@@ -113,7 +113,7 @@ export default function SakuSwitcher({
                   key={w.id}
                   type="button"
                   onClick={() => handleSelect(w.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-left ${
+                  className={`w-full flex items-center justify-between min-h-11 px-3 rounded-xl text-sm font-semibold text-left ${
                     isSelected
                       ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                       : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
@@ -125,7 +125,7 @@ export default function SakuSwitcher({
                       <div className="truncate text-zinc-900 dark:text-zinc-100">
                         {w.name}
                       </div>
-                      <div className="text-[10px] text-zinc-400 font-normal">
+                      <div className="text-xs text-zinc-400 font-normal">
                         {w.kind === "spending"
                           ? w.weekly_budget
                             ? `Budget: ${formatCurrency(w.weekly_budget)}`

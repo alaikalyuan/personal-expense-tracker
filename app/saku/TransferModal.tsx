@@ -6,6 +6,7 @@ import { useTranslation } from "@/utils/i18n/context";
 import { transferBetweenWallets } from "./actions";
 import { WalletBalance } from "@/utils/wallets/server";
 import { getTodayString } from "@/utils/date";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -75,7 +76,7 @@ export default function TransferModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+    <ModalOverlay className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fade-in">
       <div className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800">
           <div>
@@ -202,6 +203,6 @@ export default function TransferModal({
           </div>
         </form>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

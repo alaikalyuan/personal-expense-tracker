@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import type { CategoryKey } from "@/utils/i18n/dictionaries";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface PendingTransactionsBannerProps {
   initialTransactions: PendingEmailTransaction[];
@@ -115,11 +116,11 @@ export default function PendingTransactionsBanner({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400 truncate">
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 truncate">
                   {t.emailSync.bannerTitle}
                 </span>
                 {transactions.length > 1 && (
-                  <span className="shrink-0 rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
+                  <span className="shrink-0 rounded-full bg-amber-200/80 px-2 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
                     {t.emailSync.bannerMore.replace("{count}", String(transactions.length - 1))}
                   </span>
                 )}
@@ -134,7 +135,7 @@ export default function PendingTransactionsBanner({
             <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
               {formatMoney(currentTx.amount, (currentTx.currency as any) || "IDR")}
             </span>
-            <div className="text-[10px] text-zinc-500 dark:text-zinc-400">
+            <div className="text-xs text-zinc-500 dark:text-zinc-400">
               {currentTx.transaction_date}
               {currentTx.transaction_time ? ` • ${currentTx.transaction_time.slice(0, 5)}` : ""}
             </div>
@@ -183,7 +184,7 @@ export default function PendingTransactionsBanner({
             type="button"
             onClick={() => handleQuickApprove(currentTx)}
             disabled={isPending && actionLoadingId === currentTx.id}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 py-2 px-2 text-xs font-bold text-white shadow-xs hover:bg-amber-700 active:scale-97 disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600 cursor-pointer"
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-accent py-2 px-2 text-xs font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-97 disabled:opacity-50 cursor-pointer"
           >
             {isPending && actionLoadingId === currentTx.id ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
@@ -197,8 +198,8 @@ export default function PendingTransactionsBanner({
 
       {/* Review & Edit Modal */}
       {selectedTx && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+        <ModalOverlay
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           onClick={() => setSelectedTx(null)}
         >
           <div
@@ -223,7 +224,7 @@ export default function PendingTransactionsBanner({
 
             <div className="my-4 space-y-3">
               <div>
-                <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   {t.emailSync.merchantLabel}
                 </label>
                 <div className="mt-1 font-bold text-base text-zinc-900 dark:text-zinc-100">
@@ -232,7 +233,7 @@ export default function PendingTransactionsBanner({
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   {t.emailSync.amountLabel}
                 </label>
                 <div className="mt-1 font-extrabold text-xl text-emerald-600 dark:text-emerald-400">
@@ -241,7 +242,7 @@ export default function PendingTransactionsBanner({
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   {t.emailSync.categoryLabel}
                 </label>
                 <select
@@ -259,7 +260,7 @@ export default function PendingTransactionsBanner({
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   {t.emailSync.sakuLabel}
                 </label>
                 <select
@@ -276,10 +277,10 @@ export default function PendingTransactionsBanner({
                 </select>
               </div>
 
-              <div className="rounded-xl bg-zinc-50 p-2.5 text-[11px] text-zinc-500 dark:bg-zinc-800/60 dark:text-zinc-400 space-y-1">
+              <div className="rounded-xl bg-zinc-50 p-2.5 text-xs text-zinc-500 dark:bg-zinc-800/60 dark:text-zinc-400 space-y-1">
                 <div>📅 {t.emailSync.dateLabel}: {selectedTx.transaction_date}</div>
                 {selectedTx.reference_id && (
-                  <div className="font-mono text-[10px] truncate">
+                  <div className="font-mono text-xs truncate">
                     {t.emailSync.refLabel}: {selectedTx.reference_id}
                   </div>
                 )}
@@ -299,14 +300,14 @@ export default function PendingTransactionsBanner({
                 type="button"
                 onClick={handleModalConfirm}
                 disabled={isPending}
-                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-600 cursor-pointer"
               >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                 <span>{t.emailSync.approveBtn}</span>
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </>
   );

@@ -76,7 +76,7 @@ export default function ArchiveWeekList({ weeks, wallets = [] }: ArchiveWeekList
   if (weeks.length === 0) {
     return (
       <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-xs dark:border-zinc-800 dark:bg-zinc-900/40">
-        <Calendar className="w-8 h-8 text-zinc-400 dark:text-zinc-600 mx-auto mb-2" />
+        <Calendar className="w-8 h-8 text-zinc-400 dark:text-zinc-400 mx-auto mb-2" />
         <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-300">{t.archive.noArchivedWeeks}</p>
         <p className="text-xs text-zinc-500 mt-1">
           {t.archive.noArchivedDescription}
@@ -110,7 +110,7 @@ export default function ArchiveWeekList({ weeks, wallets = [] }: ArchiveWeekList
           )}
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1">
+        <div className="flex items-center justify-between text-xs text-zinc-500 px-1">
           <span>
             {filteredWeeks.length} {filteredWeeks.length === 1 ? t.archive.weekCount : t.archive.weeksCount}
             {searchQuery && ` ${t.archive.weeksMatching} "${searchQuery}"`}
@@ -159,11 +159,11 @@ export default function ArchiveWeekList({ weeks, wallets = [] }: ArchiveWeekList
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                  <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                     <span>{week.expenses.length} {week.expenses.length === 1 ? t.archive.entryCount : t.archive.entriesCount}</span>
                     {week.topCategory && week.topCategory !== "None" && (
                       <>
-                        <span className="text-zinc-300 dark:text-zinc-600">•</span>
+                        <span className="text-zinc-300 dark:text-zinc-400">•</span>
                         <span className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400 truncate">
                           <Tag className="w-2.5 h-2.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
                           {getCategoryLabel(week.topCategory)}

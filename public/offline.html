@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fff8ec" />
+    <title>Tidak ada koneksi : SakuTrack</title>
+    <style>
+      :root {
+        --paper: #fff8ec;
+        --card: #ffffff;
+        --ink: #2b2118;
+        --ink-soft: #6b5a48;
+        --line: #ead9bd;
+        --accent: #e8590c;
+        --on-accent: #17110b;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #1a130d;
+          --card: #261d15;
+          --ink: #f6ebdd;
+          --ink-soft: #c4b29b;
+          --line: #3d3024;
+          --accent: #f98229;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      main {
+        width: 100%;
+        max-width: 28rem;
+        margin: 0 auto;
+        padding: 1.5rem;
+      }
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: 1.5rem;
+      }
+      p {
+        margin: 0 0 0.75rem;
+        font-size: 1rem;
+        line-height: 1.5;
+        color: var(--ink-soft);
+      }
+      button {
+        min-height: 44px;
+        margin-top: 0.5rem;
+        padding: 0 1.25rem;
+        border: 0;
+        border-radius: 12px;
+        background: var(--accent);
+        color: var(--on-accent);
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button:hover {
+        filter: brightness(0.95);
+      }
+      button:active {
+        filter: brightness(0.9);
+      }
+      button:focus-visible {
+        outline: 2px solid var(--ink);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Tidak ada koneksi</h1>
+      <p>SakuTrack butuh internet untuk memuat dan menyimpan catatanmu. Data yang sudah tersimpan tetap aman.</p>
+      <p lang="en">You are offline. SakuTrack needs a connection to load and save your entries. What you already saved is safe.</p>
+      <button type="button" onclick="location.reload()">Coba lagi</button>
+    </main>
+  </body>
+</html>

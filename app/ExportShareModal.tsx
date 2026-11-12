@@ -14,6 +14,7 @@ import {
 import { useTranslation } from "@/utils/i18n/context";
 import { ExpenseItem } from "./ExpenseList";
 import { parseISO } from "date-fns";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface ExportShareModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export default function ExportShareModal({
   isOpen,
   onClose,
   expenses,
-  weeklyBudget = 500000,
+  weeklyBudget = 0,
   startDateStr,
   endDateStr,
   wallets = [],
@@ -289,8 +290,8 @@ export default function ExportShareModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in"
+    <ModalOverlay
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -305,7 +306,7 @@ export default function ExportShareModal({
               <Share2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
               {t.exportShare.modalTitle}
             </h3>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
               {t.exportShare.modalSubtitle}
             </p>
           </div>
@@ -353,7 +354,7 @@ export default function ExportShareModal({
             <div className="flex flex-col gap-3">
               {/* WhatsApp Message Preview Box */}
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-50/40 dark:border-emerald-500/20 dark:bg-emerald-950/20 p-3.5">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-emerald-200/50 dark:border-emerald-800/40 text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold uppercase tracking-wider">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-emerald-200/50 dark:border-emerald-800/40 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
                   <span>Pratinjau Pesan / Preview</span>
                   {summary.dateRangeText && (
                     <span className="flex items-center gap-1">
@@ -392,7 +393,7 @@ export default function ExportShareModal({
                 <button
                   type="button"
                   onClick={handleShareWhatsApp}
-                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 px-3 text-xs font-semibold active:scale-98 transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-600 text-white py-2.5 px-3 text-xs font-semibold active:scale-98 transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
                 >
                   <ExternalLink className="w-4 h-4" />
                   <span>{t.exportShare.openWhatsApp}</span>
@@ -411,14 +412,14 @@ export default function ExportShareModal({
                     <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                       {t.exportShare.csvTitle}
                     </h4>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
                       {t.exportShare.csvSubtitle}
                     </p>
                   </div>
                 </div>
 
                 {/* CSV File Info & Columns */}
-                <div className="mt-3 pt-3 border-t border-zinc-200/80 dark:border-zinc-800/80 text-[11px] flex flex-col gap-1.5">
+                <div className="mt-3 pt-3 border-t border-zinc-200/80 dark:border-zinc-800/80 text-xs flex flex-col gap-1.5">
                   <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
                     <span>{t.archive.entryCount || "Total"}:</span>
                     <span className="font-semibold text-zinc-900 dark:text-zinc-100">
@@ -433,7 +434,7 @@ export default function ExportShareModal({
                   </div>
                   <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
                     <span>Format:</span>
-                    <span className="font-mono text-[10px] text-zinc-500">
+                    <span className="font-mono text-xs text-zinc-500">
                       UTF-8 BOM (.csv)
                     </span>
                   </div>
@@ -457,7 +458,7 @@ export default function ExportShareModal({
           )}
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }
 

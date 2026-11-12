@@ -1,3 +1,4 @@
+import { addDays as addDaysFn } from "date-fns";
 import { createClient } from "@/utils/supabase/server";
 import UserMenu from "@/app/UserMenu";
 import AiHeaderButton from "@/app/ai/AiHeaderButton";
@@ -117,9 +118,18 @@ export default async function ComparePage() {
     0
   );
 
-  const diffAmount = thisTotal - lastTotal;
+  // Like-for-like: compare with last week only up to the same weekday as today,
+  // so a half-finished week is never measured against a full one.
+  const dayIndexToday = ((now.getDay() + 6) % 7) + 1;
+  const lastWeekCutoffStr = format(addDaysFn(lastWeekStart, dayIndexToday - 1), "yyyy-MM-dd");
+  const lastTotalSameDays = (lastWeekExpenses || []).reduce(
+    (acc, curr) => (String(curr.spent_at).slice(0, 10) <= lastWeekCutoffStr ? acc + Number(curr.amount) : acc),
+    0
+  );
+
+  const diffAmount = thisTotal - lastTotalSameDays;
   const percentDiff =
-    lastTotal > 0 ? Math.round(((thisTotal - lastTotal) / lastTotal) * 100) : 0;
+    lastTotalSameDays > 0 ? Math.round(((thisTotal - lastTotalSameDays) / lastTotalSameDays) * 100) : 0;
   const isSaving = diffAmount < 0;
   const isNeutral = diffAmount === 0;
 
@@ -239,12 +249,12 @@ export default async function ComparePage() {
       <div className="flex justify-between items-center pt-2">
         <div>
           <h1 className="font-bold tracking-tight text-lg">{t.compare.title}</h1>
-          <p className="text-[11px] text-zinc-400">
+          <p className="text-xs text-zinc-400">
             {formatDateServer(thisWeekStart, "MMM d", locale)} – {formatDateServer(thisWeekEnd, "MMM d", locale)} {t.common.vs}{" "}
             {formatDateServer(lastWeekStart, "MMM d", locale)} – {formatDateServer(lastWeekEnd, "MMM d", locale)}
           </p>
           {activeWallet && (
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 mt-1">
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-700 dark:text-emerald-300 mt-1">
               <span>{activeWallet.emoji}</span>
               <span>{activeWallet.name}</span>
             </div>
@@ -257,28 +267,32 @@ export default async function ComparePage() {
       </div>
 
       {/* Week-over-Week Spend Hero Card */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-linear-to-b dark:from-zinc-900 dark:to-zinc-950 dark:shadow-sm">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+      <div className="receipt rounded-2xl bg-card p-5">
+        <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
           {t.compare.wowCardTitle}
         </p>
 
         <div className="mt-3 grid grid-cols-2 gap-4">
           <div>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">{t.compare.thisWeek}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">{t.compare.thisWeek}</p>
             <p className="mt-0.5 text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
               {formatCurrencyServer(thisTotal, currency)}
             </p>
-            <p className="text-[10px] text-zinc-500 mt-0.5">
+            <p className="text-xs text-zinc-500 mt-0.5">
               {locale === "id" ? `Hari ke-${todayDayIndex} dari 7` : `Day ${todayDayIndex} of 7`}
             </p>
           </div>
 
           <div className="border-l border-zinc-200/80 pl-4 dark:border-zinc-800/80">
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">{t.compare.lastWeek}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">{t.compare.lastWeek}</p>
             <p className="mt-0.5 text-2xl font-bold tracking-tight text-zinc-700 dark:text-zinc-300">
-              {formatCurrencyServer(lastTotal, currency)}
+              {formatCurrencyServer(lastTotalSameDays, currency)}
             </p>
-            <p className="text-[10px] text-zinc-500 mt-0.5">{t.compare.fullSevenDays}</p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {locale === "id" ? `Sampai hari ke-${dayIndexToday}` : `Through day ${dayIndexToday}`}
+              {" · "}
+              {t.compare.fullSevenDays}: {formatCurrencyServer(lastTotal, currency)}
+            </p>
           </div>
         </div>
 
@@ -302,7 +316,7 @@ export default async function ComparePage() {
               </span>
             )}
           </div>
-          <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
             {diffAmount < 0 ? "-" : diffAmount > 0 ? "+" : ""}
             {formatCurrencyServer(Math.abs(diffAmount), currency)}
           </span>
@@ -310,31 +324,31 @@ export default async function ComparePage() {
       </div>
 
       {/* Burn Rate Pacing Card */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs backdrop-blur-xs dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-3">
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">
+        <h3 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-3">
           {t.compare.burnRateTitle}
         </h3>
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-zinc-800/60 dark:bg-zinc-950/60">
-            <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.compare.currentDailyAvg}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t.compare.currentDailyAvg}</p>
             <p className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-100">
               {formatCurrencyServer(Math.round(thisDailyAvg), currency)}
             </p>
-            <p className="text-[9px] text-zinc-500 mt-0.5">
+            <p className="text-xs text-zinc-500 mt-0.5">
               {t.compare.basedOnElapsedDays.replace("{days}", String(todayDayIndex))}
             </p>
           </div>
 
           <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-zinc-800/60 dark:bg-zinc-950/60">
-            <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{t.compare.lastWeekDailyAvg}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t.compare.lastWeekDailyAvg}</p>
             <p className="mt-1 text-sm font-bold text-zinc-700 dark:text-zinc-300">
               {formatCurrencyServer(Math.round(lastDailyAvg), currency)}
             </p>
-            <p className="text-[9px] text-zinc-500 mt-0.5">{t.compare.acrossAllDays}</p>
+            <p className="text-xs text-zinc-500 mt-0.5">{t.compare.acrossAllDays}</p>
           </div>
         </div>
 
-        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 text-center mt-3">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-3">
           {thisDailyAvg <= lastDailyAvg ? (
             <span className="text-emerald-600 dark:text-emerald-400 font-medium">
               {t.compare.pacingSaving.replace(
@@ -364,6 +378,7 @@ export default async function ComparePage() {
           lastWeek: t.compare.lastWeek,
           viewBreakdown: t.compare.viewBreakdown,
           viewChart: t.compare.viewChart,
+          daysLogged: t.compare.daysLogged,
           daysLower: t.compare.daysLower,
           daysHigher: t.compare.daysHigher,
           allDaysEven: t.compare.allDaysEven,
@@ -379,8 +394,8 @@ export default async function ComparePage() {
       />
 
       {/* Category Delta Comparison */}
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs backdrop-blur-xs dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-3">
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">
+        <h3 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-3">
           {t.compare.categoryChangesTitle}
         </h3>
 
@@ -409,9 +424,9 @@ export default async function ComparePage() {
                       <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-200">
                         {getCategoryLabelServer(cat.category, locale)}
                       </p>
-                      <p className="text-[10px] text-zinc-500">
+                      <p className="text-xs text-zinc-500">
                         {formatCurrencyServer(cat.thisAmt, currency)}{" "}
-                        <span className="text-zinc-400 dark:text-zinc-600">{t.common.vs}</span>{" "}
+                        <span className="text-zinc-400 dark:text-zinc-400">{t.common.vs}</span>{" "}
                         {formatCurrencyServer(cat.lastAmt, currency)}
                       </p>
                     </div>
@@ -435,11 +450,11 @@ export default async function ComparePage() {
                     )}
                     {cat.pct !== null && (
                       <p
-                        className={`text-[9px] ${
+                        className={`text-xs ${
                           hasDecreased
-                            ? "text-emerald-600 dark:text-emerald-500"
+                            ? "text-emerald-600 dark:text-emerald-400"
                             : hasIncreased
-                            ? "text-rose-600 dark:text-rose-500"
+                            ? "text-rose-600 dark:text-rose-400"
                             : "text-zinc-500"
                         }`}
                       >

@@ -31,39 +31,19 @@ export default function CadenceToggle({
     }
   };
 
+  const segment = (active: boolean) =>
+    `flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold ${
+      active ? "bg-card text-ink" : "text-ink-soft hover:text-ink"
+    }`;
+
   return (
-    <div
-      role="group"
-      aria-label="Dashboard Period Switcher"
-      className="flex items-center rounded-xl bg-zinc-100 p-1 border border-zinc-200/80 dark:bg-zinc-900/90 dark:border-zinc-800"
-    >
-      {/* Weekly Pill */}
-      <button
-        type="button"
-        onClick={() => handleSwitch("week")}
-        aria-pressed={currentCadence === "week"}
-        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-          currentCadence === "week"
-            ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white dark:shadow-sm"
-            : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-        }`}
-      >
-        <Calendar className="w-3.5 h-3.5 shrink-0" />
+    <div role="group" aria-label={t.home.periodLabel} className="flex rounded-xl border border-line bg-paper p-1">
+      <button type="button" onClick={() => handleSwitch("week")} aria-pressed={currentCadence === "week"} className={segment(currentCadence === "week")}>
+        <Calendar className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span>{t.dashboard.cadenceWeek}</span>
       </button>
-
-      {/* Monthly Pill */}
-      <button
-        type="button"
-        onClick={() => handleSwitch("month")}
-        aria-pressed={currentCadence === "month"}
-        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-          currentCadence === "month"
-            ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-white dark:shadow-sm"
-            : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-        }`}
-      >
-        <CalendarRange className="w-3.5 h-3.5 shrink-0" />
+      <button type="button" onClick={() => handleSwitch("month")} aria-pressed={currentCadence === "month"} className={segment(currentCadence === "month")}>
+        <CalendarRange className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span>{t.dashboard.cadenceMonth}</span>
       </button>
     </div>

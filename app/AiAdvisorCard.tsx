@@ -106,11 +106,11 @@ export default function AiAdvisorCard({
               <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                 {t.aiAdvisor.cardTitle}
               </h4>
-              <span className="rounded-full bg-teal-500/15 px-2 py-0.5 text-[9px] font-semibold text-teal-600 dark:bg-teal-500/25 dark:text-teal-400">
+              <span className="rounded-full bg-teal-500/15 px-2 py-0.5 text-xs font-semibold text-teal-600 dark:bg-teal-500/25 dark:text-teal-400">
                 {t.aiAdvisor.cardBadge}
               </span>
             </div>
-            <p className="mt-0.5 text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-1">
+            <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400 line-clamp-1">
               {teaserText}
             </p>
           </div>
@@ -134,7 +134,7 @@ export default function AiAdvisorCard({
               key={idx}
               type="button"
               onClick={() => handleOpen(chip)}
-              className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 dark:bg-zinc-800/80 hover:bg-white dark:hover:bg-zinc-800 border border-teal-500/20 hover:border-teal-500/40 text-[11px] font-medium text-teal-700 dark:text-teal-300 transition-all cursor-pointer shadow-2xs"
+              className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 dark:bg-zinc-800/80 hover:bg-white dark:hover:bg-zinc-800 border border-teal-500/20 hover:border-teal-500/40 text-xs font-medium text-teal-700 dark:text-teal-300 transition-all cursor-pointer shadow-2xs"
             >
               <Sparkles className="w-3 h-3 text-teal-500" />
               <span>{chip}</span>

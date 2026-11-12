@@ -11,4 +11,4 @@
  * 
  * - Set to `true` to seamlessly re-enable the Multi-Saku system anytime.
  */
-export const FEATURE_MULTI_SAKU_ENABLED = false;
+export const FEATURE_MULTI_SAKU_ENABLED = true;

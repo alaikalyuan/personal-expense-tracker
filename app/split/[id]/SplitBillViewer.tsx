@@ -28,6 +28,7 @@ import {
 } from "@/utils/splitCalculator";
 import { toggleParticipantPaid, deleteSplitBill } from "@/app/split/actions";
 import { useTranslation } from "@/utils/i18n/context";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface SplitBillViewerProps {
   bill: SplitBillRecord;
@@ -122,17 +123,25 @@ export default function SplitBillViewer({
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
+      navigator.clipboard
+        .writeText(window.location.href)
+        .then(() => {
+          setCopiedLink(true);
+          setTimeout(() => setCopiedLink(false), 2000);
+        })
+        .catch(() => setCopiedLink(false));
     }
   };
 
   const handleCopyAccount = (textToCopy: string) => {
     if (typeof window !== "undefined" && textToCopy) {
-      navigator.clipboard.writeText(textToCopy);
-      setCopiedAccount(true);
-      setTimeout(() => setCopiedAccount(false), 2000);
+      navigator.clipboard
+        .writeText(textToCopy)
+        .then(() => {
+          setCopiedAccount(true);
+          setTimeout(() => setCopiedAccount(false), 2000);
+        })
+        .catch(() => setCopiedAccount(false));
     }
   };
 
@@ -196,7 +205,7 @@ export default function SplitBillViewer({
 
         {isHost && (
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800">
+            <span className="text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800">
               {t.splitBill.hostBadge}
             </span>
             <Link
@@ -223,7 +232,7 @@ export default function SplitBillViewer({
       <div className="rounded-3xl border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex items-start justify-between">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
               {t.splitBill.billDetails}
             </span>
             <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-50 mt-0.5">
@@ -235,7 +244,7 @@ export default function SplitBillViewer({
           </div>
 
           <div className="text-right">
-            <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider block">
+            <span className="text-xs text-zinc-400 font-semibold block">
               {t.splitBill.totalBill}
             </span>
             <span className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-50">
@@ -293,7 +302,7 @@ export default function SplitBillViewer({
           <button
             type="button"
             onClick={handleShareWhatsApp}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer shadow-xs"
+            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-600 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer shadow-xs"
           >
             <Share2 className="w-3.5 h-3.5" />
             <span>{t.splitBill.whatsapp}</span>
@@ -311,14 +320,14 @@ export default function SplitBillViewer({
                 {t.splitBill.transferToMethod.replace("{method}", bill.payment_info.method || "Bank")}
               </span>
             </div>
-            <span className="text-[10px] font-semibold bg-zinc-800 text-amber-400 px-2 py-0.5 rounded-md">
+            <span className="text-xs font-semibold bg-zinc-800 text-amber-400 px-2 py-0.5 rounded-md">
               {t.splitBill.transferDestination}
             </span>
           </div>
 
           <div className="flex items-center justify-between bg-zinc-800/90 dark:bg-zinc-800 p-3 rounded-2xl">
             <div>
-              <p className="font-mono text-base sm:text-lg font-bold tracking-wider text-zinc-100">
+              <p className="font-mono text-base sm:text-lg font-bold text-zinc-100">
                 {bill.payment_info.account_number}
               </p>
               {bill.payment_info.account_name && (
@@ -342,7 +351,7 @@ export default function SplitBillViewer({
 
       {/* Participants Breakdown Accordion */}
       <div className="space-y-3">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400 px-1">
+        <h2 className="text-xs font-bold text-zinc-400 px-1">
           {t.splitBill.participantBreakdown.replace("{count}", String(participants.length))}
         </h2>
 
@@ -382,7 +391,7 @@ export default function SplitBillViewer({
                     <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                       <span>{p.name}</span>
                       {p.isCreator && (
-                        <span className="text-[10px] text-zinc-400 font-normal">
+                        <span className="text-xs text-zinc-400 font-normal">
                           ({t.splitBill.hostBadge})
                         </span>
                       )}
@@ -396,7 +405,7 @@ export default function SplitBillViewer({
                 <div className="flex items-center gap-2">
                   {/* Status Badge */}
                   <span
-                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
                       p.isPaid
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
                         : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
@@ -418,7 +427,7 @@ export default function SplitBillViewer({
               {isExpanded && (
                 <div className="px-4 pb-4 pt-1 border-t border-zinc-100 dark:border-zinc-800/80 space-y-3 text-xs">
                   <div className="space-y-1.5 pt-2">
-                    <p className="font-semibold text-zinc-500 text-[11px]">
+                    <p className="font-semibold text-zinc-500 text-xs">
                       {t.splitBill.menuOrdered}
                     </p>
                     {p.items.map((item, idx) => (
@@ -429,7 +438,7 @@ export default function SplitBillViewer({
                         <span className="truncate pr-2">
                           {item.name}
                           {item.splitBetweenCount > 1 && (
-                            <span className="text-[10px] text-zinc-400 ml-1">
+                            <span className="text-xs text-zinc-400 ml-1">
                               ({t.splitBill.splitBetweenCount.replace("{count}", String(item.splitBetweenCount))})
                             </span>
                           )}
@@ -442,7 +451,7 @@ export default function SplitBillViewer({
                   </div>
 
                   {/* Proportional breakdown items */}
-                  <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                  <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
                     <div className="flex justify-between">
                       <span>{t.splitBill.subtotalMenu}</span>
                       <span>{formatRupiah(p.itemsSubtotal)}</span>
@@ -486,7 +495,7 @@ export default function SplitBillViewer({
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 ${
                           p.isPaid
                             ? "bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                            : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
+                            : "bg-emerald-600 hover:bg-emerald-600 text-white shadow-xs"
                         }`}
                       >
                         {isUpdating
@@ -506,10 +515,10 @@ export default function SplitBillViewer({
 
       {/* QR Code Modal for In-Person Scanning */}
       {showQrModal && (
-        <div
+        <ModalOverlay
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 backdrop-blur-xs animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 animate-fade-in"
         >
           <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 text-center space-y-4">
             <div>
@@ -547,15 +556,15 @@ export default function SplitBillViewer({
               {t.splitBill.closeModal}
             </button>
           </div>
-        </div>
+        </ModalOverlay>
       )}
 
       {/* Delete Confirmation Modal for Host */}
       {showDeleteModal && (
-        <div
+        <ModalOverlay
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 backdrop-blur-xs animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 animate-fade-in"
         >
           <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
             <div className="flex items-start gap-3">
@@ -596,7 +605,7 @@ export default function SplitBillViewer({
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

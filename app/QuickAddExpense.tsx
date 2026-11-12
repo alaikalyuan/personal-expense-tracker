@@ -51,6 +51,7 @@ import { parseQuickExpenseInput } from "@/utils/expenseParser";
 import { subDays, format, parseISO } from "date-fns";
 import { getActiveWallets } from "@/app/saku/actions";
 import { Wallet } from "@/utils/wallets/server";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -79,7 +80,7 @@ const CATEGORY_STYLES: Record<
   }
 > = {
   "Food & Dining": {
-    activeBg: "bg-emerald-500 text-white shadow-xs",
+    activeBg: "bg-emerald-600 text-white shadow-xs",
     activeText: "text-emerald-600 dark:text-emerald-400",
     border: "border-emerald-500",
     badgeBg: "bg-emerald-50 dark:bg-emerald-950/40",
@@ -93,7 +94,7 @@ const CATEGORY_STYLES: Record<
     badgeText: "text-blue-700 dark:text-blue-300",
   },
   Utilities: {
-    activeBg: "bg-amber-500 text-white shadow-xs",
+    activeBg: "bg-accent text-on-accent shadow-xs",
     activeText: "text-amber-600 dark:text-amber-400",
     border: "border-amber-500",
     badgeBg: "bg-amber-50 dark:bg-amber-950/40",
@@ -607,7 +608,7 @@ function QuickAddModalContent({
     e.preventDefault();
     if (isSubmitting) return;
 
-    if (amount < 0) {
+    if (!(amount > 0)) {
       setError(t.expenses.amountPositiveError);
       amountInputRef.current?.focus();
       return;
@@ -778,8 +779,9 @@ function QuickAddModalContent({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-xs animate-fade-in"
+    <ModalOverlay
+      aria-label={t.expenses.addTitle}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 animate-fade-in"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) handleClose();
       }}
@@ -877,7 +879,7 @@ function QuickAddModalContent({
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                     Hasil Pindai Foto
                   </span>
-                  <span className="rounded-full bg-teal-500/20 px-2 py-0.5 text-[9px] font-semibold text-teal-700 dark:text-teal-300">
+                  <span className="rounded-full bg-teal-500/20 px-2 py-0.5 text-xs font-semibold text-teal-700 dark:text-teal-300">
                     {scannedDoc.kind === "receipt" ? "Struk Belanja" : "Bukti Mutasi/Transfer"}
                   </span>
                 </div>
@@ -898,10 +900,10 @@ function QuickAddModalContent({
             {/* Receipt Itemization Mode Switch (only if receipt has items) */}
             {scannedDoc.kind === "receipt" && scannedDoc.items.length > 0 && (
               <div className="flex items-center justify-between text-xs bg-white/60 dark:bg-zinc-900/60 p-2 rounded-xl border border-zinc-200/60 dark:border-zinc-800">
-                <span className="text-zinc-600 dark:text-zinc-400 font-medium text-[11px]">
+                <span className="text-zinc-600 dark:text-zinc-400 font-medium text-xs">
                   Mode Pencatatan:
                 </span>
-                <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg text-[11px]">
+                <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg text-xs">
                   <button
                     type="button"
                     onClick={() => handleToggleReceiptBreakdown("summary")}
@@ -951,7 +953,7 @@ function QuickAddModalContent({
                         <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-100 block">
                           {row.name}
                         </span>
-                        <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-zinc-400">
+                        <div className="mt-0.5 flex items-center gap-1.5 text-xs text-zinc-400">
                           <span className="rounded-md bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 font-medium text-zinc-600 dark:text-zinc-300">
                             {getCategoryLabel(row.category)}
                           </span>
@@ -959,7 +961,7 @@ function QuickAddModalContent({
                           <span>{row.spentAt}</span>
                         </div>
                         {row.duplicate && (
-                          <div className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400 font-medium">
+                          <div className="mt-1.5 flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 font-medium">
                             <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                             <span>{row.duplicate.details}</span>
                           </div>
@@ -980,7 +982,7 @@ function QuickAddModalContent({
             {/* Saku Selector if multiple wallets */}
             {multiSakuEnabled && wallets.length > 1 && (
               <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-zinc-500 dark:text-zinc-400 font-medium text-[11px]">
+                <span className="text-zinc-500 dark:text-zinc-400 font-medium text-xs">
                   Catat ke Saku:
                 </span>
                 <select
@@ -1047,7 +1049,7 @@ function QuickAddModalContent({
             {/* Quick-Fill Chips Shelf */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   {t.expenses.quickShortcuts}
                 </span>
                 <button
@@ -1056,7 +1058,7 @@ function QuickAddModalContent({
                     setIsManagingChips(true);
                     handleOpenAddChip();
                   }}
-                  className="flex items-center gap-1 text-[11px] font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 py-0.5 px-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 py-0.5 px-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
                   <Settings2 className="w-3 h-3" />
                   <span>{t.expenses.manageChips}</span>
@@ -1080,7 +1082,7 @@ function QuickAddModalContent({
                       {chip.emoji && <span className="text-sm">{chip.emoji}</span>}
                       <span>{chip.name}</span>
                       {chip.defaultAmount && (
-                        <span className="text-[10px] opacity-75 font-normal">
+                        <span className="text-xs opacity-75 font-normal">
                           {(chip.defaultAmount / 1000).toFixed(0)}k
                         </span>
                       )}
@@ -1093,7 +1095,7 @@ function QuickAddModalContent({
             {/* Multi-Saku Selector in Standard Mode */}
             {multiSakuEnabled && wallets.length > 1 && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   {t.saku.switchToSaku}
                 </span>
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar -mx-1 px-1">
@@ -1182,7 +1184,7 @@ function QuickAddModalContent({
                     key={item.label}
                     type="button"
                     onClick={() => addQuickAmount(item.val)}
-                    className="py-1.5 rounded-lg border border-zinc-200/80 bg-zinc-50 hover:bg-zinc-100 text-[11px] font-semibold text-zinc-700 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    className="py-1.5 rounded-lg border border-zinc-200/80 bg-zinc-50 hover:bg-zinc-100 text-xs font-semibold text-zinc-700 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-300 dark:hover:bg-zinc-800"
                   >
                     {item.label}
                   </button>
@@ -1190,7 +1192,7 @@ function QuickAddModalContent({
                 <button
                   type="button"
                   onClick={clearAmount}
-                  className="py-1.5 rounded-lg border border-zinc-200/80 bg-zinc-50 hover:bg-rose-50 hover:text-rose-600 text-[11px] font-semibold text-zinc-500 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+                  className="py-1.5 rounded-lg border border-zinc-200/80 bg-zinc-50 hover:bg-rose-50 hover:text-rose-600 text-xs font-semibold text-zinc-500 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
                 >
                   C
                 </button>
@@ -1199,7 +1201,7 @@ function QuickAddModalContent({
 
             {/* 1-Tap Category Grid */}
             <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
+              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                 {t.expenses.categoryLabel}
               </span>
               <div className="grid grid-cols-3 gap-2">
@@ -1330,7 +1332,7 @@ function QuickAddModalContent({
               <div className="flex items-start justify-between gap-2.5 rounded-xl border border-amber-200/90 bg-amber-50/80 p-2.5 text-xs text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200 animate-fade-in">
                 <div className="flex items-start gap-2 min-w-0">
                   <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="leading-snug text-[11px]">
+                  <p className="leading-snug text-xs">
                     {t.expenses.oneOffDetectBanner}
                   </p>
                 </div>
@@ -1338,7 +1340,7 @@ function QuickAddModalContent({
                   <button
                     type="button"
                     onClick={() => setIsExempt(true)}
-                    className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-amber-600 active:scale-95 transition-all cursor-pointer"
+                    className="rounded-lg bg-accent px-2.5 py-1 text-xs font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-95 transition-all cursor-pointer"
                   >
                     {t.expenses.oneOffMarkButton}
                   </button>
@@ -1363,7 +1365,7 @@ function QuickAddModalContent({
                 <button
                   type="button"
                   onClick={() => setIsExempt(false)}
-                  className="text-[11px] text-amber-600 hover:text-amber-900 dark:text-amber-400 font-semibold cursor-pointer underline"
+                  className="text-xs text-amber-600 hover:text-amber-900 dark:text-amber-400 font-semibold cursor-pointer underline"
                 >
                   {t.expenses.oneOffRemoveButton}
                 </button>
@@ -1377,7 +1379,7 @@ function QuickAddModalContent({
                   <button
                     type="button"
                     onClick={() => setShowMoreOptions(true)}
-                    className="text-[11px] font-medium text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors cursor-pointer"
+                    className="text-xs font-medium text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors cursor-pointer"
                   >
                     + {t.expenses.moreOptions}
                   </button>
@@ -1392,7 +1394,7 @@ function QuickAddModalContent({
                     />
                     <label htmlFor="manualOneOff" className="text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
                       <p className="font-semibold text-xs text-zinc-900 dark:text-zinc-100">{t.expenses.oneOffCheckbox}</p>
-                      <p className="text-[10px] text-zinc-500">{t.expenses.oneOffHelp}</p>
+                      <p className="text-xs text-zinc-500">{t.expenses.oneOffHelp}</p>
                     </label>
                   </div>
                 )}
@@ -1425,7 +1427,7 @@ function QuickAddModalContent({
             {/* Quick-Fill Chips Shelf in Quick Mode */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   {t.expenses.quickShortcuts}
                 </span>
                 <button
@@ -1434,7 +1436,7 @@ function QuickAddModalContent({
                     setIsManagingChips(true);
                     handleOpenAddChip();
                   }}
-                  className="flex items-center gap-1 text-[11px] font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 py-0.5 px-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 py-0.5 px-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
                   <Settings2 className="w-3 h-3" />
                   <span>{t.expenses.manageChips}</span>
@@ -1452,7 +1454,7 @@ function QuickAddModalContent({
                     {chip.emoji && <span className="text-sm">{chip.emoji}</span>}
                     <span>{chip.name}</span>
                     {chip.defaultAmount && (
-                      <span className="text-[10px] opacity-75 font-normal">
+                      <span className="text-xs opacity-75 font-normal">
                         {(chip.defaultAmount / 1000).toFixed(0)}k
                       </span>
                     )}
@@ -1464,7 +1466,7 @@ function QuickAddModalContent({
             {/* Multi-Saku Selector in Quick Type Mode */}
             {multiSakuEnabled && wallets.length > 1 && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                   {t.saku.switchToSaku}
                 </span>
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar -mx-1 px-1">
@@ -1515,7 +1517,7 @@ function QuickAddModalContent({
                   </button>
                 )}
               </div>
-              <p className="text-[11px] text-zinc-400 dark:text-zinc-500 pl-1">
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 pl-1">
                 {t.expenses.quickBarHint}
               </p>
             </div>
@@ -1523,7 +1525,7 @@ function QuickAddModalContent({
             {/* Live Parsing Preview Card with 1-Tap Overrides */}
             <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-950/60 p-3.5 flex flex-col gap-2.5 transition-all">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 dark:text-zinc-500">
+                <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">
                   {t.expenses.detectedPreview}
                 </span>
                 {parsedExpense.isValid && (
@@ -1532,7 +1534,7 @@ function QuickAddModalContent({
                       <button
                         type="button"
                         onClick={() => setOverrideExempt(false)}
-                        className="flex items-center gap-1 rounded-md bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800/80 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors cursor-pointer"
+                        className="flex items-center gap-1 rounded-md bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800/80 px-2 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors cursor-pointer"
                         title="Remove One-off tag"
                       >
                         <Tag className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
@@ -1540,7 +1542,7 @@ function QuickAddModalContent({
                         <X className="w-2.5 h-2.5 opacity-60 hover:opacity-100" />
                       </button>
                     )}
-                    <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       <Check className="w-3.5 h-3.5" /> Ready
                     </span>
                   </div>
@@ -1567,7 +1569,7 @@ function QuickAddModalContent({
                         setShowCategoryPicker((prev) => !prev);
                         setShowDatePicker(false);
                       }}
-                      className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer border ${
+                      className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer border ${
                         CATEGORY_STYLES[effectiveCategory].badgeBg
                       } ${CATEGORY_STYLES[effectiveCategory].badgeText} ${
                         showCategoryPicker ? "ring-2 ring-zinc-400 dark:ring-zinc-600" : ""
@@ -1579,7 +1581,7 @@ function QuickAddModalContent({
                         return <CatIcon className="w-3 h-3 shrink-0" />;
                       })()}
                       <span>{getCategoryLabel(effectiveCategory)}</span>
-                      <span className="text-[9px] opacity-70 ml-0.5">▾</span>
+                      <span className="text-xs opacity-70 ml-0.5">▾</span>
                     </button>
 
                     {/* Date Badge - Clickable */}
@@ -1589,7 +1591,7 @@ function QuickAddModalContent({
                         setShowDatePicker((prev) => !prev);
                         setShowCategoryPicker(false);
                       }}
-                      className={`flex items-center gap-1 rounded-lg border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all cursor-pointer ${
+                      className={`flex items-center gap-1 rounded-lg border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all cursor-pointer ${
                         showDatePicker ? "ring-2 ring-zinc-400 dark:ring-zinc-600" : ""
                       }`}
                       title={t.expenses.whenLabel}
@@ -1602,12 +1604,12 @@ function QuickAddModalContent({
                           ? t.common.yesterday
                           : formatDate(effectiveSpentAt, "EEEE, d MMM")}
                       </span>
-                      <span className="text-[9px] opacity-70 ml-0.5">▾</span>
+                      <span className="text-xs opacity-70 ml-0.5">▾</span>
                     </button>
 
                     {/* Saku Badge (Multi-Saku Enabled) */}
                     {multiSakuEnabled && wallets.length > 0 && (
-                      <div className="flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-50/50 dark:border-emerald-500/20 dark:bg-emerald-950/30 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                      <div className="flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-50/50 dark:border-emerald-500/20 dark:bg-emerald-950/30 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                         <span>{wallets.find((w) => w.id === (parsedExpense.walletId || selectedWalletId))?.emoji || "👛"}</span>
                         <span>{wallets.find((w) => w.id === (parsedExpense.walletId || selectedWalletId))?.name || "Dompet"}</span>
                       </div>
@@ -1636,7 +1638,7 @@ function QuickAddModalContent({
                             }`}
                           >
                             <Icon className={`w-3.5 h-3.5 shrink-0 ${isSel ? "text-white" : style.activeText}`} />
-                            <span className="truncate text-[11px]">{getCategoryLabel(catKey)}</span>
+                            <span className="truncate text-xs">{getCategoryLabel(catKey)}</span>
                           </button>
                         );
                       })}
@@ -1677,7 +1679,7 @@ function QuickAddModalContent({
                         </button>
                       </div>
                       <div className="flex items-center gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
-                        <span className="text-[11px] text-zinc-400">{t.expenses.customDate}:</span>
+                        <span className="text-xs text-zinc-400">{t.expenses.customDate}:</span>
                         <input
                           type="date"
                           value={effectiveSpentAt}
@@ -1705,7 +1707,7 @@ function QuickAddModalContent({
               <div className="flex items-start justify-between gap-2.5 rounded-xl border border-amber-200/90 bg-amber-50/80 p-2.5 text-xs text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200 animate-fade-in">
                 <div className="flex items-start gap-2 min-w-0">
                   <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="leading-snug text-[11px]">
+                  <p className="leading-snug text-xs">
                     {t.expenses.oneOffDetectBanner}
                   </p>
                 </div>
@@ -1713,7 +1715,7 @@ function QuickAddModalContent({
                   <button
                     type="button"
                     onClick={() => setOverrideExempt(true)}
-                    className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-amber-600 active:scale-95 transition-all cursor-pointer"
+                    className="rounded-lg bg-accent px-2.5 py-1 text-xs font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-95 transition-all cursor-pointer"
                   >
                     {t.expenses.oneOffMarkButton}
                   </button>
@@ -1772,7 +1774,7 @@ function QuickAddModalContent({
                 <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                   {t.expenses.manageChipsTitle}
                 </h3>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {t.expenses.manageChipsSubtitle}
                 </p>
               </div>
@@ -1796,7 +1798,7 @@ function QuickAddModalContent({
                     {chip.emoji && <span className="text-base">{chip.emoji}</span>}
                     <div>
                       <p className="font-semibold text-zinc-900 dark:text-zinc-100">{chip.name}</p>
-                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">
                         {getCategoryLabel(chip.category)}
                         {chip.defaultAmount ? ` • ${formatCurrency(chip.defaultAmount)}` : ""}
                       </span>
@@ -1872,7 +1874,7 @@ function QuickAddModalContent({
                 <button
                   type="button"
                   onClick={handleResetChips}
-                  className="flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer"
+                  className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>{t.expenses.resetDefaults}</span>
@@ -1908,7 +1910,7 @@ function QuickAddModalContent({
           onApply={handleApplyScannedDoc}
         />
       </div>
-    </div>
+    </ModalOverlay>
   );
 }
 

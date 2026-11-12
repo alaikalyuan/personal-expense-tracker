@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
+import { syncMultiSakuCookie } from "@/utils/wallets/server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -53,6 +54,8 @@ export async function GET(request: Request) {
           console.error("Failed to merge guest expenses on Google login:", insertError);
         }
       }
+
+      if (newUserId) await syncMultiSakuCookie(supabase, newUserId);
 
       const targetPath = mergedCount > 0
         ? `${next}${next.includes("?") ? "&" : "?"}merged=${mergedCount}`

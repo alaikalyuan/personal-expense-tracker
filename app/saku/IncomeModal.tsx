@@ -6,6 +6,7 @@ import { useTranslation } from "@/utils/i18n/context";
 import { recordWalletIncome } from "./actions";
 import { WalletBalance } from "@/utils/wallets/server";
 import { getTodayString } from "@/utils/date";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface IncomeModalProps {
   isOpen: boolean;
@@ -66,7 +67,7 @@ export default function IncomeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+    <ModalOverlay className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fade-in">
       <div className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800">
           <div>
@@ -146,7 +147,7 @@ export default function IncomeModal({
                   key={chip}
                   type="button"
                   onClick={() => setNote(chip)}
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
                 >
                   {chip}
                 </button>
@@ -186,6 +187,6 @@ export default function IncomeModal({
           </div>
         </form>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

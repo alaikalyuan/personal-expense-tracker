@@ -484,6 +484,31 @@ export async function getMultiSakuEnabledServer(
 }
 
 /**
+ * Copy the saved multi-saku setting into its cookie at sign-in. The root layout
+ * reads only the cookie (no query per navigation), so without this a user who
+ * turned Saku on from another device would see the old bottom bar.
+ */
+export async function syncMultiSakuCookie(supabase: SupabaseClient, userId: string): Promise<void> {
+  if (!FEATURE_MULTI_SAKU_ENABLED) return;
+  try {
+    const { data } = await supabase
+      .from("user_settings")
+      .select("multi_saku_enabled")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    cookieStore.set("MULTI_SAKU_ENABLED", String(Boolean(data?.multi_saku_enabled)), {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
+  } catch (e) {
+    console.error("syncMultiSakuCookie error:", e);
+  }
+}
+
+/**
  * Read the selected saku ID from cookie ("all" or wallet_id)
  */
 export async function getSelectedSakuServer(

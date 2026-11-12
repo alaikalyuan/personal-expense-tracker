@@ -116,7 +116,7 @@ export default function ActionProposalCard({
             {proposal.preview.title}
           </span>
         </div>
-        <span className="rounded-full bg-teal-500/20 px-2 py-0.5 text-[9px] font-semibold text-teal-700 dark:text-teal-300">
+        <span className="rounded-full bg-teal-500/20 px-2 py-0.5 text-xs font-semibold text-teal-700 dark:text-teal-300">
           Aksi AI
         </span>
       </div>
@@ -150,7 +150,7 @@ export default function ActionProposalCard({
                       {line.label}
                     </span>
                     {line.duplicateWarning && (
-                      <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400 font-medium">
+                      <div className="mt-1 flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 font-medium">
                         <AlertTriangle className="w-3 h-3 shrink-0" />
                         <span>{line.duplicateWarning}</span>
                       </div>
@@ -160,11 +160,11 @@ export default function ActionProposalCard({
 
                 <div className="flex items-center gap-1.5 shrink-0 text-right">
                   {line.before && (
-                    <span className="text-zinc-400 line-through text-[11px]">
+                    <span className="text-zinc-400 line-through text-xs">
                       {line.before}
                     </span>
                   )}
-                  {line.before && <span className="text-zinc-400 text-[10px]">→</span>}
+                  {line.before && <span className="text-zinc-400 text-xs">→</span>}
                   <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                     {line.after}
                   </span>
@@ -175,7 +175,7 @@ export default function ActionProposalCard({
         })}
 
         {errorMessage && (
-          <div className="mt-2 flex items-center gap-1.5 text-red-600 dark:text-red-400 text-[11px] bg-red-500/10 p-2 rounded-xl">
+          <div className="mt-2 flex items-center gap-1.5 text-red-600 dark:text-red-400 text-xs bg-red-500/10 p-2 rounded-xl">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             <span>{errorMessage}</span>
           </div>
@@ -186,7 +186,7 @@ export default function ActionProposalCard({
       <div className="px-3 py-2 border-t border-teal-500/15 bg-zinc-50/50 dark:bg-zinc-900/40 flex items-center justify-between gap-2">
         <div>
           {isBatchLog && proposal.status === "pending" && (
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
               {selectedIndices.size} dari {proposal.preview.lines.length} dipilih
             </span>
           )}

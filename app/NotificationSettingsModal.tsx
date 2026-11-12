@@ -18,6 +18,7 @@ import {
 } from "@/utils/pwa/pushManager";
 import { updateNotificationSettings } from "@/app/subscriptions/actions";
 import { useTranslation } from "@/utils/i18n/context";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface NotificationSettingsModalProps {
   isOpen: boolean;
@@ -152,7 +153,7 @@ export default function NotificationSettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-zinc-950/60 backdrop-blur-xs animate-fade-in">
+    <ModalOverlay className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-zinc-950/60 animate-fade-in">
       <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-2xl animate-modal-in max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-zinc-200 dark:border-zinc-800">
@@ -164,7 +165,7 @@ export default function NotificationSettingsModal({
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 {t.notifications.title}
               </h3>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {t.notifications.subtitle}
               </p>
             </div>
@@ -181,7 +182,7 @@ export default function NotificationSettingsModal({
 
         {/* Guest Warning */}
         {isGuest && (
-          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-900 dark:text-amber-200 flex items-start gap-2">
+          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
             <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
             <span>
               {t.notifications.guestWarning}
@@ -196,7 +197,7 @@ export default function NotificationSettingsModal({
               <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                 {t.notifications.pushCardTitle}
               </p>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                 {isSubscribed
                   ? t.notifications.pushActive
                   : permission === "denied"
@@ -258,7 +259,7 @@ export default function NotificationSettingsModal({
                 <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                   {t.notifications.dailyReminderTime}
                 </p>
-                <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {t.notifications.dailyReminderTimeDesc}
                 </p>
               </div>
@@ -277,7 +278,7 @@ export default function NotificationSettingsModal({
               <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                 {t.notifications.reminderToggleTitle}
               </p>
-              <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {t.notifications.reminderToggleDesc}
               </p>
             </div>
@@ -297,7 +298,7 @@ export default function NotificationSettingsModal({
                 <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                   {t.notifications.quotesToggleTitle}
                 </p>
-                <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {t.notifications.quotesToggleDesc}
                 </p>
               </div>
@@ -316,7 +317,7 @@ export default function NotificationSettingsModal({
               <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                 {t.notifications.subsToggleTitle}
               </p>
-              <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {t.notifications.subsToggleDesc}
               </p>
             </div>
@@ -330,7 +331,7 @@ export default function NotificationSettingsModal({
         </div>
 
         {/* PWA Tips */}
-        <div className="mt-5 p-3 rounded-xl bg-zinc-100/60 dark:bg-zinc-800/60 text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+        <div className="mt-5 p-3 rounded-xl bg-zinc-100/60 dark:bg-zinc-800/60 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
           <p className="font-semibold text-zinc-700 dark:text-zinc-300 mb-0.5">
             {t.notifications.tipsTitle}
           </p>
@@ -355,6 +356,6 @@ export default function NotificationSettingsModal({
           </button>
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

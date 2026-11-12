@@ -14,6 +14,7 @@ import {
 import { useTranslation } from "@/utils/i18n/context";
 import { upgradeGuestAccount, modalLogin } from "@/app/actions";
 import { createClient } from "@/utils/supabase/client";
+import ModalOverlay from "@/app/ui/ModalOverlay";
 
 export interface UpgradeAccountModalProps {
   isOpen: boolean;
@@ -135,8 +136,8 @@ function UpgradeAccountModalContent({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in"
+    <ModalOverlay
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && !loading) {
           onClose();
@@ -160,7 +161,7 @@ function UpgradeAccountModalContent({
                 </>
               )}
             </h3>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
               {mode === "signup"
                 ? t.guest.upgradeModalSubtitle
                 : t.guest.loginSubtitle}
@@ -262,7 +263,7 @@ function UpgradeAccountModalContent({
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-zinc-200 dark:border-zinc-800" />
               </div>
-              <div className="relative flex justify-center text-[10px] uppercase">
+              <div className="relative flex justify-center text-xs">
                 <span className="bg-white px-2 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500 font-medium">
                   {t.login.or}
                 </span>
@@ -272,36 +273,40 @@ function UpgradeAccountModalContent({
             {/* Email + Password Form */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               <div>
-                <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                <label htmlFor="auth-email" className="block text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
                   {t.guest.upgradeEmailLabel}
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-400" />
+                  <Mail className="absolute left-3 top-3.5 w-4 h-4 text-zinc-500" aria-hidden="true" />
                   <input
+                    id="auth-email"
                     type="email"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={t.login.emailPlaceholder}
                     required
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-zinc-200 bg-zinc-50 focus:border-zinc-400 outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    className="w-full min-h-11 pl-9 pr-3 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:border-zinc-400 outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                <label htmlFor="auth-password" className="block text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
                   {t.guest.upgradePasswordLabel}
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-400" />
+                  <Lock className="absolute left-3 top-3.5 w-4 h-4 text-zinc-500" aria-hidden="true" />
                   <input
+                    id="auth-password"
                     type="password"
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
                     minLength={6}
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-zinc-200 bg-zinc-50 focus:border-zinc-400 outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    className="w-full min-h-11 pl-9 pr-3 text-base rounded-xl border border-zinc-200 bg-zinc-50 focus:border-zinc-400 outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                   />
                 </div>
               </div>
@@ -311,14 +316,14 @@ function UpgradeAccountModalContent({
                   type="button"
                   onClick={onClose}
                   disabled={loading}
-                  className="flex-1 h-10 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-all cursor-pointer flex items-center justify-center whitespace-nowrap"
+                  className="flex-1 min-h-11 rounded-xl border border-line bg-card text-sm font-semibold text-ink hover:bg-paper flex items-center justify-center whitespace-nowrap"
                 >
                   {t.common.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 h-10 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 text-xs font-semibold active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
+                  className="flex-1 min-h-11 rounded-xl bg-accent text-on-accent hover:brightness-95 disabled:opacity-60 text-sm font-bold flex items-center justify-center gap-1.5 whitespace-nowrap"
                 >
                   {loading ? (
                     <>
@@ -356,7 +361,7 @@ function UpgradeAccountModalContent({
                   setMode(mode === "signup" ? "login" : "signup");
                   setError(null);
                 }}
-                className="text-[11px] text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
               >
                 {mode === "signup" ? t.guest.switchToLogIn : t.guest.switchToSignUp}
               </button>
@@ -364,6 +369,6 @@ function UpgradeAccountModalContent({
           </div>
         )}
       </div>
-    </div>
+    </ModalOverlay>
   );
 }
