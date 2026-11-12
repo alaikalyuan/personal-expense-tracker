@@ -206,10 +206,11 @@ export function parseLivinEmail(rawInput: string): ParsedLivinTransaction {
   // or "Penerima : TEH CAMELLIA"
   // or "Penerima\nKOPI KENANGAN"
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const merchantLabel = /^(?:Penerima|Nama Merchant|Merchant)\b\s*:?\s*/i;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (/^(?:Penerima|Nama Merchant|Merchant)\s*[:]?\s*(.*)$/i.test(line)) {
-      const inlineRest = line.replace(/^(?:Penerima|Nama Merchant|Merchant)\s*[:]?\s*/i, "").trim();
+    if (merchantLabel.test(line)) {
+      const inlineRest = line.replace(merchantLabel, "").trim();
       if (inlineRest) {
         merchantName = inlineRest;
         break;
@@ -221,9 +222,11 @@ export function parseLivinEmail(rawInput: string): ParsedLivinTransaction {
     }
   }
 
-  // Fallback merchant search if empty
+  // Fallback for text flattened onto one line: "...dengan QR: Penerima KANTIN X Surabaya (Kota) - ID Tanggal ..."
   if (!merchantName) {
-    const fallbackMatch = text.match(/(?:transaksi Anda dengan QR(?:\s*:\s*|\s+ke\s+)?|ke\s+merchant\s+)([A-Z0-9\s&'.]+)/i);
+    const fallbackMatch = text.match(
+      /(?:transaksi Anda dengan QR\s*:?\s*(?:Penerima\s*:?\s*)?|ke\s+merchant\s+)([A-Za-z0-9 &'.,-]+?)(?=\s+[A-Za-z.]+\s*\((?:Kota|Kab(?:upaten)?)\)|\s+Tanggal\b|$)/i
+    );
     if (fallbackMatch) {
       merchantName = fallbackMatch[1].trim();
     }
@@ -232,22 +235,10 @@ export function parseLivinEmail(rawInput: string): ParsedLivinTransaction {
   // Clean merchant name from city suffixes or location lines like "Surabaya (Kota) - ID"
   if (merchantName) {
     merchantName = merchantName
+      .replace(/\s+[A-Za-z.]+\s*\((?:Kota|Kab(?:upaten)?)\).*$/i, "")
       .replace(/\s*-\s*[A-Z]{2}$/, "")
-      .replace(/\s+\(Kota\).*$/i, "")
+      .replace(/\s{2,}/g, " ")
       .trim();
-  }
-
-  // Fallback merchant search if empty
-  if (!merchantName) {
-    const fallbackMatch = text.match(/(?:transaksi Anda dengan QR(?:\s*:\s*|\s+ke\s+)?|ke\s+merchant\s+)([A-Z0-9\s&'.]+)/i);
-    if (fallbackMatch) {
-      merchantName = fallbackMatch[1].trim();
-    }
-  }
-
-  // Clean merchant name from city suffixes like "Surabaya (Kota)"
-  if (merchantName) {
-    merchantName = merchantName.replace(/\s+\(Kota\).*$/i, "").trim();
   }
 
   // 2. Amount / Nominal extraction
@@ -280,7 +271,11 @@ export function parseLivinEmail(rawInput: string): ParsedLivinTransaction {
   }
 
   // 5. Reference Number extraction
-  const refMatch = text.match(/(?:No\.?\s*Referensi|No\.?\s*Transaksi|ID\s*Transaksi|RRN|Ref(?:erence)?(?:\s*No)?)\s*[:\n]?\s*([A-Za-z0-9_-]+)/i);
+  // Only accept the labelled numeric references. A loose "Ref" match picks up email
+  // headers like "References:" and yields junk IDs that collide as duplicates.
+  const refMatch =
+    text.match(/No\.?\s*Referensi\s*:?\s*(\d{8,})/i) ||
+    text.match(/No\.?\s*Ref\.?\s*QRIS\s*:?\s*(\d{8,})/i);
   if (refMatch) {
     referenceId = refMatch[1].trim();
   } else if (merchantName && amount && date) {

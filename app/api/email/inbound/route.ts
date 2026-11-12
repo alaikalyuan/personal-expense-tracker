@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { parseLivinEmail } from "@/utils/email/livinParser";
+import PostalMime, { type Address, type Email } from "postal-mime";
+import { parseLivinEmail, stripHtmlToText } from "@/utils/email/livinParser";
 import { sendWebPushNotification } from "@/utils/pwa/webPushServer";
 import { formatMoney } from "@/utils/money";
 
@@ -41,6 +42,21 @@ function decodeMimeAndHtml(raw: string): string {
     .replace(/&gt;/gi, ">")
     .replace(/&#39;/g, "'")
     .replace(/&quot;/g, '"');
+}
+
+async function parseMime(raw: string): Promise<Email | null> {
+  // Only a real MIME message has a header block; pasted plain text does not.
+  if (!/^[\w-]+:[^\r\n]*\r?\n/.test(raw)) return null;
+  try {
+    return await PostalMime.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function formatAddress(address: Address | undefined): string {
+  if (!address || !("address" in address) || !address.address) return "";
+  return address.name ? `${address.name} <${address.address}>` : address.address;
 }
 
 function extractGoogleVerification(raw: string): { code: string | null; url: string | null } {
@@ -86,7 +102,7 @@ function extractGoogleVerification(raw: string): { code: string | null; url: str
 export async function POST(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
-    let queryToken = searchParams.get("token") || searchParams.get("key");
+    const queryToken =searchParams.get("token") || searchParams.get("key");
 
     const body = await req.json().catch(() => ({}));
 
@@ -109,13 +125,6 @@ export async function POST(req: NextRequest) {
 
     // Extract content
     const rawContent = body.text || body.html || body.content || body.body || "";
-    // Gmail auto-forwarding rewrites the envelope sender to postmaster@...google.com,
-    // so read the original sender from the message's own From header.
-    const envelopeSender = String(body.from || body.sender || "");
-    const headerSection = rawContent.split(/\r?\n\r?\n/, 1)[0] || "";
-    const headerFrom = headerSection.match(/^From:[ \t]*(.+(?:\r?\n[ \t].+)*)/im)?.[1]?.trim() || "";
-    const sender = headerFrom || envelopeSender || "noreply.livin@bankmandiri.co.id";
-    const subject = body.subject || "Pembayaran Berhasil";
 
     if (!rawContent || typeof rawContent !== "string") {
       return NextResponse.json(
@@ -123,6 +132,21 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // The Cloudflare worker posts the raw MIME message. Decode it into its real
+    // body so the parser never sees headers or base64/quoted-printable blobs.
+    const mime = await parseMime(rawContent);
+
+    // Gmail auto-forwarding rewrites the envelope sender to postmaster@...google.com,
+    // so read the original sender from the message's own From header.
+    const envelopeSender = String(body.from || body.sender || "");
+    const headerSection = rawContent.split(/\r?\n\r?\n/, 1)[0] || "";
+    const headerFrom =
+      formatAddress(mime?.from) ||
+      headerSection.match(/^From:[ \t]*(.+(?:\r?\n[ \t].+)*)/im)?.[1]?.trim() ||
+      "";
+    const sender = headerFrom || envelopeSender || "noreply.livin@bankmandiri.co.id";
+    const subject = mime?.subject || body.subject || "Pembayaran Berhasil";
 
     // Check if this is a Gmail forwarding verification email
     // Only Gmail's own forwarding confirmation counts. Every auto-forwarded email
@@ -156,14 +180,28 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Parse email (try raw first, then decoded text)
-    let parsed = parseLivinEmail(rawContent);
-    if (!parsed.isValid) {
-      const decodedContent = decodeMimeAndHtml(rawContent);
-      parsed = parseLivinEmail(decodedContent);
+    // Parse the decoded body: HTML keeps the label/value rows apart, plain text is the fallback.
+    const candidates = mime
+      ? [mime.html ? stripHtmlToText(mime.html) : "", mime.text || ""]
+      : [decodeMimeAndHtml(rawContent)];
+    let parsed = parseLivinEmail("");
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      parsed = parseLivinEmail(candidate);
+      if (parsed.isValid) break;
     }
 
     if (!parsed.isValid) {
+      // The Gmail filter forwards every Livin email (promos, transfers, login alerts).
+      // Only a payment receipt that fails to parse is an error worth reporting.
+      if (!/pembayaran\s+berhasil|qris/i.test(subject)) {
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          reason: "NOT_A_RECEIPT",
+          subject,
+        });
+      }
       return NextResponse.json(
         {
           error: "UNRECOGNIZED_FORMAT",
