@@ -459,7 +459,7 @@ export default function SubscriptionsClient({
           </div>
           <Link
             href="/login?next=/subscriptions"
-            className="rounded-lg bg-amber-600 text-white px-2.5 py-1 text-xs font-semibold hover:bg-amber-700 transition-colors"
+            className="rounded-lg bg-accent text-on-accent px-2.5 py-1 text-xs font-semibold hover:brightness-95 transition-colors"
           >
             {t.subscriptions.loginBtn}
           </Link>

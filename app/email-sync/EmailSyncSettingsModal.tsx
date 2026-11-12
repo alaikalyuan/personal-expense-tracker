@@ -398,7 +398,7 @@ Rp 5.000,00`);
                   type="button"
                   onClick={handleSaveSettings}
                   disabled={isPending}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-amber-600 py-3 text-xs font-bold text-zinc-950 shadow-xs hover:bg-amber-700 active:scale-98 disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600 cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-accent py-3 text-xs font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-98 disabled:opacity-50 cursor-pointer"
                 >
                   {isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

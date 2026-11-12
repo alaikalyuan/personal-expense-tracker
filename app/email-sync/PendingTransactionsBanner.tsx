@@ -184,7 +184,7 @@ export default function PendingTransactionsBanner({
             type="button"
             onClick={() => handleQuickApprove(currentTx)}
             disabled={isPending && actionLoadingId === currentTx.id}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 py-2 px-2 text-xs font-bold text-zinc-950 shadow-xs hover:bg-amber-700 active:scale-97 disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600 cursor-pointer"
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-accent py-2 px-2 text-xs font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-97 disabled:opacity-50 cursor-pointer"
           >
             {isPending && actionLoadingId === currentTx.id ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />

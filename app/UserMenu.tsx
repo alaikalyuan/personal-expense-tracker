@@ -9,6 +9,7 @@ import { setMultiSakuEnabled } from "@/app/saku/actions";
 import { Menu, Archive, CreditCard, Bell, Mail, LogOut, UserPlus, ChevronRight } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { useTheme } from "@/utils/theme/context";
+import { PALETTE_CHOICES, type PaletteChoice } from "@/utils/theme/palette";
 import { CURRENCY_CODES, SUPPORTED_CURRENCIES, SupportedCurrency } from "@/utils/money";
 import { FEATURE_MULTI_SAKU_ENABLED } from "@/utils/wallets/config";
 import { useAiAssistant } from "@/app/ai/AiAssistantProvider";
@@ -58,6 +59,59 @@ function Switch({
         />
       </span>
     </button>
+  );
+}
+
+// Each swatch shows its palette's accent on its paper, so it reads the same in either mode.
+const SWATCH: Record<PaletteChoice, string> = {
+  orange: "#e8590c",
+  pink: "#d6336c",
+  blue: "#1f6feb",
+  mono: "#1c1c1c",
+  // The four colors in the order the day goes through them.
+  hybrid: "conic-gradient(#e8590c 0 25%, #1f6feb 0 50%, #d6336c 0 75%, #1c1c1c 0)",
+};
+
+function PalettePicker() {
+  const { t } = useTranslation();
+  const { palette, activePalette, setPalette } = useTheme();
+  const names = t.nav.paletteNames;
+  return (
+    <div className="px-3 py-2">
+      <div className="flex items-baseline justify-between gap-3 text-sm font-semibold text-ink">
+        <span id="menu-palette">{t.nav.palette}</span>
+        <span className="text-ink-soft">{names[palette]}</span>
+      </div>
+      <div role="group" aria-labelledby="menu-palette" className="mt-2 flex flex-wrap gap-2">
+        {PALETTE_CHOICES.map((choice) => {
+          const selected = palette === choice;
+          return (
+            <button
+              key={choice}
+              type="button"
+              aria-pressed={selected}
+              aria-label={names[choice]}
+              title={names[choice]}
+              onClick={() => setPalette(choice)}
+              className={`flex h-11 w-11 items-center justify-center rounded-full border-2 ${
+                selected ? "border-ink" : "border-transparent hover:border-line"
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className="h-8 w-8 rounded-full ring-1 ring-black/10 dark:ring-white/20"
+                style={{ background: SWATCH[choice] }}
+              />
+            </button>
+          );
+        })}
+      </div>
+      {palette === "hybrid" && (
+        <p className="mt-2 text-xs leading-relaxed text-ink-soft">
+          {t.nav.hybridHint} {t.nav.hybridNow.replace("{name}", names[activePalette])}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -228,6 +282,7 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade, multiSakuEnab
                 ]}
               />
             </div>
+            <PalettePicker />
             <div className={settingRow}>
               <label htmlFor="menu-currency">{t.nav.currency}</label>
               <select

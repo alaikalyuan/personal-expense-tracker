@@ -32,6 +32,10 @@ Defined once in `app/globals.css`. Use the semantic names in new code.
 
 Limit: paper and ink neutrals, plus accent, ok and danger. No other hue.
 
+**Palettes:** the table above is the default, Orange. The owner asked for more color because one palette gets dull over months of daily use, so the menu also offers Pink, Blue, Monochrome and Hybrid (`utils/theme/palette.ts`, overrides in `app/globals.css` under `[data-palette]`). Each palette swaps paper, card, ink, ink-soft, line and the accent pair, plus the zinc and amber ramps old screens use. Leaf and brick never change, so "within budget" and "over budget" mean the same color in every palette. Every pair was checked: ink-soft at least 6.2:1 on paper, text on accent at least 4.6:1. In Monochrome the accent is the ink itself.
+
+**Hybrid** follows the local clock: Orange from 05:00 (morning sun), Blue from 11:00 (midday sky), Pink from 15:00 (dusk), Monochrome from 19:00 (night). A script in `<head>` applies it before first paint, and an open app re-checks every minute. Light or dark stays the user's own choice.
+
 **Legacy remap:** older screens still use Tailwind color class names (`bg-emerald-500`, `text-pink-600` and so on). `app/globals.css` points every one of those families at a Warung ramp, so no screen can render an off-palette color. When a screen is redesigned, replace those class names with the semantic ones. The remap is a bridge, not the destination.
 
 ## Typography

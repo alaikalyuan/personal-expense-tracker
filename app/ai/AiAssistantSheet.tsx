@@ -542,7 +542,7 @@ export default function AiAssistantSheet() {
                   type="button"
                   disabled={isResettingLimit}
                   onClick={handleResetLimit}
-                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-600 active:scale-95 text-zinc-950 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs shrink-0"
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-accent hover:brightness-95 active:scale-95 text-on-accent transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs shrink-0"
                 >
                   <RotateCcw className={`w-3 h-3 ${isResettingLimit ? "animate-spin" : ""}`} />
                   {isResettingLimit

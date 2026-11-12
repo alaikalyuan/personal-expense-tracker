@@ -45,6 +45,155 @@
   --muted-500: #b5a48c;
 }
 
+/*
+ * Color palettes, chosen in the menu (utils/theme/palette.ts). Orange is the
+ * default above. Each palette swaps the semantic tokens and the two ramps that
+ * older screens use (zinc for neutrals, amber for the accent). Leaf (ok) and
+ * brick (danger) are shared so good and bad news look the same everywhere.
+ */
+/* Pink: rose paper, plum ink, raspberry accent. */
+:root[data-palette="pink"] {
+  --paper: #fff5f7;
+  --card: #ffffff;
+  --ink: #2e1720;
+  --ink-soft: #6e4a58;
+  --line: #f2d5de;
+  --accent: #d6336c;
+  --accent-strong: #a61e4d;
+  --on-accent: #ffffff;
+  --muted-400: #85606e;
+  --muted-500: #6e4a58;
+  --color-zinc-50: #fffafb;
+  --color-zinc-100: #fff5f7;
+  --color-zinc-200: #f6dde5;
+  --color-zinc-300: #e9c3d0;
+  --color-zinc-600: #5f3e4b;
+  --color-zinc-700: #482d38;
+  --color-zinc-800: #36212a;
+  --color-zinc-900: #28181f;
+  --color-zinc-950: #170c11;
+  --color-amber-50: #fff0f5;
+  --color-amber-100: #ffdeea;
+  --color-amber-200: #fcc2d7;
+  --color-amber-300: #ff8fb3;
+  --color-amber-400: #f06595;
+  --color-amber-500: #d6336c;
+  --color-amber-600: #a61e4d;
+  --color-amber-700: #8a1a41;
+  --color-amber-800: #6e1636;
+  --color-amber-900: #55122b;
+  --color-amber-950: #330918;
+}
+:root.dark[data-palette="pink"] {
+  --paper: #1b1015;
+  --card: #28181f;
+  --ink: #fbe9ef;
+  --ink-soft: #d1aebb;
+  --line: #45293a;
+  --accent: #f06595;
+  --accent-strong: #ff8fb3;
+  --on-accent: #1b0a11;
+  --muted-400: #b993a2;
+  --muted-500: #c3a0ad;
+}
+
+/* Blue: sky paper, navy ink, clear blue accent. */
+:root[data-palette="blue"] {
+  --paper: #f3f7fc;
+  --card: #ffffff;
+  --ink: #14213a;
+  --ink-soft: #4a5b78;
+  --line: #d5e0ee;
+  --accent: #1f6feb;
+  --accent-strong: #1553b8;
+  --on-accent: #ffffff;
+  --muted-400: #5f7090;
+  --muted-500: #4a5b78;
+  --color-zinc-50: #f9fbfe;
+  --color-zinc-100: #f3f7fc;
+  --color-zinc-200: #dde6f2;
+  --color-zinc-300: #c3d1e4;
+  --color-zinc-600: #3f5070;
+  --color-zinc-700: #2e3b54;
+  --color-zinc-800: #212c3e;
+  --color-zinc-900: #16202f;
+  --color-zinc-950: #0a101b;
+  --color-amber-50: #eef4ff;
+  --color-amber-100: #dbe7ff;
+  --color-amber-200: #b9d1ff;
+  --color-amber-300: #8cb8ff;
+  --color-amber-400: #5b9bff;
+  --color-amber-500: #1f6feb;
+  --color-amber-600: #1553b8;
+  --color-amber-700: #124496;
+  --color-amber-800: #103877;
+  --color-amber-900: #0e2d5e;
+  --color-amber-950: #081a38;
+}
+:root.dark[data-palette="blue"] {
+  --paper: #0d1421;
+  --card: #16202f;
+  --ink: #e6eefa;
+  --ink-soft: #a8b8d0;
+  --line: #263449;
+  --accent: #5b9bff;
+  --accent-strong: #8cb8ff;
+  --on-accent: #07111f;
+  --muted-400: #8fa1bd;
+  --muted-500: #9badc7;
+}
+
+/* Monochrome: grey paper and black ink; the accent is the ink. Leaf and brick stay for good and bad news. */
+:root[data-palette="mono"] {
+  --paper: #f6f6f4;
+  --card: #ffffff;
+  --ink: #1c1c1c;
+  --ink-soft: #5c5c5c;
+  --line: #e0e0dc;
+  --accent: #1c1c1c;
+  --accent-strong: #000000;
+  --on-accent: #ffffff;
+  --muted-400: #707070;
+  --muted-500: #5c5c5c;
+  --color-zinc-50: #fbfbfa;
+  --color-zinc-100: #f6f6f4;
+  --color-zinc-200: #e6e6e3;
+  --color-zinc-300: #d1d1cd;
+  --color-zinc-600: #4f4f4f;
+  --color-zinc-700: #3a3a3a;
+  --color-zinc-800: #2a2a2a;
+  --color-zinc-900: #1e1e1e;
+  --color-zinc-950: #111111;
+  --color-amber-50: #f4f4f2;
+  --color-amber-100: #e9e9e7;
+  --color-amber-200: #d4d4d1;
+  --color-amber-300: #bdbdb9;
+  --color-amber-400: #d6d6d6;
+  --color-amber-500: #262626;
+  --color-amber-600: #1a1a1a;
+  --color-amber-700: #262626;
+  --color-amber-800: #2a2a2a;
+  --color-amber-900: #222222;
+  --color-amber-950: #161616;
+}
+:root.dark[data-palette="mono"] {
+  /* The accent is ink, so in dark it turns light; bars and dots stay visible on dark cards. */
+  --color-amber-300: #e6e6e6;
+  --color-amber-400: #d6d6d6;
+  --color-amber-500: #c4c4c4;
+  --color-amber-600: #a8a8a8;
+  --paper: #121212;
+  --card: #1e1e1e;
+  --ink: #f0f0f0;
+  --ink-soft: #b0b0b0;
+  --line: #333333;
+  --accent: #f0f0f0;
+  --accent-strong: #ffffff;
+  --on-accent: #121212;
+  --muted-400: #9a9a9a;
+  --muted-500: #a6a6a6;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

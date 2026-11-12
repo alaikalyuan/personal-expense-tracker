@@ -1003,7 +1003,7 @@ export default function SavingsClient({
                 <button
                   type="submit"
                   disabled={isSubmitting || Number(sweepAmount) <= 0 || Number(sweepAmount) > availableSurplus}
-                  className="px-4 py-1.5 rounded-xl bg-amber-500 text-zinc-950 text-xs font-semibold hover:bg-amber-600 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-xl bg-accent text-on-accent text-xs font-semibold hover:brightness-95 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
                 >
                   {isSubmitting ? t.common.saving : t.savings.confirmSweep}
                 </button>

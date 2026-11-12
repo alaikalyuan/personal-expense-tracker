@@ -94,7 +94,7 @@ const CATEGORY_STYLES: Record<
     badgeText: "text-blue-700 dark:text-blue-300",
   },
   Utilities: {
-    activeBg: "bg-amber-500 text-zinc-950 shadow-xs",
+    activeBg: "bg-accent text-on-accent shadow-xs",
     activeText: "text-amber-600 dark:text-amber-400",
     border: "border-amber-500",
     badgeBg: "bg-amber-50 dark:bg-amber-950/40",
@@ -1340,7 +1340,7 @@ function QuickAddModalContent({
                   <button
                     type="button"
                     onClick={() => setIsExempt(true)}
-                    className="rounded-lg bg-amber-500 px-2.5 py-1 text-xs font-bold text-zinc-950 shadow-xs hover:bg-amber-600 active:scale-95 transition-all cursor-pointer"
+                    className="rounded-lg bg-accent px-2.5 py-1 text-xs font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-95 transition-all cursor-pointer"
                   >
                     {t.expenses.oneOffMarkButton}
                   </button>
@@ -1715,7 +1715,7 @@ function QuickAddModalContent({
                   <button
                     type="button"
                     onClick={() => setOverrideExempt(true)}
-                    className="rounded-lg bg-amber-500 px-2.5 py-1 text-xs font-bold text-zinc-950 shadow-xs hover:bg-amber-600 active:scale-95 transition-all cursor-pointer"
+                    className="rounded-lg bg-accent px-2.5 py-1 text-xs font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-95 transition-all cursor-pointer"
                   >
                     {t.expenses.oneOffMarkButton}
                   </button>

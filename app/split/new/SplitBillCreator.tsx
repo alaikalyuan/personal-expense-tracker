@@ -564,7 +564,7 @@ export default function SplitBillCreator({
             <button
               type="button"
               onClick={handleRestoreDraft}
-              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-zinc-950 font-semibold rounded-lg cursor-pointer"
+              className="px-2.5 py-1 bg-accent hover:brightness-95 text-on-accent font-semibold rounded-lg cursor-pointer"
             >
               {t.splitBill.restoreDraftBtn}
             </button>

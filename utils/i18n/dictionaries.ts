@@ -42,6 +42,10 @@ export interface Dictionary {
     theme: string;
     light: string;
     dark: string;
+    palette: string;
+    paletteNames: { orange: string; pink: string; blue: string; mono: string; hybrid: string };
+    hybridHint: string;
+    hybridNow: string;
     currency: string;
     quickAddAria: string;
     savings: string;
@@ -972,6 +976,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       theme: "Tema",
       light: "Terang",
       dark: "Gelap",
+      palette: "Warna",
+      paletteNames: { orange: "Oranye", pink: "Pink", blue: "Biru", mono: "Monokrom", hybrid: "Hybrid" },
+      hybridHint: "Ikut jam: pagi oranye, siang biru, sore pink, malam monokrom.",
+      hybridNow: "Sekarang: {name}",
       currency: "Mata Uang",
       quickAddAria: "Tambah pengeluaran",
       savings: "Tabungan",
@@ -1919,6 +1927,10 @@ export const dictionaries: Record<Locale, Dictionary> = {
       theme: "Theme",
       light: "Light",
       dark: "Dark",
+      palette: "Color",
+      paletteNames: { orange: "Orange", pink: "Pink", blue: "Blue", mono: "Monochrome", hybrid: "Hybrid" },
+      hybridHint: "Follows the clock: orange in the morning, blue at midday, pink at dusk, monochrome at night.",
+      hybridNow: "Now: {name}",
       currency: "Currency",
       quickAddAria: "Add expense",
       savings: "Savings",

@@ -7,7 +7,8 @@ import ServiceWorkerRegister from "./ServiceWorkerRegister";
 import { LanguageProvider } from "@/utils/i18n/context";
 import { getLocaleServer, getCurrencyServer } from "@/utils/i18n/server";
 import { ThemeProvider } from "@/utils/theme/context";
-import { getThemeServer } from "@/utils/theme/server";
+import { getThemeServer, getPaletteServer } from "@/utils/theme/server";
+import { PAPER, THEME_BOOT_SCRIPT } from "@/utils/theme/palette";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -31,9 +32,10 @@ export const metadata: Metadata = {
 };
 
 export async function generateViewport(): Promise<Viewport> {
-  const theme = await getThemeServer();
+  const [theme, palette] = await Promise.all([getThemeServer(), getPaletteServer()]);
+  // Hybrid depends on the visitor's clock; the client corrects the color after load.
   return {
-    themeColor: theme === "dark" ? "#1a130d" : "#fff8ec",
+    themeColor: PAPER[palette === "hybrid" ? "orange" : palette][theme],
     width: "device-width",
     initialScale: 1,
   };
@@ -50,9 +52,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const aiModeEnabled = cookieStore.get("AI_MODE_ENABLED")?.value !== "false";
   const signedIn = cookieStore.getAll().some((cookie) => cookie.name.includes("-auth-token"));
 
-  const [locale, theme, currency] = await Promise.all([
+  const [locale, theme, palette, currency] = await Promise.all([
     getLocaleServer(),
     getThemeServer(),
+    getPaletteServer(),
     getCurrencyServer(),
   ]);
 
@@ -61,17 +64,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       lang={locale}
       className={theme === "dark" ? "dark" : ""}
       style={{ colorScheme: theme }}
+      data-palette={palette === "orange" || palette === "hybrid" ? undefined : palette}
       suppressHydrationWarning
     >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var c=document.cookie.match(/(?:^|;\\s*)THEME=([^;]+)/);var t=c?c[1]:(localStorage.getItem('theme')||'light');if(t==='dark'){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}else{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light';}}catch(e){}})();`,
+            __html: THEME_BOOT_SCRIPT,
           }}
         />
       </head>
       <body className={`${jakarta.variable} font-sans bg-paper text-ink antialiased min-h-screen relative`}>
-        <ThemeProvider initialTheme={theme}>
+        <ThemeProvider initialTheme={theme} initialPalette={palette}>
           <LanguageProvider initialLocale={locale} initialCurrency={currency}>
             <AiAssistantProvider initialAiEnabled={aiModeEnabled}>
               <ServiceWorkerRegister />
