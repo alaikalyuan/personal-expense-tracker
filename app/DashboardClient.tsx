@@ -23,6 +23,11 @@ import InstallPrompt from "./InstallPrompt";
 import CadenceToggle from "./CadenceToggle";
 import ProjectedBurnCard from "./ProjectedBurnCard";
 import BudgetProgress from "./BudgetProgress";
+import dynamic from "next/dynamic";
+
+// Loaded on first open; it is rendered outside the receipt card so the card's
+// filter and mask cannot clip it.
+const BudgetEditDialog = dynamic(() => import("./BudgetEditDialog"), { ssr: false });
 import BreakdownCard, { DaySpend, WeekSpend, CategorySpend } from "./BreakdownCard";
 import ExpenseList, { ExpenseItem } from "./ExpenseList";
 import { useTranslation } from "@/utils/i18n/context";
@@ -91,6 +96,7 @@ export default function DashboardClient({
 }: DashboardClientProps) {
   const router = useRouter();
   const [cadence, setCadence] = useState<"week" | "month">(initialCadence);
+  const [isBudgetOpen, setIsBudgetOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(Boolean(initialAuthMode));
   const [authModalMode, setAuthModalMode] = useState<"signup" | "login">(initialAuthMode || "signup");
   const [authModalError, setAuthModalError] = useState<string | null>(initialAuthError || null);
@@ -474,6 +480,7 @@ export default function DashboardClient({
           <UserMenu
             isGuest={isGuest}
             multiSakuEnabled={multiSakuEnabled}
+            budget={{ period: cadence, amount: activeBudget, onEdit: () => setIsBudgetOpen(true) }}
             onOpenUpgrade={(mode = "signup") => {
               setAuthModalMode(mode);
               setAuthModalError(null);
@@ -526,6 +533,7 @@ export default function DashboardClient({
               projectedSubscriptionsTotal={projectedSubscriptionsTotal}
               dueSubscriptions={dueSubscriptions}
               onPaySubscription={handlePaySubscription}
+              onEditBudget={() => setIsBudgetOpen(true)}
             />
           </div>
         </section>
@@ -628,6 +636,10 @@ export default function DashboardClient({
       />
 
       {/* The welcome screen lives in GuestLanding, before a session exists */}
+      {isBudgetOpen && (
+        <BudgetEditDialog period={cadence} currentBudget={activeBudget} onClose={() => setIsBudgetOpen(false)} />
+      )}
+
       <UpgradeAccountModal
         isOpen={isUpgradeModalOpen}
         onClose={() => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 interface DialogProps {
@@ -22,6 +23,10 @@ const FOCUSABLE =
 /**
  * The one dialog shell for the app: labelled, closes on Escape and backdrop,
  * keeps Tab inside, and hands focus back to whatever opened it.
+ *
+ * Rendered into <body> through a portal: an ancestor with a CSS filter, mask or
+ * transform (such as the receipt card) would otherwise trap and clip the
+ * fixed-position overlay inside itself.
  */
 export default function Dialog({
   isOpen,
@@ -81,7 +86,7 @@ export default function Dialog({
     }
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/60 p-0 sm:items-center sm:p-4 animate-fade-in"
       onMouseDown={(e) => {
@@ -122,6 +127,7 @@ export default function Dialog({
         <div className="overflow-y-auto px-5 py-4">{children}</div>
         {footer && <div className="flex gap-3 border-t border-line px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

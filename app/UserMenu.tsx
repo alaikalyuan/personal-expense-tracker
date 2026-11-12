@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { logout } from "@/app/actions";
 import { setMultiSakuEnabled } from "@/app/saku/actions";
-import { Menu, Archive, CreditCard, Bell, Mail, LogOut, UserPlus, ChevronRight } from "lucide-react";
+import { Menu, Archive, CreditCard, Bell, Mail, LogOut, UserPlus, ChevronRight, Wallet } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { useTheme } from "@/utils/theme/context";
 import { PALETTE_CHOICES, type PaletteChoice } from "@/utils/theme/palette";
@@ -23,6 +23,8 @@ interface UserMenuProps {
   isGuest?: boolean;
   onOpenUpgrade?: (mode?: "signup" | "login") => void;
   multiSakuEnabled?: boolean;
+  /** Only the dashboard passes this: the budget row edits the period on screen. */
+  budget?: { period: "week" | "month"; amount: number; onEdit: () => void };
 }
 
 const ROW =
@@ -145,13 +147,13 @@ function Segmented<T extends string>({
   );
 }
 
-export default function UserMenu({ isGuest = false, onOpenUpgrade, multiSakuEnabled }: UserMenuProps) {
+export default function UserMenu({ isGuest = false, onOpenUpgrade, multiSakuEnabled, budget }: UserMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [openSettings, setOpenSettings] = useState<"notifications" | "email" | null>(null);
   const [loadedSettings, setLoadedSettings] = useState({ notifications: false, email: false });
-  const { locale, setLocale, currency, setCurrency, t } = useTranslation();
+  const { locale, setLocale, currency, setCurrency, t, formatCurrency } = useTranslation();
   const { theme, setTheme } = useTheme();
   const { isAiEnabled, setIsAiEnabled } = useAiAssistant();
   const [isPending, startTransition] = useTransition();
@@ -258,6 +260,21 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade, multiSakuEnab
             <h3 id="menu-settings" className="px-3 pb-1 text-xs font-semibold text-ink-soft">
               {t.home.menuSettings}
             </h3>
+            {budget && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  budget.onEdit();
+                }}
+                className={ROW}
+              >
+                <Wallet className="h-5 w-5 shrink-0 text-ink-soft" aria-hidden="true" />
+                <span className="flex-1">{budget.period === "month" ? t.budget.monthlyModalTitle : t.budget.modalTitle}</span>
+                <span className="text-ink-soft">{budget.amount > 0 ? formatCurrency(budget.amount) : t.home.setBudget}</span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-ink-soft" aria-hidden="true" />
+              </button>
+            )}
             <div className={settingRow}>
               <span>{t.nav.language}</span>
               <Segmented

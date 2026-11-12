@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 import { Pencil, ChevronDown, Tag } from "lucide-react";
-import { setWeeklyBudget, setMonthlyBudget, toggleExpenseExemption } from "@/app/actions";
+import { toggleExpenseExemption } from "@/app/actions";
 import { useTranslation } from "@/utils/i18n/context";
-import Dialog from "@/app/ui/Dialog";
-import Button from "@/app/ui/Button";
-import { MoneyField } from "@/app/ui/Field";
 
 export interface DueSubscriptionItem {
   id: string;
@@ -30,52 +27,8 @@ interface BudgetProgressProps {
   projectedSubscriptionsTotal?: number;
   dueSubscriptions?: DueSubscriptionItem[];
   onPaySubscription?: (id: string, name: string) => Promise<void>;
-}
-
-function getPresets(currency: string, period: "week" | "month", t: ReturnType<typeof useTranslation>["t"]) {
-  if (currency === "IDR") {
-    return period === "month"
-      ? [
-          { label: t.budget.preset1m5, value: 1500000 },
-          { label: t.budget.preset2m5, value: 2500000 },
-          { label: t.budget.preset5m, value: 5000000 },
-          { label: t.budget.preset10m, value: 10000000 },
-        ]
-      : [
-          { label: t.budget.preset250k, value: 250000 },
-          { label: t.budget.preset500k, value: 500000 },
-          { label: t.budget.preset1m, value: 1000000 },
-          { label: t.budget.preset2m, value: 2000000 },
-        ];
-  }
-  if (currency === "MYR") {
-    return period === "month"
-      ? [
-          { label: "1.5k", value: 1500 },
-          { label: "2.5k", value: 2500 },
-          { label: "4k", value: 4000 },
-          { label: "6k", value: 6000 },
-        ]
-      : [
-          { label: "300", value: 300 },
-          { label: "500", value: 500 },
-          { label: "1k", value: 1000 },
-          { label: "1.5k", value: 1500 },
-        ];
-  }
-  return period === "month"
-    ? [
-        { label: "500", value: 500 },
-        { label: "1k", value: 1000 },
-        { label: "1.5k", value: 1500 },
-        { label: "2.5k", value: 2500 },
-      ]
-    : [
-        { label: "100", value: 100 },
-        { label: "200", value: 200 },
-        { label: "300", value: 300 },
-        { label: "500", value: 500 },
-      ];
+  /** Opens the budget dialog, which the dashboard renders outside this card. */
+  onEditBudget?: () => void;
 }
 
 /** The period line under the day's summary: spent of budget, the bar, and what is still due. */
@@ -90,17 +43,12 @@ export default function BudgetProgress({
   projectedSubscriptionsTotal,
   dueSubscriptions,
   onPaySubscription,
+  onEditBudget,
 }: BudgetProgressProps) {
-  const { t, formatCurrency, currency, currencySymbol } = useTranslation();
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [budgetInput, setBudgetInput] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const { t, formatCurrency } = useTranslation();
   const [isExempting, setIsExempting] = useState(false);
   const [payingSubId, setPayingSubId] = useState<string | null>(null);
   const [isDueSubsOpen, setIsDueSubsOpen] = useState(false);
-
-  const presetBudgets = getPresets(currency, period, t);
 
   // One-off expenses are left out of the budget math.
   const activeSpend = regularTotal !== undefined ? regularTotal : weeklyTotal;
@@ -121,33 +69,6 @@ export default function BudgetProgress({
   // Leaf while comfortable, tangerine when 75% is gone, brick when over.
   const barColor = isOver ? "bg-danger" : isWarning ? "bg-accent" : "bg-ok";
 
-  const closeEdit = () => {
-    if (isSubmitting) return;
-    setSaveError(null);
-    setIsEditOpen(false);
-  };
-
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!budgetInput || Number(budgetInput) <= 0) return;
-    const formData = new FormData();
-    formData.set("budget", budgetInput);
-    try {
-      setIsSubmitting(true);
-      setSaveError(null);
-      if (period === "month") {
-        await setMonthlyBudget(formData);
-      } else {
-        await setWeeklyBudget(formData);
-      }
-      setIsEditOpen(false);
-    } catch {
-      setSaveError(t.home.saveFailed);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const spentOfBudget = (period === "month" ? t.home.spentOfBudgetMonth : t.home.spentOfBudgetWeek)
     .replace("{spent}", formatCurrency(activeSpend))
     .replace("{budget}", formatCurrency(weeklyBudget));
@@ -156,17 +77,17 @@ export default function BudgetProgress({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-ink-soft">{weeklyBudget > 0 ? spentOfBudget : t.home.noBudget}</p>
-        <button
-          type="button"
-          onClick={() => {
-            setBudgetInput(weeklyBudget > 0 ? String(Math.round(weeklyBudget)) : "");
-            setIsEditOpen(true);
-          }}
-          className="-mr-2 flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-2 text-sm font-semibold text-accent-strong hover:bg-paper active:bg-line"
-        >
-          <Pencil className="h-4 w-4" aria-hidden="true" />
-          <span>{weeklyBudget > 0 ? t.budget.editLimit : t.home.setBudget}</span>
-        </button>
+        {/* Changing an existing budget lives in the menu; the card only asks when none is set. */}
+        {weeklyBudget <= 0 && onEditBudget && (
+          <button
+            type="button"
+            onClick={onEditBudget}
+            className="-mr-2 flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-2 text-sm font-semibold text-accent-strong hover:bg-paper active:bg-line"
+          >
+            <Pencil className="h-4 w-4" aria-hidden="true" />
+            <span>{t.home.setBudget}</span>
+          </button>
+        )}
       </div>
 
       {weeklyBudget > 0 && (
@@ -299,57 +220,6 @@ export default function BudgetProgress({
 
       {isOver && <p className="text-sm text-ink-soft">{t.budget.overBudgetEncouragement}</p>}
 
-      <Dialog
-        isOpen={isEditOpen}
-        onClose={closeEdit}
-        busy={isSubmitting}
-        title={period === "month" ? t.budget.monthlyModalTitle : t.budget.modalTitle}
-        description={period === "month" ? t.budget.monthlyModalSubtitle : t.budget.modalSubtitle}
-        closeLabel={t.common.close}
-        footer={
-          <>
-            <Button block onClick={closeEdit} disabled={isSubmitting}>
-              {t.common.cancel}
-            </Button>
-            <Button block variant="primary" type="submit" form="budget-form" disabled={isSubmitting || !budgetInput}>
-              {isSubmitting ? t.common.saving : t.budget.saveBudget}
-            </Button>
-          </>
-        }
-      >
-        <form id="budget-form" onSubmit={handleFormSubmit} className="flex flex-col gap-4">
-          <MoneyField
-            label={t.home.budgetAmountLabel}
-            value={budgetInput}
-            onChange={setBudgetInput}
-            prefix={currencySymbol}
-            error={saveError}
-            required
-            autoFocus
-          />
-          <div role="group" aria-label={t.budget.quickPresets} className="flex flex-col gap-1.5">
-            <p className="text-sm font-semibold">{t.budget.quickPresets}</p>
-            <div className="grid grid-cols-4 gap-2">
-              {presetBudgets.map((preset) => {
-                const selected = budgetInput === String(preset.value);
-                return (
-                  <button
-                    key={preset.value}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setBudgetInput(String(preset.value))}
-                    className={`min-h-11 rounded-xl border text-sm font-semibold ${
-                      selected ? "border-ink bg-ink text-card" : "border-line bg-card text-ink hover:bg-paper active:bg-line"
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </form>
-      </Dialog>
     </div>
   );
 }
