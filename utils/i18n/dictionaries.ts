@@ -921,27 +921,50 @@ export interface Dictionary {
     approveBtn: string;
     modalTitle: string;
     modalSubtitle: string;
+    loadFailed: string;
+    retryBtn: string;
+    addressLabel: string;
+    copyAddress: string;
+    copied: string;
+    pendingNotice: string;
+    tabSetup: string;
     tabSettings: string;
     tabPaste: string;
-    privacyNote: string;
+    setupIntro: string;
+    mobileNote: string;
+    partForwardTitle: string;
+    stepOpenSettings: string;
+    openGmailSettings: string;
+    stepAddAddress: string;
+    stepCode: string;
+    codeLabel: string;
+    codeWaiting: string;
+    codeRefresh: string;
+    codeLinkFound: string;
+    codeOpenLink: string;
+    copyCodeBtn: string;
+    stepKeepDisabled: string;
+    partFilterTitle: string;
+    stepSearch: string;
+    openGmailSearch: string;
+    stepFilterFrom: string;
+    copySender: string;
+    stepForwardTo: string;
+    stepDone: string;
     modeTitle: string;
-    modeDesc: string;
     modeReview: string;
     modeReviewDesc: string;
     modeAuto: string;
     modeAutoDesc: string;
     sakuTitle: string;
     sakuDesc: string;
-    forwardingTitle: string;
+    resetTitle: string;
+    resetHint: string;
     resetToken: string;
     resetConfirm: string;
-    gmailGuideTitle: string;
-    gmailStep1: string;
-    gmailStep2: string;
-    gmailStep3: string;
-    gmailStep4: string;
     saveBtn: string;
     savedToast: string;
+    saveFailed: string;
     pasteTitle: string;
     pasteDesc: string;
     loadSampleBtn: string;
@@ -949,8 +972,6 @@ export interface Dictionary {
     extractBtn: string;
     extractSuccess: string;
     extractFailed: string;
-    verificationCodeTitle: string;
-    copyCodeBtn: string;
   };
 }
 
@@ -1882,38 +1903,59 @@ export const dictionaries: Record<Locale, Dictionary> = {
       refLabel: "Ref",
       dismissBtn: "Abaikan",
       approveBtn: "Setujui & Catat",
-      modalTitle: "Deteksi Transaksi Email (Livin' QRIS)",
-      modalSubtitle: "Deteksi otomatis & aman hanya untuk bukti pembayaran bank Anda",
-      tabSettings: "Pengaturan & Forwarding",
-      tabPaste: "Tempel Email (Uji Langsung)",
-      privacyNote: "Privasi 100% Terjaga: Aplikasi ini tidak pernah memiliki akses ke inbox pribadi Gmail Anda. Hanya email bukti resi Mandiri yang Anda filter untuk diteruskan yang akan diproses.",
-      modeTitle: "Mode Eksekusi (Hybrid)",
-      modeDesc: "Pilih bagaimana sistem memproses transaksi yang terdeteksi dari email:",
-      modeReview: "Tinjau Dahulu",
-      modeReviewDesc: "Masuk ke antrean Dashboard untuk Anda setujui dengan 1 ketukan.",
-      modeAuto: "Otomatis Penuh",
-      modeAutoDesc: "Langsung dicatat ke pengeluaran + notifikasi instan.",
-      sakuTitle: "Tujuan Saku (Wallet)",
-      sakuDesc: "Pilih saku tempat transaksi QRIS akan dialokasikan:",
-      forwardingTitle: "Alamat Email Penerusan Pribadi",
-      resetToken: "Reset Token",
-      resetConfirm: "Regenerasi token akan mengubah alamat email sync Anda. Lanjutkan?",
-      gmailGuideTitle: "Cara Pasang di Gmail (1 Menit):",
-      gmailStep1: "Salin alamat di atas, buka Gmail > Setelan > Penerusan (Forwarding).",
-      gmailStep2: "Buat Filter Baru: Pada kolom Dari isi: noreply.livin@bankmandiri.co.id",
-      gmailStep3: "Centang Teruskan ke dan pilih alamat sinkronisasi Anda.",
-      gmailStep4: "Selesai! Setiap resi QRIS Livin' akan terdeteksi seketika.",
-      saveBtn: "Simpan Pengaturan",
-      savedToast: "Pengaturan Tersimpan!",
-      pasteTitle: "Tempel Teks Bukti Email",
-      pasteDesc: "Uji ekstraksi secara langsung tanpa menunggu forwarding.",
-      loadSampleBtn: "Muat Contoh Resi",
-      pastePlaceholder: "Tempel teks atau isi email Livin di sini...",
-      extractBtn: "Ekstrak & Proses Transaksi",
-      extractSuccess: "Berhasil Diproses!",
-      extractFailed: "Gagal Mengekstrak",
-      verificationCodeTitle: "Kode Verifikasi Gmail:",
-      copyCodeBtn: "Salin Kode",
+      modalTitle: "Catat otomatis dari email Livin'",
+      modalSubtitle: "Bayar pakai QRIS Livin', pengeluarannya langsung masuk ke sini.",
+      loadFailed: "Pengaturan email belum bisa dimuat.",
+      retryBtn: "Coba lagi",
+      addressLabel: "Alamat sinkronisasi kamu",
+      copyAddress: "Salin alamat",
+      copied: "Tersalin",
+      pendingNotice: "{count} transaksi dari email menunggu ditinjau di Beranda.",
+      tabSetup: "Cara pasang",
+      tabSettings: "Pengaturan",
+      tabPaste: "Coba tempel",
+      setupIntro: "Sekali pasang, sekitar 3 menit. SakuTrack tidak bisa membuka inbox kamu: yang sampai ke sini hanya email Livin' yang kamu teruskan lewat filter.",
+      mobileNote: "Langkahnya di Gmail versi komputer, karena aplikasi Gmail di HP tidak punya pengaturan penerusan. Kalau hanya ada HP, buka mail.google.com di Chrome lalu centang Situs desktop di menu ⋮.",
+      partForwardTitle: "Daftarkan alamat di Gmail",
+      stepOpenSettings: "Buka Gmail dengan akun yang menerima email Livin'. Klik ikon roda gigi, pilih Lihat semua setelan, lalu buka tab Penerusan dan POP/IMAP.",
+      openGmailSettings: "Buka setelan penerusan",
+      stepAddAddress: "Klik Tambahkan alamat penerusan, tempel alamat sinkronisasi di atas, lalu klik Berikutnya, Lanjutkan, dan OK.",
+      stepCode: "Gmail mengirim kode konfirmasi ke alamat itu, dan kodenya muncul di bawah ini dalam semenit. Ketik kodenya di Gmail, lalu klik Verifikasi.",
+      codeLabel: "Kode konfirmasi Gmail",
+      codeWaiting: "Belum ada kode masuk.",
+      codeRefresh: "Cek lagi",
+      codeLinkFound: "Gmail mengirim tautan konfirmasi. Buka tautannya untuk menyetujui alamat ini.",
+      codeOpenLink: "Buka tautan konfirmasi",
+      copyCodeBtn: "Salin kode",
+      stepKeepDisabled: "Setelah terverifikasi, biarkan pilihan Nonaktifkan penerusan. Kalau kamu memilih Teruskan salinan email masuk, semua email kamu ikut terkirim, bukan hanya dari Livin'.",
+      partFilterTitle: "Teruskan email Livin' saja",
+      stepSearch: "Cari email dari Livin' di Gmail, lalu klik ikon Tampilkan opsi penelusuran di ujung kanan kolom pencarian.",
+      openGmailSearch: "Cari email Livin' di Gmail",
+      stepFilterFrom: "Pastikan kolom Dari berisi alamat ini, lalu klik Buat filter.",
+      copySender: "Salin alamat pengirim Livin'",
+      stepForwardTo: "Centang Teruskan ke, pilih alamat sinkronisasi kamu, lalu klik Buat filter.",
+      stepDone: "Selesai. Pembayaran QRIS Livin' berikutnya akan masuk ke SakuTrack. Email lama tidak ikut diteruskan, jadi tempel isinya di tab Coba tempel kalau mau dicatat.",
+      modeTitle: "Setelah email masuk",
+      modeReview: "Tinjau dulu",
+      modeReviewDesc: "Masuk antrean di Beranda, kamu catat dengan satu ketukan.",
+      modeAuto: "Langsung catat",
+      modeAutoDesc: "Langsung tercatat sebagai pengeluaran, lalu kamu dapat notifikasi.",
+      sakuTitle: "Masuk ke Saku",
+      sakuDesc: "Pengeluaran dari email dicatat di Saku ini.",
+      resetTitle: "Ganti alamat sinkronisasi",
+      resetHint: "Pakai ini kalau alamatnya tersebar ke orang lain. Alamat lama berhenti bekerja, jadi alamat penerusan dan filter di Gmail harus dipasang ulang.",
+      resetToken: "Buat alamat baru",
+      resetConfirm: "Alamat lama akan berhenti bekerja dan filter Gmail harus dipasang ulang. Lanjutkan?",
+      saveBtn: "Simpan pengaturan",
+      savedToast: "Pengaturan tersimpan.",
+      saveFailed: "Belum tersimpan. Coba lagi.",
+      pasteTitle: "Isi email Livin'",
+      pasteDesc: "Untuk email lama, atau untuk mengecek apakah email kamu terbaca. Salin isi email Livin', tempel di sini, dan transaksinya ikut dicatat sesuai pengaturan kamu.",
+      loadSampleBtn: "Pakai contoh",
+      pastePlaceholder: "Tempel isi email Livin' di sini",
+      extractBtn: "Baca dan catat",
+      extractSuccess: "Terbaca",
+      extractFailed: "Tidak terbaca",
     },
   },
   en: {
@@ -2843,38 +2885,59 @@ export const dictionaries: Record<Locale, Dictionary> = {
       refLabel: "Ref",
       dismissBtn: "Dismiss",
       approveBtn: "Approve & Record",
-      modalTitle: "Email Transaction Detection (Livin' QRIS)",
-      modalSubtitle: "Secure, automatic detection strictly for your bank receipts",
-      tabSettings: "Settings & Forwarding",
-      tabPaste: "Paste Email (Test Live)",
-      privacyNote: "100% Privacy Preserved: This app never accesses your personal Gmail inbox. Only Mandiri receipt emails that you filter to forward will be processed.",
-      modeTitle: "Execution Mode (Hybrid)",
-      modeDesc: "Choose how the system handles transactions detected from email:",
-      modeReview: "Human Review",
-      modeReviewDesc: "Held in a Dashboard queue for 1-tap confirmation.",
-      modeAuto: "Full Automation",
-      modeAutoDesc: "Logged directly to expenses + instant notification.",
-      sakuTitle: "Destination Saku (Wallet)",
-      sakuDesc: "Select the saku where QRIS expenses will be assigned:",
-      forwardingTitle: "Private Forwarding Email Address",
-      resetToken: "Reset Token",
-      resetConfirm: "Regenerating the token will change your sync email address. Continue?",
-      gmailGuideTitle: "How to set up in Gmail (1 Minute):",
-      gmailStep1: "Copy the address above, go to Gmail > Settings > Forwarding.",
-      gmailStep2: "Create a New Filter: In the From field, enter: noreply.livin@bankmandiri.co.id",
-      gmailStep3: "Check Forward it to and select your sync address.",
-      gmailStep4: "Done! Every Livin' QRIS receipt will be detected instantly.",
-      saveBtn: "Save Settings",
-      savedToast: "Settings Saved!",
-      pasteTitle: "Paste Email Receipt Text",
-      pasteDesc: "Test extraction directly without waiting for email forwarding.",
-      loadSampleBtn: "Load Sample Receipt",
-      pastePlaceholder: "Paste Livin email text or receipt content here...",
-      extractBtn: "Extract & Process Transaction",
-      extractSuccess: "Successfully Processed!",
-      extractFailed: "Extraction Failed",
-      verificationCodeTitle: "Gmail Verification Code:",
-      copyCodeBtn: "Copy Code",
+      modalTitle: "Record Livin' emails automatically",
+      modalSubtitle: "Pay with Livin' QRIS and the expense shows up here.",
+      loadFailed: "Email settings couldn't be loaded.",
+      retryBtn: "Try again",
+      addressLabel: "Your sync address",
+      copyAddress: "Copy address",
+      copied: "Copied",
+      pendingNotice: "{count} email transactions are waiting for review on Home.",
+      tabSetup: "Setup",
+      tabSettings: "Settings",
+      tabPaste: "Paste",
+      setupIntro: "A one-time setup, about 3 minutes. SakuTrack can't open your inbox: only the Livin' emails your filter forwards reach it.",
+      mobileNote: "These steps use Gmail on a computer, because the Gmail phone app has no forwarding settings. On a phone only, open mail.google.com in Chrome and tick Desktop site in the ⋮ menu.",
+      partForwardTitle: "Add the address in Gmail",
+      stepOpenSettings: "Open Gmail with the account that receives Livin' emails. Click the gear icon, choose See all settings, then open the Forwarding and POP/IMAP tab.",
+      openGmailSettings: "Open forwarding settings",
+      stepAddAddress: "Click Add a forwarding address, paste the sync address above, then click Next, Proceed and OK.",
+      stepCode: "Gmail sends a confirmation code to that address, and it appears below within a minute. Type it into Gmail and click Verify.",
+      codeLabel: "Gmail confirmation code",
+      codeWaiting: "No code yet.",
+      codeRefresh: "Check again",
+      codeLinkFound: "Gmail sent a confirmation link. Open it to approve this address.",
+      codeOpenLink: "Open confirmation link",
+      copyCodeBtn: "Copy code",
+      stepKeepDisabled: "Once verified, leave Disable forwarding selected. If you choose Forward a copy of incoming mail, every email you get is sent, not only Livin' ones.",
+      partFilterTitle: "Forward only Livin' emails",
+      stepSearch: "Search for Livin' emails in Gmail, then click the Show search options icon at the right end of the search bar.",
+      openGmailSearch: "Search Livin' emails in Gmail",
+      stepFilterFrom: "Make sure the From field holds this address, then click Create filter.",
+      copySender: "Copy Livin' sender address",
+      stepForwardTo: "Tick Forward it to, pick your sync address, then click Create filter.",
+      stepDone: "Done. Your next Livin' QRIS payment will reach SakuTrack. Older emails are not forwarded, so paste them in the Paste tab if you want them recorded.",
+      modeTitle: "When an email arrives",
+      modeReview: "Review first",
+      modeReviewDesc: "Waits on Home until you record it with one tap.",
+      modeAuto: "Record right away",
+      modeAutoDesc: "Saved as an expense straight away, then you get a notification.",
+      sakuTitle: "Record into Saku",
+      sakuDesc: "Expenses from email are recorded in this Saku.",
+      resetTitle: "Change sync address",
+      resetHint: "Use this if the address has been shared with others. The old address stops working, so the forwarding address and filter in Gmail need setting up again.",
+      resetToken: "Make a new address",
+      resetConfirm: "The old address will stop working and the Gmail filter must be set up again. Continue?",
+      saveBtn: "Save settings",
+      savedToast: "Settings saved.",
+      saveFailed: "Not saved. Try again.",
+      pasteTitle: "Livin' email content",
+      pasteDesc: "For older emails, or to check that your email is read correctly. Copy the Livin' email, paste it here, and the transaction is recorded according to your settings.",
+      loadSampleBtn: "Use sample",
+      pastePlaceholder: "Paste the Livin' email here",
+      extractBtn: "Read and record",
+      extractSuccess: "Read",
+      extractFailed: "Couldn't read it",
     },
   },
 };
