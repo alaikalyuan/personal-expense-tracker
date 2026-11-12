@@ -38,11 +38,11 @@ export default {
         }),
       });
 
+      const resultText = await res.text();
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`SakuTrack webhook error [${res.status}]:`, errorText);
+        console.error(`SakuTrack webhook error [${res.status}] for "${subject}":`, resultText);
       } else {
-        console.log("Successfully forwarded transaction email to SakuTrack:", { to, from, subject });
+        console.log(`SakuTrack accepted "${subject}":`, resultText);
       }
     } catch (err) {
       console.error("Cloudflare Email Worker exception:", err);
