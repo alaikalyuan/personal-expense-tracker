@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  Pencil,
   AlertTriangle,
 } from "lucide-react";
 import confetti from "canvas-confetti";
@@ -102,6 +103,19 @@ export default function SplitBillViewer({
       });
     }
   }, [allPaid]);
+
+  // Close modals on Escape key
+  useEffect(() => {
+    if (!showQrModal && !showDeleteModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowQrModal(false);
+        if (!isDeleting) setShowDeleteModal(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showQrModal, showDeleteModal, isDeleting]);
 
   const formatRupiah = (amt: number) => {
     return formatCurrency(amt);
@@ -194,12 +208,20 @@ export default function SplitBillViewer({
             <span className="text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800">
               {t.splitBill.hostBadge}
             </span>
+            <Link
+              href={`/split/${bill.id}/edit`}
+              aria-label={t.splitBill.editBillAria}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
+            >
+              <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>{t.splitBill.editBillBtn}</span>
+            </Link>
             <button
               type="button"
               onClick={() => setShowDeleteModal(true)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
               <span>{t.splitBill.deleteBillBtn}</span>
             </button>
           </div>
@@ -347,11 +369,13 @@ export default function SplitBillViewer({
               }`}
             >
               {/* Header row */}
-              <div
+              <button
+                type="button"
+                aria-expanded={isExpanded}
                 onClick={() =>
                   setExpandedParticipantId(isExpanded ? null : p.participantId)
                 }
-                className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none"
+                className="w-full p-4 sm:p-5 flex items-center justify-between text-left cursor-pointer select-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-emerald-500"
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -390,15 +414,14 @@ export default function SplitBillViewer({
                     {p.isPaid ? t.splitBill.paidBadgeText : t.splitBill.unpaidBadge}
                   </span>
 
-                  <button
-                    type="button"
-                    aria-label="Detail"
+                  <span
+                    aria-hidden="true"
                     className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
                   >
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
+                  </span>
                 </div>
-              </div>
+              </button>
 
               {/* Expanded Item Breakdown */}
               {isExpanded && (
@@ -514,6 +537,8 @@ export default function SplitBillViewer({
                 <img
                   src={qrDataUrl}
                   alt={`QR Code untuk split bill ${bill.title}`}
+                  width={224}
+                  height={224}
                   className="w-56 h-56 object-contain"
                 />
               ) : (

@@ -24,10 +24,12 @@ import {
   saveSplitDraft,
   loadSplitDraft,
   clearSplitDraft,
+  invalidateSplitCache,
+  SplitBillRecord,
   SplitItemRecord,
   SplitParticipantRecord,
 } from "@/utils/splitCalculator";
-import { createSplitBill } from "@/app/split/actions";
+import { createSplitBill, updateSplitBill } from "@/app/split/actions";
 import FriendViewPreviewModal from "./FriendViewPreviewModal";
 import { useTranslation } from "@/utils/i18n/context";
 import { useAiAssistant } from "@/app/ai/AiAssistantProvider";
@@ -39,6 +41,7 @@ interface FormParticipant {
   id: string;
   name: string;
   isCreator: boolean;
+  isPaid?: boolean;
 }
 
 interface FormItem {
@@ -52,6 +55,13 @@ interface FormItem {
 import type { Wallet } from "@/utils/wallets/server";
 import ModalOverlay from "@/app/ui/ModalOverlay";
 
+export interface SplitBillInitialData {
+  bill: SplitBillRecord;
+  participants: SplitParticipantRecord[];
+  items: SplitItemRecord[];
+  loggedWalletId?: string | null;
+}
+
 interface SplitBillCreatorProps {
   creatorName: string;
   defaultPayment: {
@@ -63,6 +73,8 @@ interface SplitBillCreatorProps {
   wallets?: Wallet[];
   multiSakuEnabled?: boolean;
   defaultWalletId?: string | null;
+  mode?: "create" | "edit";
+  initialData?: SplitBillInitialData;
 }
 
 const PAYMENT_METHODS = [
@@ -93,51 +105,115 @@ export default function SplitBillCreator({
   wallets = [],
   multiSakuEnabled = false,
   defaultWalletId = null,
+  mode = "create",
+  initialData,
 }: SplitBillCreatorProps) {
   const router = useRouter();
   const { formatCurrency, currencySymbol, currency, t } = useTranslation();
+  const isEditMode = mode === "edit" && Boolean(initialData);
 
   // General Bill Info
-  const [title, setTitle] = useState("");
-  const [splitMode, setSplitMode] = useState<"itemized" | "equal">("itemized");
-  const [category, setCategory] = useState("Food & Dining");
+  const [title, setTitle] = useState(() => initialData?.bill.title || "");
+  const [splitMode, setSplitMode] = useState<"itemized" | "equal">(
+    () => initialData?.bill.split_mode || "itemized"
+  );
+  const [category, setCategory] = useState(
+    () => initialData?.bill.category || "Food & Dining"
+  );
   const [selectedWalletId, setSelectedWalletId] = useState<string>(
-    () => defaultWalletId || wallets.find((w) => w.is_primary)?.id || wallets[0]?.id || ""
+    () =>
+      initialData?.loggedWalletId ||
+      defaultWalletId ||
+      wallets.find((w) => w.is_primary)?.id ||
+      wallets[0]?.id ||
+      ""
   );
 
   // Participants
-  const [participants, setParticipants] = useState<FormParticipant[]>([
-    { id: "creator-0", name: creatorName || "Saya", isCreator: true },
-  ]);
+  const [participants, setParticipants] = useState<FormParticipant[]>(() => {
+    if (initialData && initialData.participants.length > 0) {
+      return initialData.participants.map((p) => ({
+        id: p.id,
+        name: p.name,
+        isCreator: Boolean(p.is_creator),
+        isPaid: Boolean(p.is_paid),
+      }));
+    }
+    return [{ id: "creator-0", name: creatorName || "Saya", isCreator: true, isPaid: true }];
+  });
   const [friendNameInput, setFriendNameInput] = useState("");
 
   // Items
-  const [items, setItems] = useState<FormItem[]>([
-    {
-      id: "item-1",
-      name: "",
-      price: 0,
-      quantity: 1,
-      assignedParticipantIds: ["creator-0"],
-    },
-  ]);
+  const [items, setItems] = useState<FormItem[]>(() => {
+    if (initialData && initialData.items.length > 0) {
+      const allPartIds = initialData.participants.map((p) => p.id);
+      return initialData.items.map((it) => ({
+        id: it.id,
+        name: it.name,
+        price: Number(it.price) || 0,
+        quantity: Math.max(1, Number(it.quantity) || 1),
+        assignedParticipantIds:
+          it.assigned_participant_ids && it.assigned_participant_ids.length > 0
+            ? it.assigned_participant_ids
+            : allPartIds,
+      }));
+    }
+    return [
+      {
+        id: "item-1",
+        name: "",
+        price: 0,
+        quantity: 1,
+        assignedParticipantIds: ["creator-0"],
+      },
+    ];
+  });
 
   // Adjustments & Taxes
-  const [taxPreset, setTaxPreset] = useState<"0" | "10" | "11" | "custom">("0");
-  const [customTax, setCustomTax] = useState<number>(0);
-  const [servicePercentage, setServicePercentage] = useState<number>(0);
-  const [discountAmount, setDiscountAmount] = useState<number>(0);
-  const [extraFee, setExtraFee] = useState<number>(0);
-  const [roundingStep, setRoundingStep] = useState<number>(100);
+  const [taxPreset, setTaxPreset] = useState<"0" | "10" | "11" | "custom">(() => {
+    if (!initialData) return "0";
+    const tax = Number(initialData.bill.tax_percentage) || 0;
+    if (tax === 0) return "0";
+    if (tax === 10) return "10";
+    if (tax === 11) return "11";
+    return "custom";
+  });
+  const [customTax, setCustomTax] = useState<number>(() => {
+    if (!initialData) return 0;
+    const tax = Number(initialData.bill.tax_percentage) || 0;
+    return tax !== 0 && tax !== 10 && tax !== 11 ? tax : 0;
+  });
+  const [servicePercentage, setServicePercentage] = useState<number>(
+    () => Number(initialData?.bill.service_percentage) || 0
+  );
+  const [discountAmount, setDiscountAmount] = useState<number>(
+    () => Number(initialData?.bill.discount_amount) || 0
+  );
+  const [extraFee, setExtraFee] = useState<number>(
+    () => Number(initialData?.bill.extra_fee) || 0
+  );
+  const [roundingStep, setRoundingStep] = useState<number>(
+    () => (initialData?.bill.rounding_step !== undefined ? Number(initialData.bill.rounding_step) : 100)
+  );
 
   // Payment Details
-  const [paymentMethod, setPaymentMethod] = useState(defaultPayment?.method || "BCA");
-  const [accountNumber, setAccountNumber] = useState(defaultPayment?.account_number || "");
-  const [accountName, setAccountName] = useState(defaultPayment?.account_name || creatorName || "");
-  const [saveAsDefault, setSaveAsDefault] = useState(!defaultPayment?.account_number);
+  const [paymentMethod, setPaymentMethod] = useState(
+    () => initialData?.bill.payment_info?.method || defaultPayment?.method || "BCA"
+  );
+  const [accountNumber, setAccountNumber] = useState(
+    () => initialData?.bill.payment_info?.account_number ?? defaultPayment?.account_number ?? ""
+  );
+  const [accountName, setAccountName] = useState(
+    () => initialData?.bill.payment_info?.account_name ?? defaultPayment?.account_name ?? creatorName ?? ""
+  );
+  const [saveAsDefault, setSaveAsDefault] = useState(
+    () => (isEditMode ? false : !defaultPayment?.account_number)
+  );
 
   // Tracker Integration
-  const [autoLogToTracker, setAutoLogToTracker] = useState(true);
+  const [autoLogToTracker, setAutoLogToTracker] = useState(
+    () => (isEditMode ? Boolean(initialData?.bill.logged_expense_id) : true)
+  );
 
   // UI States
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -148,13 +224,9 @@ export default function SplitBillCreator({
   // Vision OCR Scan State
   const { isAiEnabled } = useAiAssistant();
   const {
-    extract,
-    isExtracting,
-    statusMessage: extractStatus,
     error: extractError,
     clearError: clearExtractError,
   } = useImageExtract({ hint: "split" });
-  const scanInputRef = useRef<HTMLInputElement>(null);
   const [scannedReceiptTotal, setScannedReceiptTotal] = useState<number | null>(null);
   const [pendingScannedDoc, setPendingScannedDoc] = useState<ExtractedDocument | null>(null);
   const [showReplaceDialog, setShowReplaceDialog] = useState(false);
@@ -168,12 +240,15 @@ export default function SplitBillCreator({
       setCategory(doc.suggestedCategory);
     }
 
+    const creatorPartId =
+      participants.find((p) => p.isCreator)?.id || participants[0]?.id || "creator-0";
+
     const mappedItems: FormItem[] = doc.items.map((it, idx) => ({
       id: `item-scan-${Date.now()}-${idx}`,
       name: it.name,
       price: it.unitPrice,
       quantity: it.quantity || 1,
-      assignedParticipantIds: ["creator-0"],
+      assignedParticipantIds: [creatorPartId],
     }));
 
     if (appendMode) {
@@ -189,7 +264,7 @@ export default function SplitBillCreator({
                 name: doc.merchant || "Tagihan Struk",
                 price: doc.total || 0,
                 quantity: 1,
-                assignedParticipantIds: ["creator-0"],
+                assignedParticipantIds: [creatorPartId],
               },
             ]
       );
@@ -247,6 +322,7 @@ export default function SplitBillCreator({
 
   // Check for existing draft on client mount to avoid hydration mismatch
   useEffect(() => {
+    if (isEditMode) return;
     const timer = setTimeout(() => {
       const draft = loadSplitDraft<{
         title?: string;
@@ -257,7 +333,7 @@ export default function SplitBillCreator({
       }
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isEditMode]);
 
   // Compute effective tax percentage
   const effectiveTaxPercentage = useMemo(() => {
@@ -301,6 +377,7 @@ export default function SplitBillCreator({
 
   // Auto-Save Draft to LocalStorage whenever key fields change
   useEffect(() => {
+    if (isEditMode) return;
     if (!title && items.length === 1 && !items[0].name) return;
     const timeout = setTimeout(() => {
       saveSplitDraft({
@@ -316,7 +393,7 @@ export default function SplitBillCreator({
       });
     }, 800);
     return () => clearTimeout(timeout);
-  }, [title, splitMode, participants, items, taxPreset, customTax, servicePercentage, discountAmount, extraFee]);
+  }, [isEditMode, title, splitMode, participants, items, taxPreset, customTax, servicePercentage, discountAmount, extraFee]);
 
   // Real-Time Calculation (Memoized for zero keystroke lag)
   const calculation = useMemo(() => {
@@ -330,10 +407,10 @@ export default function SplitBillCreator({
 
     const calcParts: SplitParticipantRecord[] = participants.map((p) => ({
       id: p.id,
-      bill_id: "preview",
+      bill_id: initialData?.bill.id || "preview",
       name: p.name,
       is_creator: p.isCreator,
-      is_paid: p.isCreator,
+      is_paid: p.isPaid !== undefined ? p.isPaid : p.isCreator,
     }));
 
     return calculateSplitBreakdown(
@@ -487,7 +564,7 @@ export default function SplitBillCreator({
           .filter((idx): idx is number => idx !== undefined),
       }));
 
-      const res = await createSplitBill({
+      const payload = {
         title: title.trim(),
         splitMode,
         taxPercentage: effectiveTaxPercentage,
@@ -505,19 +582,30 @@ export default function SplitBillCreator({
         walletId: selectedWalletId || null,
         category,
         participants: participants.map((p) => ({
+          id: p.id.startsWith("part-") || p.id.startsWith("creator-") ? undefined : p.id,
           name: p.name,
           isCreator: p.isCreator,
         })),
         items: payloadItems,
-      });
+      };
 
-      // Clear draft on successful creation
-      clearSplitDraft();
+      if (isEditMode && initialData) {
+        await updateSplitBill(initialData.bill.id, payload);
+        invalidateSplitCache(initialData.bill.id);
+        router.push(`/split/${initialData.bill.id}`);
+        router.refresh();
+      } else {
+        const res = await createSplitBill(payload);
 
-      // Redirect directly to the generated bill share route
-      router.push(`/split/${res.billId}`);
+        // Clear draft on successful creation
+        clearSplitDraft();
+
+        // Redirect directly to the generated bill share route
+        router.push(`/split/${res.billId}`);
+      }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t.splitBill.errGenericCreate;
+      const fallbackError = isEditMode ? t.splitBill.errGenericUpdate : t.splitBill.errGenericCreate;
+      const message = err instanceof Error ? err.message : fallbackError;
       setErrorMsg(message);
       setIsPublishing(false);
     }
@@ -532,24 +620,24 @@ export default function SplitBillCreator({
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
         <Link
-          href="/split"
+          href={isEditMode && initialData ? `/split/${initialData.bill.id}` : "/split"}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{t.splitBill.historyBack}</span>
+          <span>{isEditMode ? t.splitBill.backToBill : t.splitBill.historyBack}</span>
         </Link>
         <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
-          {t.splitBill.newSplitBadge}
+          {isEditMode ? t.splitBill.editSplitBadge : t.splitBill.newSplitBadge}
         </span>
       </div>
 
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
-          {t.splitBill.newSplitTitle}
+          {isEditMode ? t.splitBill.editSplitTitle : t.splitBill.newSplitTitle}
         </h1>
         <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          {t.splitBill.newSplitSubtitle}
+          {isEditMode ? t.splitBill.editSplitSubtitle : t.splitBill.newSplitSubtitle}
         </p>
       </div>
 
@@ -804,14 +892,21 @@ export default function SplitBillCreator({
               {p.isCreator ? (
                 <span className="text-xs opacity-75 font-semibold">({t.splitBill.hostBadge})</span>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => handleRemoveParticipant(p.id)}
-                  aria-label={t.splitBill.removeParticipantAria.replace("{name}", p.name)}
-                  className="text-zinc-400 hover:text-rose-500 transition-colors ml-0.5 cursor-pointer"
-                >
-                  &times;
-                </button>
+                <>
+                  {isEditMode && p.isPaid && (
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ {t.splitBill.paidBadgeText}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveParticipant(p.id)}
+                    aria-label={t.splitBill.removeParticipantAria.replace("{name}", p.name)}
+                    className="text-zinc-400 hover:text-rose-500 transition-colors ml-0.5 cursor-pointer"
+                  >
+                    &times;
+                  </button>
+                </>
               )}
             </div>
           ))}
@@ -920,8 +1015,30 @@ export default function SplitBillCreator({
                   className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
                 />
 
+                {/* Quantity input (for itemized mode) */}
+                {splitMode === "itemized" && (
+                  <div className="relative w-14 sm:w-16">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400">
+                      &times;
+                    </span>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      aria-label="Quantity"
+                      value={item.quantity || 1}
+                      onChange={(e) =>
+                        handleUpdateItem(item.id, {
+                          quantity: Math.max(1, Math.floor(Number(e.target.value) || 1)),
+                        })
+                      }
+                      className="w-full pl-5 pr-2 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
+                    />
+                  </div>
+                )}
+
                 {/* Price input */}
-                <div className="relative w-32 sm:w-40">
+                <div className="relative w-28 sm:w-36">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400">
                     {currencySymbol}
                   </span>
@@ -1404,7 +1521,7 @@ export default function SplitBillCreator({
               <span className="sm:hidden">{t.splitBill.previewShortBtn}</span>
             </button>
 
-            {/* Direct Publish Button */}
+            {/* Direct Publish / Save Button */}
             <button
               type="button"
               onClick={handlePublish}
@@ -1412,11 +1529,11 @@ export default function SplitBillCreator({
               className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 font-bold text-xs active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
             >
               {isPublishing ? (
-                <span>{t.splitBill.publishingBtn}</span>
+                <span>{isEditMode ? t.splitBill.savingChangesBtn : t.splitBill.publishingBtn}</span>
               ) : (
                 <>
                   <Receipt className="w-4 h-4" />
-                  <span>{t.splitBill.publishBtn}</span>
+                  <span>{isEditMode ? t.splitBill.saveChangesBtn : t.splitBill.publishBtn}</span>
                 </>
               )}
             </button>
@@ -1438,6 +1555,7 @@ export default function SplitBillCreator({
         onClose={() => setIsPreviewOpen(false)}
         onConfirmPublish={handlePublish}
         isPublishing={isPublishing}
+        isEditMode={isEditMode}
         title={title || "Split Bill"}
         calculation={calculation}
         paymentInfo={{

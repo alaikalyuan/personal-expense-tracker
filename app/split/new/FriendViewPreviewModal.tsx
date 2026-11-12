@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   CreditCard,
@@ -20,6 +20,7 @@ interface FriendViewPreviewModalProps {
   onClose: () => void;
   onConfirmPublish: () => void;
   isPublishing: boolean;
+  isEditMode?: boolean;
   title: string;
   calculation: SplitCalculationSummary;
   paymentInfo: {
@@ -35,6 +36,7 @@ export default function FriendViewPreviewModal({
   onClose,
   onConfirmPublish,
   isPublishing,
+  isEditMode = false,
   title,
   calculation,
   paymentInfo,
@@ -45,6 +47,15 @@ export default function FriendViewPreviewModal({
       calculation.participants[0]?.participantId ||
       ""
   );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -132,8 +143,14 @@ export default function FriendViewPreviewModal({
                     {formatRupiah(activeParticipant.totalOwed)}
                   </h3>
                 </div>
-                <div className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-300 dark:border-amber-700/40">
-                  {t.splitBill.unpaidBadge}
+                <div
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                    activeParticipant.isPaid
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                      : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-300 dark:border-amber-700/40"
+                  }`}
+                >
+                  {activeParticipant.isPaid ? t.splitBill.paidBadgeText : t.splitBill.unpaidBadge}
                 </div>
               </div>
 
@@ -252,11 +269,11 @@ export default function FriendViewPreviewModal({
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-600 text-white font-semibold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
           >
             {isPublishing ? (
-              <span>{t.splitBill.publishingBtn}</span>
+              <span>{isEditMode ? t.splitBill.savingChangesBtn : t.splitBill.publishingBtn}</span>
             ) : (
               <>
                 <ShieldCheck className="w-4 h-4" />
-                <span>{t.splitBill.confirmPublishBtn}</span>
+                <span>{isEditMode ? t.splitBill.confirmSaveBtn : t.splitBill.confirmPublishBtn}</span>
               </>
             )}
           </button>
