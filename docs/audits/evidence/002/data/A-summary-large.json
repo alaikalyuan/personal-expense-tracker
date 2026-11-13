@@ -1,0 +1,21 @@
+[
+ {
+  "label": "large-home",
+  "run": 1,
+  "finalUrl": "http://localhost:3100/",
+  "runWarnings": [],
+  "score": 92,
+  "fcp": 1069.582,
+  "lcp": 3170.5820000000003,
+  "cls": 0,
+  "tbt": 139.49999999999955,
+  "si": 1381.9975668314,
+  "tti": 3334.882000000001,
+  "ttfb": 136,
+  "totalBytes": 346176,
+  "secs": 11.116,
+  "env": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.18 Safari/537.36",
+  "form": "mobile",
+  "thr": "simulate"
+ }
+]

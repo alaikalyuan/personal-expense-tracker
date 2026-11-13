@@ -1,0 +1,15 @@
+import { launch, newContext, login, BASE } from "./lib.mjs";
+const b = await launch();
+const ctx = await newContext(b, { theme: "light", hasTouch:true, isMobile:true });
+const page = await ctx.newPage();
+await login(page, "typical");
+await page.goto(BASE + "/"); await page.waitForLoadState("networkidle");
+const dump = async (t)=>console.log(t+"\n"+(await page.evaluate(() => { const d=document.querySelector('[role=dialog]')||document.body; return [...d.querySelectorAll('a[href],button,input,select,textarea,[role=tab],[role=menuitem],summary')].filter(e=>e.getBoundingClientRect().width>0).map(e=>`${e.tagName.toLowerCase()}|type=${e.type||''}|role=${e.getAttribute('role')||''}|name=${(e.getAttribute('aria-label')||e.innerText||e.placeholder||'').trim().replace(/\s+/g,' ').slice(0,40)}|ph=${e.placeholder||''}`).join("\n")+"\nDIALOG: "+!!document.querySelector('[role=dialog]'); })));
+await page.getByRole("button",{name:"Buka menu"}).click(); await page.waitForTimeout(500);
+await dump("MENU");
+await page.screenshot({path:"../out/shots/B/menu.png"});
+await page.keyboard.press("Escape"); await page.waitForTimeout(300);
+await page.getByRole("button",{name:"Tambah pengeluaran"}).click(); await page.waitForTimeout(600);
+await dump("ADD");
+await page.screenshot({path:"../out/shots/B/add.png"});
+await b.close();

@@ -1,0 +1,11 @@
+import { launch, newContext, shot, BASE } from "./lib.mjs";
+import { readFileSync } from "node:fs";
+const url = readFileSync("../out/_D_split_url.txt","utf8").trim();
+const b = await launch(); const ctx = await newContext(b, {}); const page = await ctx.newPage();
+await page.goto(url); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(2500);
+console.log("FRIEND:", await page.evaluate(()=>document.body.innerText.replace(/\n+/g,' | ')));
+await page.getByText("[A002] Rina").first().click(); await page.waitForTimeout(500);
+console.log("RINA expanded:", await page.evaluate(()=>{const t=document.body.innerText; const i=t.indexOf('Menu & Porsi'); return t.slice(i).replace(/\n+/g,' | ')}));
+await shot(page,"D","E10-friend-view-mine",{fullPage:true});
+console.log("auth cookie:",(await ctx.cookies()).filter(k=>k.name.includes('auth')).length);
+await b.close();

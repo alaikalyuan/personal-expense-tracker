@@ -1,0 +1,14 @@
+import { launch, newContext, shot, BASE } from "./lib.mjs";
+import { writeFileSync } from "node:fs";
+const b = await launch();
+const ctx = await newContext(b, {});
+const page = await ctx.newPage();
+await page.goto(BASE); await page.waitForLoadState("networkidle"); await page.waitForTimeout(1500);
+console.log("GUEST CREATE at", new Date().toString());
+await page.getByText("Mulai tanpa akun").click(); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(3000);
+console.log("url", page.url(), "auth cookie:", (await ctx.cookies()).filter(k=>k.name.includes("auth")).length);
+await shot(page,"D","A06-guest-dashboard",{fullPage:true});
+console.log(await page.evaluate(()=>document.body.innerText));
+console.log(await page.evaluate(()=>[...document.querySelectorAll('button,a')].map(e=>(e.innerText.trim()||e.getAttribute('aria-label')||'?')+'|'+(e.getAttribute('href')||'')+'@'+Math.round(e.getBoundingClientRect().y)+' h'+Math.round(e.getBoundingClientRect().height)).join('\n')));
+await ctx.storageState({path:"../out/_D_guest_state.json"});
+await b.close();

@@ -1,0 +1,14 @@
+import { launch, newContext, shot, BASE } from "./lib.mjs";
+const b = await launch();
+const ctx = await newContext(b, {storageState:"../out/_D_guest_state.json"});
+const page = await ctx.newPage();
+await page.goto(BASE); await page.waitForLoadState("networkidle"); await page.waitForTimeout(1500);
+await page.getByText('Mode Tamu').first().click(); await page.waitForTimeout(800);
+await shot(page,"D","A07-guest-badge-click");
+console.log("MODE TAMU CLICK:\n", await page.evaluate(()=>document.body.innerText.slice(0,900)));
+await page.keyboard.press("Escape"); await page.waitForTimeout(500);
+await page.getByRole('button',{name:'Tambah pengeluaran'}).click(); await page.waitForTimeout(800);
+await shot(page,"D","A08-add-modal");
+console.log("ADD:\n", await page.evaluate(()=>{const d=document.querySelector('[role=dialog]');return (d||document.body).innerText}));
+console.log(await page.evaluate(()=>[...document.querySelectorAll('[role=dialog] button, [role=dialog] input, [role=dialog] select, [role=dialog] textarea')].map(e=>e.tagName+':'+(e.innerText.trim()||e.getAttribute('aria-label')||e.getAttribute('placeholder')||e.type)+':'+(e.type||'')+':'+(e.inputMode||'')+' h'+Math.round(e.getBoundingClientRect().height)).join('\n')));
+await b.close();

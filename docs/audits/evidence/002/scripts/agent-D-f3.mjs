@@ -1,0 +1,17 @@
+import { open, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open("journey");
+await page.goto("http://localhost:3100/subscriptions"); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(2000);
+await page.getByRole('button',{name:/Tambah/}).first().click(); await page.waitForTimeout(700);
+await page.locator('input[placeholder^="cth: Spotify"]').fill("[A002] Spotify uji");
+await page.locator('input[type=number]').first().fill("34990");
+await page.locator('input[type=date]').fill("2026-11-16");
+await page.locator('input[type=checkbox]').first().check(); await page.waitForTimeout(300);
+await page.locator('input[placeholder^="Nama teman"]').fill("[A002] Rina"); await page.getByRole('button',{name:'Tambah',exact:true}).last().click(); await page.waitForTimeout(400);
+console.log("split calc:", await page.evaluate(()=>{const t=document.body.innerText; const i=t.indexOf('Porsi Per Orang'); return t.slice(i,i+140).replace(/\n+/g,' | ')}));
+const posts=[]; page.on('request',r=>{if(r.method()==='POST')posts.push(1)});
+await page.getByRole('button',{name:'Tambah Langganan'}).last().dblclick(); await page.waitForTimeout(3000);
+console.log("create POSTs (dblclick):", posts.length);
+console.log("LIST:", await txt(page,1100)); await shot(page,"D","F03-sub-created");
+await page.reload(); await page.waitForTimeout(1800);
+console.log("count after reload of '[A002] Spotify uji':", await page.getByText('[A002] Spotify uji').count());
+await b.close();

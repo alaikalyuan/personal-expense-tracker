@@ -1,0 +1,13 @@
+import { open, goHome, txt, shot } from "./agent-D-h.mjs";
+import { readFileSync } from "node:fs";
+const {b, ctx, page} = await open("journey",{acceptDownloads:true});
+await goHome(page);
+await page.getByRole('button',{name:'Bagikan / Ekspor'}).click(); await page.waitForTimeout(800);
+await page.getByRole('button',{name:'Unduh CSV'}).first().click(); await page.waitForTimeout(600);
+const dlg = ()=>page.evaluate(()=>[...document.querySelectorAll('[role=dialog]')].slice(-1).map(d=>d.innerText.replace(/\n+/g,' | ')).join(''));
+console.log("CSV TAB:", await dlg()); await shot(page,"D","D09-export-csv-tab");
+const btns = await page.evaluate(()=>[...[...document.querySelectorAll('[role=dialog]')].slice(-1)[0].querySelectorAll('button')].map(e=>e.innerText.trim()));
+console.log(btns);
+const [dl] = await Promise.all([page.waitForEvent('download',{timeout:8000}).catch(()=>null), page.getByRole('button',{name:/Unduh|Download/}).last().click().catch(()=>null)]);
+if(dl){ await dl.saveAs("../agents/D/export-week.csv"); console.log("saved", dl.suggestedFilename()); console.log(readFileSync("../agents/D/export-week.csv","utf8")); } else console.log("no download event");
+await b.close();

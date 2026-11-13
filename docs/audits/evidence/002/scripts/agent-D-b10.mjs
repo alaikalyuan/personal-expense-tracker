@@ -1,0 +1,16 @@
+import { open, goHome, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open();
+await goHome(page);
+await page.getByRole('button',{name:/Minggu Ini/}).click(); await page.waitForTimeout(800);
+await page.getByRole('button',{name:'Ubah [A002] fotokopi'}).click(); await page.waitForTimeout(900);
+await page.getByRole('button',{name:'Hapus'}).click(); await page.waitForTimeout(600);
+const box=await page.locator('[role=dialog]').boundingBox(); console.log(box);
+await shot(page,"D","B13-delete-confirm");
+await page.getByRole('button',{name:'Ya, hapus'}).click(); await page.waitForTimeout(400);
+await shot(page,"D","B14-after-delete-0.4s");
+console.log("t+0.4s:", await txt(page,800));
+console.log("undo present:", await page.getByText(/Urungkan|Batalkan|Undo/i).count());
+await page.waitForTimeout(2000);
+await page.getByRole('button',{name:/Minggu Ini/}).click(); await page.waitForTimeout(600);
+console.log("t+2.5s:", await txt(page,900));
+await b.close();

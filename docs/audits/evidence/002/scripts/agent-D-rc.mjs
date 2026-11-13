@@ -1,0 +1,4 @@
+import { launch } from "./lib.mjs";
+const b = await launch(); const p = await b.newPage({viewport:{width:420,height:640}});
+await p.setContent(`<body style="font-family:monospace;background:#fff;padding:24px;width:360px"><h2 style="text-align:center">[A002] WARUNG UJI</h2><div style="text-align:center">Jl. Contoh No. 1 - 13/11/2026</div><hr><table style="width:100%;font-size:18px"><tr><td>[A002] Nasi Ayam</td><td align=right>Rp 25.000</td></tr><tr><td>[A002] Es Teh</td><td align=right>Rp 5.000</td></tr><tr><td>[A002] Kerupuk</td><td align=right>Rp 3.000</td></tr></table><hr><table style="width:100%;font-size:20px;font-weight:bold"><tr><td>TOTAL</td><td align=right>Rp 33.000</td></tr></table><div style="text-align:center;margin-top:12px">Terima kasih</div></body>`);
+await p.screenshot({path:"../agents/D/receipt-A002.png"}); await b.close();

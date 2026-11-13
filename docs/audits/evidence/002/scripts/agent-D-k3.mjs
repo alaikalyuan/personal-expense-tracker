@@ -1,0 +1,14 @@
+import { open, txt, shot } from "./agent-D-h.mjs";
+const {b, ctx, page} = await open("journey");
+await page.goto("http://localhost:3100/saku"); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(2000);
+await page.getByRole('button',{name:'Tambah Saku'}).click(); await page.waitForTimeout(700);
+const d=page.locator('[role=dialog]').last();
+await d.locator('input[placeholder^="Contoh: Jajan"]').fill("[A002] Saku Kos");
+await d.locator('input[type=number]').nth(0).fill("400000");
+await d.locator('input[placeholder="Contoh: 300000"]').fill("150000");
+const posts=[]; page.on('request',r=>{if(r.method()==='POST')posts.push(1)});
+await d.getByRole('button',{name:'Tambah Saku'}).last().click(); await page.waitForTimeout(3000);
+console.log("POSTs",posts.length);
+console.log("SAKU:", await page.evaluate(()=>document.body.innerText.replace(/\n+/g,' | ').slice(0,1500)));
+await shot(page,"D","K03-two-saku");
+await b.close();

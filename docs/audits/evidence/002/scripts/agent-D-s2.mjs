@@ -1,0 +1,13 @@
+import { open, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open("journey");
+await page.goto("http://localhost:3100/savings"); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(2000);
+const dlg=()=>page.evaluate(()=>[...document.querySelectorAll('[role=dialog]')].slice(-1).map(d=>d.innerText.replace(/\n+/g,' | ')+' // INPUTS: '+[...d.querySelectorAll('input,select,textarea')].map(i=>i.type+':'+(i.inputMode||'')+':'+i.placeholder+':'+i.value).join(' ; ')).join(''));
+await page.getByRole('button',{name:'Buat Target Tabungan'}).click(); await page.waitForTimeout(700);
+console.log("GOAL DIALOG:", await dlg()); await shot(page,"D","S03-goal-dialog");
+await page.keyboard.press("Escape"); await page.waitForTimeout(400);
+await page.getByRole('button',{name:'Catat setor atau tarik'}).click(); await page.waitForTimeout(700);
+console.log("DEPOSIT DIALOG:", await dlg()); await shot(page,"D","S04-deposit-dialog");
+await page.keyboard.press("Escape"); await page.waitForTimeout(400);
+await page.getByRole('button',{name:'Pindahkan ke tabungan'}).click(); await page.waitForTimeout(700);
+console.log("MOVE DIALOG:", await dlg()); await shot(page,"D","S05-move-dialog");
+await b.close();

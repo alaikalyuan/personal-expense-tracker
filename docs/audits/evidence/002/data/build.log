@@ -1,0 +1,53 @@
+
+> personal-expense-tracker@0.1.0 build
+> next build
+
+▲ Next.js 16.3.4 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 198ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.4s
+  Running TypeScript ...
+  Finished TypeScript in 5.1s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/23) ...
+  Generating static pages using 11 workers (5/23) 
+  Generating static pages using 11 workers (11/23) 
+  Generating static pages using 11 workers (17/23) 
+✓ Generating static pages using 11 workers (23/23) in 717ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /api/ai/advisor
+├ ƒ /api/ai/extract
+├ ƒ /api/cron/notifications
+├ ƒ /api/email/inbound
+├ ƒ /api/email/parse-paste
+├ ƒ /api/notifications/subscribe
+├ ƒ /api/notifications/test
+├ ƒ /archive
+├ ƒ /auth/callback
+├ ƒ /auth/guest
+├ ƒ /compare
+├ ○ /icon.png
+├ ƒ /login
+├ ○ /manifest.webmanifest
+├ ○ /robots.txt
+├ ƒ /saku
+├ ƒ /saku/[id]
+├ ƒ /savings
+├ ƒ /split
+├ ƒ /split/[id]
+├ ƒ /split/[id]/edit
+├ ƒ /split/new
+└ ƒ /subscriptions
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -289,14 +289,11 @@ ALTER TABLE public.split_bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.split_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.split_items ENABLE ROW LEVEL SECURITY;
 
+-- No public read policies: the friend view reads one bill at a time through
+-- public.get_shared_split_bill() below (Audit 002, A002-01).
 DROP POLICY IF EXISTS "Public read split_bills" ON public.split_bills;
-CREATE POLICY "Public read split_bills" ON public.split_bills FOR SELECT USING (true);
-
 DROP POLICY IF EXISTS "Public read split_participants" ON public.split_participants;
-CREATE POLICY "Public read split_participants" ON public.split_participants FOR SELECT USING (true);
-
 DROP POLICY IF EXISTS "Public read split_items" ON public.split_items;
-CREATE POLICY "Public read split_items" ON public.split_items FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Creator manage split_bills" ON public.split_bills;
 CREATE POLICY "Creator manage split_bills" ON public.split_bills
@@ -319,6 +316,83 @@ CREATE POLICY "Creator manage split_items" ON public.split_items
 CREATE INDEX IF NOT EXISTS idx_split_bills_creator ON public.split_bills (creator_id);
 CREATE INDEX IF NOT EXISTS idx_split_participants_bill ON public.split_participants (bill_id);
 CREATE INDEX IF NOT EXISTS idx_split_items_bill ON public.split_items (bill_id);
+
+CREATE OR REPLACE FUNCTION public.get_shared_split_bill(p_bill_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_bill public.split_bills%ROWTYPE;
+  v_is_host BOOLEAN;
+BEGIN
+  IF p_bill_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT * INTO v_bill FROM public.split_bills WHERE id = p_bill_id;
+  IF NOT FOUND THEN
+    RETURN NULL;
+  END IF;
+
+  v_is_host := auth.uid() IS NOT NULL AND auth.uid() = v_bill.creator_id;
+
+  RETURN jsonb_build_object(
+    'is_host', v_is_host,
+    'bill', jsonb_build_object(
+      'id', v_bill.id,
+      'creator_id', CASE WHEN v_is_host THEN v_bill.creator_id END,
+      'title', v_bill.title,
+      'split_mode', v_bill.split_mode,
+      'tax_percentage', v_bill.tax_percentage,
+      'service_percentage', v_bill.service_percentage,
+      'discount_amount', v_bill.discount_amount,
+      'extra_fee', v_bill.extra_fee,
+      'rounding_step', v_bill.rounding_step,
+      'payment_info', v_bill.payment_info,
+      'category', v_bill.category,
+      'logged_expense_id', CASE WHEN v_is_host THEN v_bill.logged_expense_id END,
+      'status', v_bill.status,
+      'created_at', v_bill.created_at,
+      'updated_at', v_bill.updated_at
+    ),
+    'participants', COALESCE((
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'id', p.id,
+          'bill_id', p.bill_id,
+          'name', p.name,
+          'is_creator', p.is_creator,
+          'is_paid', p.is_paid,
+          'paid_at', p.paid_at
+        )
+        ORDER BY p.is_creator DESC
+      )
+      FROM public.split_participants p
+      WHERE p.bill_id = v_bill.id
+    ), '[]'::jsonb),
+    'items', COALESCE((
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'id', i.id,
+          'bill_id', i.bill_id,
+          'name', i.name,
+          'price', i.price,
+          'quantity', i.quantity,
+          'assigned_participant_ids', i.assigned_participant_ids
+        )
+      )
+      FROM public.split_items i
+      WHERE i.bill_id = v_bill.id
+    ), '[]'::jsonb)
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_shared_split_bill(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_shared_split_bill(UUID) TO anon, authenticated, service_role;
 
 -- 6. SUBSCRIPTIONS & PUSH NOTIFICATIONS
 -- ------------------------------------------------------------------------------

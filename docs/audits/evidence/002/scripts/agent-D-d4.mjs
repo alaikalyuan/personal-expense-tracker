@@ -1,0 +1,17 @@
+import { open, goHome, txt, openAdd, shot } from "./agent-D-h.mjs";
+const {b, page} = await open();
+await page.goto("http://localhost:3100/compare"); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(1500);
+console.log("COMPARE before:", await txt(page,2500));
+await shot(page,"D","D05-compare-before",{fullPage:true});
+await goHome(page); await openAdd(page);
+await page.getByRole('button',{name:'Standar'}).click(); await page.waitForTimeout(400);
+await page.locator('input[inputmode=numeric]').first().pressSequentially("40000");
+await page.getByRole('button',{name:/^Makanan/}).click();
+await page.locator('input[placeholder="Nama pengeluaran"]').fill("[A002] makan keluarga");
+await page.getByRole('button',{name:'Pilih Tanggal'}).click(); await page.waitForTimeout(300);
+await page.locator('input[type=date]').first().fill("2026-11-08");
+await page.locator('button[type=submit]').filter({hasText:'Tambah pengeluaran'}).click(); await page.waitForTimeout(2200);
+await page.goto("http://localhost:3100/compare"); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(1500);
+console.log("COMPARE after:", await txt(page,2500));
+await shot(page,"D","D06-compare-after");
+await b.close();

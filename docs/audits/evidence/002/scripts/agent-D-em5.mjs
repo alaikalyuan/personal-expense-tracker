@@ -1,0 +1,11 @@
+import { open, goHome, txt, shot } from "./agent-D-h.mjs";
+const {b, ctx, page} = await open("journey");
+await goHome(page);
+await page.getByText('1 transaksi dari email menunggu dicatat').click(); await page.waitForTimeout(600);
+const posts=[]; page.on('request',r=>{if(r.method()==='POST')posts.push(1)});
+await page.getByRole('button',{name:'Catat',exact:true}).dblclick(); await page.waitForTimeout(3000);
+console.log("POSTs", posts.length);
+await page.reload(); await page.waitForTimeout(1800);
+const t=await txt(page,2200);
+console.log("rows WARUNG UJI:", (t.match(/WARUNG UJI KOPI/g)||[]).length, "|", t.slice(0,330));
+await b.close();

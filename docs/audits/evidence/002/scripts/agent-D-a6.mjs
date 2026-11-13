@@ -1,0 +1,20 @@
+import { launch, newContext, shot, BASE } from "./lib.mjs";
+const b = await launch();
+const ctx = await newContext(b, {storageState:"../out/_D_guest_state.json"});
+const page = await ctx.newPage();
+await page.goto(BASE); await page.waitForLoadState("networkidle"); await page.waitForTimeout(1500);
+await page.getByRole('button',{name:'Tambah pengeluaran'}).click(); await page.waitForTimeout(800);
+const inp = page.locator('[role=dialog] input[type=text], input[placeholder*="cth"]').first();
+await inp.fill("[A002] guest kopi 12rb"); await page.waitForTimeout(800);
+await shot(page,"D","A09-guest-preview");
+console.log("PREVIEW:", await page.evaluate(()=>{const t=document.body.innerText; const i=t.indexOf('Terdeteksi'); return t.slice(i,i+250)}));
+await inp.press("Enter"); await page.waitForTimeout(2500);
+await shot(page,"D","A10-guest-saved");
+console.log(await page.evaluate(()=>document.body.innerText.slice(0,900)));
+await page.reload(); await page.waitForTimeout(2000);
+console.log("AFTER RELOAD:", await page.evaluate(()=>document.body.innerText.slice(0,700)));
+// menu
+await page.getByRole('button',{name:'Buka menu'}).click(); await page.waitForTimeout(700);
+await shot(page,"D","A11-guest-menu");
+console.log("MENU:", await page.evaluate(()=>document.body.innerText.slice(0,1200)));
+await b.close();

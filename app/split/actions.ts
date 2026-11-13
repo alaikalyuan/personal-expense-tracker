@@ -237,18 +237,34 @@ export async function toggleParticipantPaid(billId: string, participantId: strin
     throw new Error("Unauthorized");
   }
 
+  const { data: ownBill } = await supabase
+    .from("split_bills")
+    .select("id")
+    .eq("id", billId)
+    .eq("creator_id", user.id)
+    .maybeSingle();
+
+  if (!ownBill) {
+    throw new Error("Hanya pembuat tagihan yang bisa mengubah status bayar.");
+  }
+
   // Update participant payment state
-  const { error: partError } = await supabase
+  const { data: updatedRows, error: partError } = await supabase
     .from("split_participants")
     .update({
       is_paid: isPaid,
       paid_at: isPaid ? new Date().toISOString() : null,
     })
     .eq("id", participantId)
-    .eq("bill_id", billId);
+    .eq("bill_id", billId)
+    .select("id");
 
   if (partError) {
     throw new Error(`Gagal mengubah status: ${partError.message}`);
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    throw new Error("Peserta tidak ditemukan di tagihan ini.");
   }
 
   // Touch split_bills.updated_at so client localStorage cache is automatically invalidated!

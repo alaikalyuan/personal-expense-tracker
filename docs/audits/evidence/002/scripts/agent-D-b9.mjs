@@ -1,0 +1,12 @@
+import { open, goHome, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open();
+await goHome(page);
+await page.getByRole('button',{name:/Minggu Ini/}).click(); await page.waitForTimeout(800);
+await page.getByRole('button',{name:'Ubah [A002] fotokopi'}).click(); await page.waitForTimeout(900);
+console.log(await page.evaluate(()=>[...document.querySelectorAll('[role=dialog] input,[role=dialog] select')].map(e=>e.type+'='+e.value).join(' ; ')));
+let dlg=null; page.on('dialog',async d=>{dlg=d.type()+': '+d.message(); console.log("NATIVE DIALOG",dlg); await d.dismiss();});
+await page.getByRole('button',{name:'Hapus'}).click(); await page.waitForTimeout(900);
+console.log("after Hapus click: native?",dlg, "| dialogs:", await page.locator('[role=dialog],[role=alertdialog]').count());
+await shot(page,"D","B13-delete-confirm");
+console.log(await page.evaluate(()=>[...document.querySelectorAll('[role=dialog],[role=alertdialog]')].map(d=>d.innerText.replace(/\n+/g,' | ').slice(-250)).join('\n====\n')));
+await b.close();

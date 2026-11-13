@@ -1,0 +1,13 @@
+import { open, goHome, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open();
+await goHome(page);
+await page.getByRole('button',{name:'Bulanan',exact:true}).click(); await page.waitForTimeout(1500);
+await page.getByRole('button',{name:'Buka menu'}).click(); await page.waitForTimeout(600);
+await page.getByText(/^Budget Bulanan/).first().click(); await page.waitForTimeout(700);
+const i=page.locator('[role=dialog] input[inputmode=numeric]').last(); await i.fill(""); await i.pressSequentially("1200000");
+await page.getByRole('button',{name:'Simpan Anggaran'}).click(); await page.waitForTimeout(2500);
+await page.reload(); await page.waitForTimeout(1500);
+console.log("MONTHLY set 1.2M:", await txt(page,560));
+await page.getByRole('button',{name:'Mingguan',exact:true}).click(); await page.waitForTimeout(1500);
+console.log("WEEKLY after monthly=1.2M:", await txt(page,420));
+await b.close();

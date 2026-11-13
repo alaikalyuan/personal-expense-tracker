@@ -1,0 +1,5 @@
+import { launch, newContext, login, shot, BASE } from "./lib.mjs";
+const b = await launch(); const ctx = await newContext(b,{viewport:{width:320,height:640},hasTouch:true,isMobile:true}); const page = await ctx.newPage(); await login(page,"typical");
+for (const [n,u] of [["subscriptions","/subscriptions"],["split-new","/split/new"],["split-edit","/split/49b6b834-5267-4822-82bb-f654d1045ee3/edit"]]) { await page.goto(BASE+u); await page.waitForLoadState("networkidle"); await page.waitForTimeout(600); await shot(page,"B","reflow320-"+n); 
+ console.log(n, JSON.stringify(await page.evaluate(()=>{const vw=document.documentElement.clientWidth;return [...document.querySelectorAll("body *")].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.right>vw+1&&getComputedStyle(e).position!=="fixed"}).slice(0,6).map(e=>e.tagName.toLowerCase()+":"+(e.innerText||e.getAttribute("title")||e.className.toString()).trim().slice(0,30).replace(/\n/g," ")+" r="+Math.round(e.getBoundingClientRect().right))}))); }
+await b.close();

@@ -1,0 +1,11 @@
+import { open, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open("journey");
+await page.goto("http://localhost:3100/savings"); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(2000);
+console.log("SAVINGS:", await page.evaluate(()=>document.body.innerText.replace(/\n+/g,' | ').slice(0,2200)));
+await shot(page,"D","S01-savings-fresh",{fullPage:true});
+console.log(await page.evaluate(()=>[...document.querySelectorAll('button,a')].filter(e=>e.getBoundingClientRect().height>0).map(e=>(e.innerText||e.getAttribute('aria-label')||e.title||'?').trim().replace(/\n/g,' ').slice(0,34)+'@'+Math.round(e.getBoundingClientRect().height)).join(' ; ')));
+await page.goto("http://localhost:3100/saku"); await page.waitForTimeout(2000);
+console.log("SAKU:", await page.evaluate(()=>document.body.innerText.replace(/\n+/g,' | ').slice(0,1500)));
+await shot(page,"D","S02-saku-fresh");
+console.log(await page.evaluate(()=>[...document.querySelectorAll('button,a')].filter(e=>e.getBoundingClientRect().height>0).map(e=>(e.innerText||e.getAttribute('aria-label')||e.title||'?').trim().replace(/\n/g,' ').slice(0,34)+'@'+Math.round(e.getBoundingClientRect().height)).join(' ; ')));
+await b.close();

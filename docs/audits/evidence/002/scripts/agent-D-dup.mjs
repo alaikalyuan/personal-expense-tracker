@@ -1,0 +1,32 @@
+import { launch, newContext, login, shot, BASE } from "./lib.mjs";
+const b = await launch(); const ctx = await newContext(b, {}); const page = await ctx.newPage();
+await login(page,"journey");
+await page.goto(BASE); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(1500);
+let posts=0;
+await page.route('**/*', async route=>{ const r=route.request(); if(r.method()==='POST' && r.headers()['next-action']){ posts++; await new Promise(res=>setTimeout(res,2500)); } return route.continue(); });
+// Quick add w/ slow server, click submit 3 times 400ms apart
+await page.getByRole('button',{name:'Tambah pengeluaran'}).first().click(); await page.waitForTimeout(600);
+const inp=page.locator('input[placeholder*="cth"]').first(); await inp.fill("[A002] dup-test slow 5rb"); await page.waitForTimeout(400);
+const btn=page.locator('button[type=submit]').filter({hasText:'Tambah pengeluaran'}).first();
+await btn.click(); await page.waitForTimeout(400); await btn.click({force:true}).catch(()=>{}); await page.waitForTimeout(400); await inp.press("Enter").catch(()=>{});
+console.log("button state during slow save:", await btn.evaluate(e=>e.disabled+' | '+e.innerText).catch(()=>'gone'));
+await shot(page,"D","G08-slow-save-state");
+await page.waitForTimeout(5000);
+console.log("POSTs during slow quick add:", posts);
+posts=0;
+// standard form with slow server, 3 clicks
+await page.reload(); await page.waitForTimeout(1500);
+await page.getByRole('button',{name:'Tambah pengeluaran'}).first().click(); await page.waitForTimeout(600);
+await page.getByRole('button',{name:'Standar'}).click(); await page.waitForTimeout(300);
+await page.locator('input[inputmode=numeric]').first().pressSequentially("6000");
+await page.locator('input[placeholder="Nama pengeluaran"]').fill("[A002] dup-test slow std");
+const sb=page.locator('button[type=submit]').filter({hasText:'Tambah pengeluaran'}).first();
+await sb.click(); await page.waitForTimeout(300); await sb.click({force:true}).catch(()=>{}); await page.waitForTimeout(300); await sb.click({force:true}).catch(()=>{});
+await page.waitForTimeout(6000);
+console.log("POSTs during slow standard add:", posts);
+await page.unroute('**/*');
+await page.reload(); await page.waitForTimeout(2000);
+await page.getByText('Semua Saku').first().click().catch(()=>{});
+const t=await page.evaluate(()=>document.body.innerText);
+console.log("rows dup-test slow 5rb:", (t.match(/dup-test slow(?! std)/g)||[]).length, "| std:", (t.match(/dup-test slow std/g)||[]).length);
+await b.close();

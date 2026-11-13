@@ -1,0 +1,17 @@
+import { launch, newContext, login, BASE, shot } from "./lib.mjs";
+const b = await launch(); const ctx = await newContext(b); const p = await ctx.newPage();
+await login(p, "journey"); await p.goto(BASE + "/savings"); await p.waitForTimeout(1500);
+await p.getByRole("button", { name: /Tambah Target Baru/i }).click(); await p.waitForTimeout(800);
+const dlg = p.locator('[role=dialog]').last();
+const inputs = dlg.locator("input:visible");
+console.log("inputs:", await inputs.evaluateAll(es => es.map(e => `${e.type}|${e.placeholder}`)));
+await dlg.locator('input[type=text]:visible, input:not([type]):visible').first().fill("[A002] Lead D01");
+const num = dlg.locator('input[type=number]:visible').first();
+await num.click(); await p.keyboard.type("2.000.000");
+console.log("DOM value after typing 2.000.000:", JSON.stringify(await num.inputValue()));
+await shot(p, "lead", "d01-typed");
+await dlg.getByRole("button", { name: /Simpan|Buat/i }).last().click(); await p.waitForTimeout(2500);
+await shot(p, "lead", "d01-after-save", { fullPage: true });
+console.log("dialog still open:", await p.locator('[role=dialog]').count());
+const txt = await p.locator("body").innerText(); const i = txt.indexOf("Lead D01"); console.log("goal card text:", txt.slice(i - 10, i + 120).replace(/\s+/g, " "));
+await b.close();
