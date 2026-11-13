@@ -16,8 +16,6 @@ import {
   Pencil,
   AlertTriangle,
 } from "lucide-react";
-import confetti from "canvas-confetti";
-import QRCode from "qrcode";
 import {
   SplitBillRecord,
   SplitParticipantRecord,
@@ -76,32 +74,44 @@ export default function SplitBillViewer({
   const paidCount = participants.filter((p) => p.is_paid).length;
   const allPaid = participants.length > 0 && paidCount === participants.length;
 
-  // Generate QR Code on mount
+  // Generate the QR code the first time its dialog opens; the library loads then too.
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const currentUrl = window.location.href;
-      QRCode.toDataURL(currentUrl, {
-        width: 320,
-        margin: 2,
-        color: {
-          dark: "#18181b",
-          light: "#ffffff",
-        },
+    if (!showQrModal || qrDataUrl) return;
+    let cancelled = false;
+    const currentUrl = window.location.href;
+    import("qrcode")
+      .then((QRCode) =>
+        QRCode.toDataURL(currentUrl, {
+          width: 320,
+          margin: 2,
+          color: {
+            dark: "#18181b",
+            light: "#ffffff",
+          },
+        })
+      )
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
       })
-        .then((url) => setQrDataUrl(url))
-        .catch((err) => console.error("Error generating QR code", err));
-    }
-  }, []);
+      .catch((err) => console.error("Error generating QR code", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [showQrModal, qrDataUrl]);
 
   // Trigger confetti if all participants are paid
   useEffect(() => {
-    if (allPaid) {
-      confetti({
-        particleCount: 60,
-        spread: 60,
-        origin: { y: 0.7 },
-      });
-    }
+    if (!allPaid) return;
+    import("canvas-confetti")
+      .then(({ default: confetti }) =>
+        confetti({
+          particleCount: 60,
+          spread: 60,
+          origin: { y: 0.7 },
+          disableForReducedMotion: true,
+        })
+      )
+      .catch(() => {});
   }, [allPaid]);
 
   // Close modals on Escape key
