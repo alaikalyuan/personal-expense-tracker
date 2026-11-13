@@ -32,7 +32,8 @@ import BreakdownCard, { DaySpend, WeekSpend, CategorySpend } from "./BreakdownCa
 import ExpenseList, { ExpenseItem } from "./ExpenseList";
 import { useTranslation } from "@/utils/i18n/context";
 import { calculateExemptTotals, isExpenseExempt } from "@/utils/exemptions";
-import UpgradeAccountModal from "./UpgradeAccountModal";
+// Loaded on first open: it pulls in the Supabase browser client (A002-41).
+const UpgradeAccountModal = dynamic(() => import("./UpgradeAccountModal"));
 import SakuSwitcher from "./SakuSwitcher";
 import { WalletBalance } from "@/utils/wallets/server";
 import AiHeaderButton from "@/app/ai/AiHeaderButton";
@@ -640,15 +641,17 @@ export default function DashboardClient({
         <BudgetEditDialog period={cadence} currentBudget={activeBudget} onClose={() => setIsBudgetOpen(false)} />
       )}
 
-      <UpgradeAccountModal
-        isOpen={isUpgradeModalOpen}
-        onClose={() => {
-          setIsUpgradeModalOpen(false);
-          setAuthModalError(null);
-        }}
-        initialMode={authModalMode}
-        initialError={authModalError}
-      />
+      {isUpgradeModalOpen && (
+        <UpgradeAccountModal
+          isOpen
+          onClose={() => {
+            setIsUpgradeModalOpen(false);
+            setAuthModalError(null);
+          }}
+          initialMode={authModalMode}
+          initialError={authModalError}
+        />
+      )}
 
       {/* Toasts sit above the bottom bar and are announced to screen readers */}
       <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex flex-col items-center gap-2 px-4">

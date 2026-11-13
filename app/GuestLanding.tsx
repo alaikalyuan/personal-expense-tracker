@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import WelcomeGuestModal from "./WelcomeGuestModal";
-import UpgradeAccountModal from "./UpgradeAccountModal";
+import dynamic from "next/dynamic";
+
+// Loaded on first open: it pulls in the Supabase browser client (A002-41).
+const UpgradeAccountModal = dynamic(() => import("./UpgradeAccountModal"));
 
 interface GuestLandingProps {
   next?: string;
@@ -30,12 +33,14 @@ export default function GuestLanding({ next, initialAuthMode, initialAuthError }
   return (
     <>
       {authMode === null && <WelcomeGuestModal next={next} onOpenAuth={setAuthMode} />}
-      <UpgradeAccountModal
-        isOpen={authMode !== null}
-        onClose={() => setAuthMode(null)}
-        initialMode={authMode ?? "signup"}
-        initialError={initialAuthError ?? null}
-      />
+      {authMode !== null && (
+        <UpgradeAccountModal
+          isOpen
+          onClose={() => setAuthMode(null)}
+          initialMode={authMode}
+          initialError={initialAuthError ?? null}
+        />
+      )}
     </>
   );
 }
