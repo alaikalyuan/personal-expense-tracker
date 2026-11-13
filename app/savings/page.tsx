@@ -10,6 +10,8 @@ import {
 import { getNowInTimezone } from "@/utils/date";
 import { getDictionaryServer, formatDateServer } from "@/utils/i18n/server";
 import { calculateExemptTotals } from "@/utils/exemptions";
+import { budgetOrNull } from "@/utils/budget";
+import { weekCounts, weekSurplus } from "@/utils/surplus";
 import SavingsClient, {
   CompletedWeekData,
   SavingsGoalItem,
@@ -43,10 +45,8 @@ export default async function SavingsPage() {
     user.id
   );
 
-  const weeklyBudget =
-    spendingWallet?.weekly_budget !== null && spendingWallet?.weekly_budget !== undefined
-      ? Number(spendingWallet.weekly_budget)
-      : 500000;
+  // No default: without a weekly budget there is no surplus to report.
+  const weeklyBudget = budgetOrNull(spendingWallet?.weekly_budget);
 
   // User savings goals from savings_goals table
   const rawGoals: SavingsGoalItem[] = await getSavingsGoals(
@@ -119,8 +119,15 @@ export default async function SavingsPage() {
     pastWeekMap.get(weekKey)!.push(expense);
   });
 
+  // Only weeks from the one the account was created in count towards the surplus,
+  // so back-dated entries from before the account existed add nothing.
+  const firstCountedWeekStartStr = user.created_at
+    ? format(startOfWeek(parseISO(user.created_at), { weekStartsOn: 1 }), "yyyy-MM-dd")
+    : null;
+
   // Calculate completed weeks
   const completedWeeks: CompletedWeekData[] = Array.from(pastWeekMap.entries())
+    .filter(([weekId]) => weekCounts(weekId, firstCountedWeekStartStr))
     .map(([weekId, expenses]) => {
       const startDate = parseISO(weekId);
       const endDate = endOfWeek(startDate, { weekStartsOn: 1 });
@@ -130,9 +137,10 @@ export default async function SavingsPage() {
       const regularSpend = exemptTotals.regularTotal;
       const totalSpend = exemptTotals.totalSpend;
 
-      const isSurplus = regularSpend <= weeklyBudget;
-      const surplus = isSurplus ? weeklyBudget - regularSpend : 0;
-      const rawDeficit = !isSurplus ? regularSpend - weeklyBudget : 0;
+      const { budget, isSurplus, surplus, deficit: rawDeficit } = weekSurplus(
+        { weekStartStr: weekId, regularSpend },
+        weeklyBudget
+      );
 
       const label = `${formatDateServer(startDate, "d MMM", locale)} – ${formatDateServer(
         endDate,
@@ -145,7 +153,7 @@ export default async function SavingsPage() {
         startDateStr: weekId,
         endDateStr,
         label,
-        budget: weeklyBudget,
+        budget,
         regularSpend,
         totalSpend,
         isSurplus,
@@ -159,7 +167,7 @@ export default async function SavingsPage() {
   // Ongoing week metrics
   const ongoingExempt = calculateExemptTotals(ongoingWeekExpenses);
   const ongoingSpend = ongoingExempt.regularTotal;
-  const ongoingProjectedSurplus = Math.max(0, weeklyBudget - ongoingSpend);
+  const ongoingProjectedSurplus = weeklyBudget === null ? 0 : Math.max(0, weeklyBudget - ongoingSpend);
 
   // Financial aggregates: Pillar 1 (Core Savings / Vault)
   const totalAllocatedToGoals = rawGoals.reduce(
@@ -177,7 +185,7 @@ export default async function SavingsPage() {
 
   return (
     <SavingsClient
-      weeklyBudget={weeklyBudget}
+      weeklyBudget={weeklyBudget ?? 0}
       completedWeeks={completedWeeks}
       goals={rawGoals}
       coreSavings={coreSavings}
