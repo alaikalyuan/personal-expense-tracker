@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // One-off audit scripts kept as evidence, not app code.
+    "docs/audits/evidence/**",
   ]),
 ]);
 

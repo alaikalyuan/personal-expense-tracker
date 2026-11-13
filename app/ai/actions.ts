@@ -23,6 +23,16 @@ export interface ExecuteAiActionPayload {
   args: Record<string, unknown>;
 }
 
+// One expense as the model sends it in log_expenses; fields are passed through unchecked.
+interface AiExpenseArg {
+  name: string;
+  amount: unknown;
+  category: string;
+  spent_at?: string;
+  note?: string | null;
+  wallet_id?: string | null;
+}
+
 export interface ExecuteAiActionResult {
   success: boolean;
   message?: string;
@@ -54,7 +64,7 @@ export async function executeAiAction(
           return { success: false, error: "Daftar pengeluaran kosong." };
         }
         await addExpensesBatch(
-          rawItems.map((item: any) => ({
+          rawItems.map((item: AiExpenseArg) => ({
             name: item.name,
             amount: Number(item.amount),
             category: item.category,
@@ -196,9 +206,9 @@ export async function executeAiAction(
     default:
         return { success: false, error: `Aksi tidak dikenal: ${action}` };
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("executeAiAction error:", err);
-    return { success: false, error: err.message || "Gagal mengeksekusi aksi." };
+    return { success: false, error: (err as { message?: string } | null)?.message || "Gagal mengeksekusi aksi." };
   }
 }
 

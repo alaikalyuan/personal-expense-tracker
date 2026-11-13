@@ -46,16 +46,14 @@ export default function AiAssistantSheet() {
     resetUsage,
   } = useAiAssistant();
 
-  const [isDevMode, setIsDevMode] = useState(false);
-  const [isResettingLimit, setIsResettingLimit] = useState(false);
-
-  useEffect(() => {
-    setIsDevMode(
+  // This sheet is loaded with ssr: false, so window is available on first render.
+  const [isDevMode] = useState(
+    () =>
       process.env.NODE_ENV === "development" ||
       (typeof window !== "undefined" &&
         (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"))
-    );
-  }, []);
+  );
+  const [isResettingLimit, setIsResettingLimit] = useState(false);
 
   const handleResetLimit = async () => {
     setIsResettingLimit(true);
@@ -102,9 +100,12 @@ export default function AiAssistantSheet() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
+  // Reset the key field when the saved key changes (state adjusted during render).
+  const [keyInputSource, setKeyInputSource] = useState(apiKey);
+  if (keyInputSource !== apiKey) {
+    setKeyInputSource(apiKey);
     setKeyInput(apiKey || "");
-  }, [apiKey]);
+  }
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
