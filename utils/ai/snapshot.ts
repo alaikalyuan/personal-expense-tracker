@@ -10,9 +10,11 @@ import {
   setDate,
 } from "date-fns";
 import { getNowInTimezone } from "@/utils/date";
-import { resolveBudgets } from "@/utils/budget";
+import { dailyAllowance, daysLeftInPeriod, resolveBudgets } from "@/utils/budget";
 import { getWalletBalances, getSavingsGoals, getPrimaryWallets } from "@/utils/wallets/server";
 import { calculateExemptTotals } from "@/utils/exemptions";
+
+const NO_BUDGET = "Belum diatur (jangan mengarang angka anggaran; sarankan pengguna mengatur budget)";
 
 export interface BuildSnapshotOptions {
   selectedSakuId?: string | null;
@@ -24,8 +26,9 @@ export interface FinancialSnapshot {
   systemPromptContext: string;
   wallets: Array<{ id: string; name: string; kind: string; balance: number }>;
   goals: Array<{ id: string; name: string; target: number; allocated: number; percent: number }>;
-  weeklyBudget: number;
-  monthlyBudget: number;
+  /** null when the user has not set a budget for that period. */
+  weeklyBudget: number | null;
+  monthlyBudget: number | null;
   totalSpentWeek: number;
   totalSpentMonth: number;
   regularSpentMonth: number;
@@ -42,7 +45,9 @@ export async function buildFinancialSnapshot(
   const now = getNowInTimezone();
   const currentDay = getDate(now);
   const totalDaysInMonth = getDaysInMonth(now);
-  const daysRemainingInMonth = Math.max(0, totalDaysInMonth - currentDay);
+  // Same count as the dashboard: today plus the days still to come.
+  const daysLeftInMonth = daysLeftInPeriod("month", now, totalDaysInMonth);
+  const daysLeftInWeek = daysLeftInPeriod("week", now, totalDaysInMonth);
 
   const startOfWeekDate = startOfWeek(now, { weekStartsOn: 1 });
   const startOfMonthDate = startOfMonth(now);
@@ -157,6 +162,17 @@ export async function buildFinancialSnapshot(
   const { regularTotal: regularSpentMonth, exemptTotal: exemptSpentMonth } =
     calculateExemptTotals(monthExpenses);
 
+  // The dashboard's monthly daily allowance: what was left at the start of today,
+  // spread over today and the remaining days.
+  const todayStr = format(now, "yyyy-MM-dd");
+  const regularSpentToday = calculateExemptTotals(
+    monthExpenses.filter((e) => (e.spent_at || "").slice(0, 10) === todayStr)
+  ).regularTotal;
+  const monthlyAllowance =
+    monthlyBudget !== null && regularSpentMonth <= monthlyBudget
+      ? Math.round(dailyAllowance(monthlyBudget, regularSpentMonth - regularSpentToday, daysLeftInMonth))
+      : null;
+
   // Map wallets for lookup & text summary
   const walletMap = new Map<string, string>();
   const walletsSummary = wallets
@@ -234,19 +250,24 @@ export async function buildFinancialSnapshot(
 
   const systemPromptContext = `RINGKASAN KEUANGAN PENGGUNA TERKINI:
 - Tanggal Hari Ini: ${format(now, "yyyy-MM-dd")} (Hari ke-${currentDay} dari ${totalDaysInMonth} hari bulan ini)
-- Sisa Hari Bulan Ini: ${daysRemainingInMonth} hari
+- Sisa Hari Bulan Ini (termasuk hari ini, sama dengan dashboard): ${daysLeftInMonth} hari
+- Sisa Hari Minggu Ini (termasuk hari ini, Senin-Minggu): ${daysLeftInWeek} hari
 - Mata Uang Utama: ${baseCurrency}
 - Lokasi Tampilan Pengguna Saat Ini: ${options.path || "/"}
 - Saku Aktif yang Sedang Dilihat: ${activeSakuName} (ID: ${selectedSakuId})
 - Mode Multi-Saku: ${multiSakuEnabled ? "Aktif" : "Non-aktif (Single Saku)"}
 
 ANGGARAN & PENGELUARAN SAAT INI:
-- Anggaran Bulanan: ${monthlyBudget.toLocaleString()} ${baseCurrency}
-- Total Pengeluaran Bulan Ini (MTD): ${totalSpentMonth.toLocaleString()} ${baseCurrency} (${
-    monthlyBudget > 0 ? Math.round((totalSpentMonth / monthlyBudget) * 100) : 0
-  }% anggaran bulanan)
+- Anggaran Bulanan: ${monthlyBudget !== null ? `${monthlyBudget.toLocaleString()} ${baseCurrency}` : NO_BUDGET}
+- Total Pengeluaran Bulan Ini (MTD): ${totalSpentMonth.toLocaleString()} ${baseCurrency}${
+    monthlyBudget !== null ? ` (${Math.round((totalSpentMonth / monthlyBudget) * 100)}% anggaran bulanan)` : ""
+  }
   * Operasional/Rutin: ${regularSpentMonth.toLocaleString()} ${baseCurrency}
-  * Pengecualian (One-Off/Splurge): ${exemptSpentMonth.toLocaleString()} ${baseCurrency}
+  * Pengecualian (One-Off/Splurge): ${exemptSpentMonth.toLocaleString()} ${baseCurrency}${
+    monthlyAllowance !== null
+      ? `\n- Jatah Harian Bulan Ini (angka yang sama dengan dashboard, sisa anggaran dibagi ${daysLeftInMonth} hari termasuk hari ini): ${monthlyAllowance.toLocaleString()} ${baseCurrency}/hari`
+      : ""
+  }
 - Pengeluaran MTD Bulan Lalu: ${priorMtdSpend.toLocaleString()} ${baseCurrency} (${
     priorMtdSpend > 0
       ? `${totalSpentMonth > priorMtdSpend ? "+" : ""}${Math.round(
@@ -254,10 +275,10 @@ ANGGARAN & PENGELUARAN SAAT INI:
         )}% dibanding periode sama bulan lalu`
       : "N/A"
   })
-- Anggaran Mingguan: ${weeklyBudget.toLocaleString()} ${baseCurrency}
-- Total Pengeluaran Minggu Ini: ${totalSpentWeek.toLocaleString()} ${baseCurrency} (${
-    weeklyBudget > 0 ? Math.round((totalSpentWeek / weeklyBudget) * 100) : 0
-  }% anggaran mingguan)
+- Anggaran Mingguan: ${weeklyBudget !== null ? `${weeklyBudget.toLocaleString()} ${baseCurrency}` : NO_BUDGET}
+- Total Pengeluaran Minggu Ini: ${totalSpentWeek.toLocaleString()} ${baseCurrency}${
+    weeklyBudget !== null ? ` (${Math.round((totalSpentWeek / weeklyBudget) * 100)}% anggaran mingguan)` : ""
+  }
 
 DAFTAR SAKU / DOMPET:
 ${walletsSummary || "Tidak ada dompet tercatat."}

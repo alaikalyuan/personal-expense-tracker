@@ -14,7 +14,9 @@ export function preprocessAiMarkdown(content: string): string {
 
   // 2. Separate text prefix on same line before a table:
   // e.g., "Heading: | Col 1 | Col 2 |" -> "Heading:\n\n| Col 1 | Col 2 |"
-  text = text.replace(/([^\n|]+:?)[ \t]+(\|(?:\s*[^|\n]+\s*\|){2,})/g, "$1\n\n$2");
+  // Anchored to the line start so the cells of a well-formed row ("| A | B | C |")
+  // are never mistaken for prose; that broke every table with three or more columns.
+  text = text.replace(/^([ \t]*[^\s|][^\n|]*?)[ \t]+(\|(?:[^|\n]+\|){2,})/gm, "$1\n\n$2");
 
   // 3. Split concatenated table rows on the same line:
   // (a) Boundary between separator dashes and next data row: e.g. "...---|---| Bulanan |" -> "...---|---|\n| Bulanan |"
@@ -25,7 +27,8 @@ export function preprocessAiMarkdown(content: string): string {
   text = text.replace(/\|[ \t]+\|(?=[ \t]*\|)/g, "|\n|");
 
   // (c) If header cells got split across lines: e.g. "| Periode\n| Anggaran |" without pipe at end of first line
-  text = text.replace(/(\|\s*[^|\n]+)\n(\|\s*[^|\n]+\s*\|)/g, "$1 $2");
+  // The first line must end in cell text, not a pipe followed by trailing spaces.
+  text = text.replace(/(\|[ \t]*[^|\n]*[^|\s])[ \t]*\n(\|[ \t]*[^|\n]+[ \t]*\|)/g, "$1 $2");
 
   // 4. Ensure there is a blank line before the start of a markdown table if preceded by normal prose
   // (remark-gfm requires a preceding newline or paragraph boundary to recognize table syntax)
