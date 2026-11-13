@@ -22,6 +22,7 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import { getNowInTimezone } from "@/utils/date";
+import { compareWeeks } from "@/utils/compare";
 import {
   getDictionaryServer,
   formatDateServer,
@@ -127,16 +128,13 @@ export default async function ComparePage() {
     0
   );
 
-  const diffAmount = thisTotal - lastTotalSameDays;
-  const percentDiff =
-    lastTotalSameDays > 0 ? Math.round(((thisTotal - lastTotalSameDays) / lastTotalSameDays) * 100) : 0;
-  const isSaving = diffAmount < 0;
-  const isNeutral = diffAmount === 0;
-
-  // Daily burn rate pacing
-  const todayDayIndex = (now.getDay() + 6) % 7 + 1; // Mon=1 ... Sun=7
-  const thisDailyAvg = thisTotal / todayDayIndex;
-  const lastDailyAvg = lastTotal / 7;
+  // Headline and pace card share one window: the same days of both weeks.
+  const comparison = compareWeeks(thisTotal, lastTotalSameDays, dayIndexToday);
+  const { diffAmount, hasBaseline, thisDailyAvg, lastDailyAvg } = comparison;
+  const percentDiff = comparison.percentDiff ?? 0;
+  const isSaving = comparison.direction === "less";
+  const isNeutral = comparison.direction === "even";
+  const todayDayIndex = comparison.days;
 
   // 3. Category Delta Comparison
   const allCategories = Array.from(
@@ -299,7 +297,12 @@ export default async function ComparePage() {
         {/* Delta Outcome Badge */}
         <div className="mt-4 flex items-center justify-between border-t border-zinc-200/80 pt-3 dark:border-zinc-800/80">
           <div className="flex items-center gap-2">
-            {isNeutral ? (
+            {!hasBaseline ? (
+              <span className="flex items-center gap-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                <Minus className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                {t.compare.noBaseline}
+              </span>
+            ) : isNeutral ? (
               <span className="flex items-center gap-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                 <Minus className="w-3.5 h-3.5" />
                 {t.compare.evenWithLastWeek}
@@ -316,10 +319,12 @@ export default async function ComparePage() {
               </span>
             )}
           </div>
-          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-            {diffAmount < 0 ? "-" : diffAmount > 0 ? "+" : ""}
-            {formatCurrencyServer(Math.abs(diffAmount), currency)}
-          </span>
+          {hasBaseline && (
+            <span className="shrink-0 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              {diffAmount < 0 ? "-" : diffAmount > 0 ? "+" : ""}
+              {formatCurrencyServer(Math.abs(diffAmount), currency)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -344,23 +349,29 @@ export default async function ComparePage() {
             <p className="mt-1 text-sm font-bold text-zinc-700 dark:text-zinc-300">
               {formatCurrencyServer(Math.round(lastDailyAvg), currency)}
             </p>
-            <p className="text-xs text-zinc-500 mt-0.5">{t.compare.acrossAllDays}</p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {t.compare.sameDaysBasis.replace("{days}", String(todayDayIndex))}
+            </p>
           </div>
         </div>
 
         <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-3">
-          {thisDailyAvg <= lastDailyAvg ? (
+          {!hasBaseline ? (
+            <span>{t.compare.noBaseline}</span>
+          ) : comparison.dailyAvgGap === 0 ? (
+            <span>{t.compare.pacingEven}</span>
+          ) : thisDailyAvg < lastDailyAvg ? (
             <span className="text-emerald-600 dark:text-emerald-400 font-medium">
               {t.compare.pacingSaving.replace(
                 "{amount}",
-                formatCurrencyServer(Math.round(lastDailyAvg - thisDailyAvg), currency)
+                formatCurrencyServer(comparison.dailyAvgGap, currency)
               )}
             </span>
           ) : (
             <span className="text-amber-600 dark:text-amber-400 font-medium">
               {t.compare.pacingOver.replace(
                 "{amount}",
-                formatCurrencyServer(Math.round(thisDailyAvg - lastDailyAvg), currency)
+                formatCurrencyServer(comparison.dailyAvgGap, currency)
               )}
             </span>
           )}
