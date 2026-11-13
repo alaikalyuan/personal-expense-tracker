@@ -260,6 +260,7 @@ export interface Dictionary {
     showingFiltered: string;
     noMatchingExpenses: string;
     clearSearch: string;
+    showMore: string;
     shareExport: string;
     oneOffBadge: string;
     oneOffCheckbox: string;
@@ -1232,6 +1233,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       showingFiltered: "Menampilkan {count} dari {total} entri",
       noMatchingExpenses: "Tidak ada pengeluaran yang cocok.",
       clearSearch: "Reset filter",
+      showMore: "Tampilkan lagi ({count})",
       shareExport: "Bagikan / Ekspor",
       oneOffBadge: "Sekali Pakai",
       oneOffCheckbox: "Tandai sebagai Pengeluaran Sekali Pakai (One-Off)",
@@ -2214,6 +2216,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       showingFiltered: "Showing {count} of {total} entries",
       noMatchingExpenses: "No expenses found matching your search.",
       clearSearch: "Clear filters",
+      showMore: "Show more ({count})",
       shareExport: "Share / Export",
       oneOffBadge: "One-Off",
       oneOffCheckbox: "Mark as One-Off / Splurge",

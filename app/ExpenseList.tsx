@@ -36,6 +36,8 @@ interface ExpenseListProps {
   endDateStr?: string;
   dashboardPeriod?: "week" | "month";
   wallets?: Array<{ id: string; name: string; emoji?: string }>;
+  /** Render at most this many rows, with a "show more" button for the rest. */
+  pageSize?: number;
 }
 
 const dateOf = (item: ExpenseItem) => (item.spent_at.includes("T") ? item.spent_at.split("T")[0] : item.spent_at);
@@ -49,6 +51,7 @@ export default function ExpenseList({
   endDateStr,
   dashboardPeriod = "week",
   wallets = [],
+  pageSize,
 }: ExpenseListProps) {
   const { t, formatDate, getCategoryLabel, formatCurrency, currencySymbol, currency } = useTranslation();
   const searchId = useId();
@@ -129,6 +132,29 @@ export default function ExpenseList({
     });
     return Array.from(map.values());
   }, [filteredExpenses, todayStr, yesterdayStr, formatDate, t.common.today, t.common.yesterday]);
+
+  // Optional row cap. Day totals above still count every row; the cap goes
+  // back to one page whenever the search or category changes.
+  const filterKey = `${searchQuery}\u0000${selectedCategory ?? ""}`;
+  const [shownRows, setShownRows] = useState({ key: filterKey, count: pageSize ?? 0 });
+  const visibleLimit = pageSize
+    ? shownRows.key === filterKey
+      ? shownRows.count
+      : pageSize
+    : Number.POSITIVE_INFINITY;
+  const hiddenCount = Math.max(0, filteredExpenses.length - visibleLimit);
+
+  const visibleGroups = useMemo(() => {
+    if (!Number.isFinite(visibleLimit)) return groups;
+    let left = visibleLimit;
+    const out: typeof groups = [];
+    for (const group of groups) {
+      if (left <= 0) break;
+      out.push(group.items.length <= left ? group : { ...group, items: group.items.slice(0, left) });
+      left -= group.items.length;
+    }
+    return out;
+  }, [groups, visibleLimit]);
 
   const resetFilters = () => {
     setSearchQuery("");
@@ -248,13 +274,13 @@ export default function ExpenseList({
   } else if (showingToday) {
     body = (
       <ul className="overflow-hidden rounded-2xl border border-line bg-card">
-        {filteredExpenses.map((item) => renderRow(item, false))}
+        {filteredExpenses.slice(0, visibleLimit).map((item) => renderRow(item, false))}
       </ul>
     );
   } else {
     body = (
       <div className="flex flex-col gap-4">
-        {groups.map((group) => (
+        {visibleGroups.map((group) => (
           <section key={group.dateStr} className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between px-1 text-xs">
               <h3 className="font-semibold text-ink-soft">{group.label}</h3>
@@ -266,6 +292,21 @@ export default function ExpenseList({
           </section>
         ))}
       </div>
+    );
+  }
+
+  if (hiddenCount > 0 && pageSize) {
+    body = (
+      <>
+        {body}
+        <button
+          type="button"
+          onClick={() => setShownRows({ key: filterKey, count: visibleLimit + pageSize })}
+          className="min-h-11 w-full rounded-xl border border-line bg-card px-3 text-sm font-semibold text-ink hover:bg-paper active:bg-line"
+        >
+          {t.expenses.showMore.replace("{count}", String(hiddenCount))}
+        </button>
+      </>
     );
   }
 
