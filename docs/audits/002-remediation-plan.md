@@ -45,7 +45,7 @@ Status values: `TODO`, `IN PROGRESS`, `IN REVIEW`, `DONE` (merged and checked ag
 
 - **Findings:** A002-01 (P0), A002-29 (P3)
 - **Depends on:** nothing. **Do first.**
-- **Status:** IN PROGRESS. Branch `fix/a002-ws0-split-lockdown`. Step 1 (`get_shared_split_bill`) applied live on 2026-11-13; step 2 (`20261113120100_drop_public_split_read.sql`) waits for the deploy
+- **Status:** DONE (2026-11-13). PR #9 merged as `6cd8fb3` and deployed to production. Both migrations applied live: `20261113082149_add_get_shared_split_bill` before the deploy, `20261113082816_drop_public_split_read` after it. Anonymous counts on all three tables are 0; the production friend view still loads bills signed out. Not yet checked live: the creator's own view and the non-creator toggle rejection. Owner decision D3 (disclosure) is still open
 
 What changes:
 1. A new migration `supabase/migrations/2026111x_lock_split_bills.sql`:
