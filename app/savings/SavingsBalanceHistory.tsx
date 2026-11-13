@@ -149,6 +149,9 @@ export default function SavingsBalanceHistory({
     try {
       setDeletingId(item.id);
       await deleteSavingsHistoryEntry(item.id);
+    } catch (err) {
+      // The server refuses a delete that would push the balance below 0.
+      alert(err instanceof Error && err.message ? err.message : t.home.saveFailed);
     } finally {
       setDeletingId(null);
     }

@@ -237,6 +237,35 @@ export async function getWalletBalances(
 }
 
 /**
+ * Read one wallet's balance from the wallet_balances view, for server-side
+ * checks before money leaves it. Throws when the balance can't be read, so a
+ * failed lookup never lets a withdrawal through.
+ */
+export async function getWalletBalanceForCheck(
+  supabase: SupabaseClient,
+  userId: string,
+  walletId: string
+): Promise<{ kind: WalletKind; trackBalance: boolean; currentBalance: number }> {
+  const { data, error } = await supabase
+    .from("wallet_balances")
+    .select("kind, track_balance, current_balance")
+    .eq("wallet_id", walletId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error("Saldo saku tidak bisa dibaca. Coba lagi.");
+  }
+
+  const row = data as { kind: string; track_balance: boolean; current_balance: number | string | null };
+  return {
+    kind: row.kind === "stash" ? "stash" : "spending",
+    trackBalance: Boolean(row.track_balance),
+    currentBalance: Number(row.current_balance || 0),
+  };
+}
+
+/**
  * Get primary spending and stash wallets for a user
  */
 export async function getPrimaryWallets(

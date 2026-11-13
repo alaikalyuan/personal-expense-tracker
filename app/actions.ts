@@ -6,8 +6,29 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { getTodayString } from "@/utils/date";
 import { attachExemptTag } from "@/utils/exemptions";
-import { getPrimaryWallets, syncMultiSakuCookie } from "@/utils/wallets/server";
+import { getPrimaryWallets, getWalletBalanceForCheck, syncMultiSakuCookie } from "@/utils/wallets/server";
+import { MONEY_ERRORS, MONEY_INPUT_MAX, formatRupiahInput, parseRupiahAmount } from "@/utils/money";
+import type { ParseMoneyOptions } from "@/utils/money";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * An expense amount sent by a client. Expenses can be in a currency with
+ * decimals, so this is a number check rather than the rupiah parser.
+ */
+function readExpenseAmount(input: unknown): number {
+  const amount = typeof input === "number" ? input : typeof input === "string" && input.trim() ? Number(input) : NaN;
+  if (!Number.isFinite(amount)) throw new Error(MONEY_ERRORS.notNumber);
+  if (amount < 0) throw new Error(MONEY_ERRORS.negative);
+  if (amount > MONEY_INPUT_MAX) throw new Error(MONEY_ERRORS.tooLarge);
+  return amount;
+}
+
+/** A rupiah amount sent by a client, validated with the same parser as the money fields. */
+function readRupiahAmount(input: unknown, opts?: ParseMoneyOptions): number {
+  const parsed = parseRupiahAmount(input, opts);
+  if (!parsed.ok) throw new Error(parsed.error);
+  return parsed.value;
+}
 
 export async function login(formData: FormData) {
   const cookieStore = await cookies();
@@ -294,12 +315,8 @@ export async function addExpense(formData: FormData) {
   const category = formData.get("category") as string;
   const name = (formData.get("name") as string)?.trim();
   const note = (formData.get("note") as string)?.trim() || null;
-  const amount = Number(formData.get("amount"));
+  const amount = readExpenseAmount(formData.get("amount"));
   const spentAt = formData.get("spent_at") as string;
-
-  if (isNaN(amount) || amount < 0) {
-    throw new Error("Amount must be greater than or equal to 0");
-  }
 
   if (!name) {
     throw new Error("Expense name is required");
@@ -379,8 +396,7 @@ export async function addExpensesBatch(items: AddExpenseBatchItem[]) {
   const insertPayloads = items.map((item) => {
     const trimmedName = item.name?.trim();
     if (!trimmedName) throw new Error("Expense name is required for all items");
-    const amt = Number(item.amount);
-    if (isNaN(amt) || amt < 0) throw new Error("Amount must be greater than or equal to 0");
+    const amt = readExpenseAmount(item.amount);
 
     let wId = isGuest ? null : (item.walletId?.trim() || null);
     if (!isGuest && (!wId || wId === "all")) {
@@ -472,12 +488,8 @@ export async function updateExpense(formData: FormData) {
   const category = formData.get("category") as string;
   const name = (formData.get("name") as string)?.trim();
   const note = (formData.get("note") as string)?.trim() || null;
-  const amount = Number(formData.get("amount"));
+  const amount = readExpenseAmount(formData.get("amount"));
   const spentAt = formData.get("spent_at") as string;
-
-  if (isNaN(amount) || amount < 0) {
-    throw new Error("Amount must be greater than or equal to 0");
-  }
 
   if (!name) {
     throw new Error("Expense name is required");
@@ -764,15 +776,12 @@ export async function createSavingsGoal(formData: FormData) {
   }
 
   const name = (formData.get("name") as string)?.trim();
-  const targetAmount = Number(formData.get("target_amount"));
   const emoji = (formData.get("emoji") as string)?.trim() || "🎯";
 
   if (!name) {
     throw new Error("Goal name is required");
   }
-  if (isNaN(targetAmount) || targetAmount <= 0) {
-    throw new Error("Invalid target amount");
-  }
+  const targetAmount = readRupiahAmount(formData.get("target_amount"));
 
   const newGoalId = crypto.randomUUID();
   const createdAtIso = new Date().toISOString();
@@ -817,12 +826,12 @@ export async function updateSavingsGoal(formData: FormData) {
 
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string)?.trim();
-  const targetAmount = Number(formData.get("target_amount"));
   const emoji = (formData.get("emoji") as string)?.trim() || "🎯";
 
-  if (!id || !name || isNaN(targetAmount) || targetAmount <= 0) {
+  if (!id || !name) {
     throw new Error("Invalid goal details");
   }
+  const targetAmount = readRupiahAmount(formData.get("target_amount"));
 
   const { error: updateError } = await supabase
     .from("savings_goals")
@@ -905,9 +914,7 @@ export async function allocateSavingsToGoal(goalId: string, amount: number) {
     throw new Error("Unauthorized");
   }
 
-  if (isNaN(amount) || amount <= 0) {
-    throw new Error("Invalid allocation amount");
-  }
+  readRupiahAmount(amount);
 
   const { data: targetGoal } = await supabase
     .from("savings_goals")
@@ -919,6 +926,21 @@ export async function allocateSavingsToGoal(goalId: string, amount: number) {
   if (!targetGoal) {
     throw new Error("Savings goal not found");
   }
+
+  // Goals can only hold money the stash actually has.
+  const { currentBalance } = await getWalletBalanceForCheck(supabase, user.id, targetGoal.wallet_id);
+  // Same total as the /savings page: every active goal of this user.
+  const { data: walletGoals } = await supabase
+    .from("savings_goals")
+    .select("allocated_amount")
+    .eq("user_id", user.id)
+    .is("archived_at", null);
+  const alreadyAllocated = (walletGoals || []).reduce((sum, g) => sum + Number(g.allocated_amount || 0), 0);
+  const unallocated = Math.max(0, currentBalance - alreadyAllocated);
+  readRupiahAmount(amount, {
+    max: unallocated,
+    maxError: `Tabungan yang belum dialokasikan tinggal Rp ${formatRupiahInput(unallocated)}.`,
+  });
 
   const newAllocated = Number(targetGoal.allocated_amount || 0) + amount;
   const { error: updateError } = await supabase
@@ -963,9 +985,7 @@ export async function withdrawSavingsFromGoal(goalId: string, amount: number) {
     throw new Error("Unauthorized");
   }
 
-  if (isNaN(amount) || amount <= 0) {
-    throw new Error("Invalid withdrawal amount");
-  }
+  readRupiahAmount(amount);
 
   const { data: targetGoal } = await supabase
     .from("savings_goals")
@@ -979,7 +999,11 @@ export async function withdrawSavingsFromGoal(goalId: string, amount: number) {
   }
 
   const current = Number(targetGoal.allocated_amount || 0);
-  const newAllocated = Math.max(0, current - amount);
+  readRupiahAmount(amount, {
+    max: current,
+    maxError: `Dana di target ini hanya Rp ${formatRupiahInput(current)}.`,
+  });
+  const newAllocated = current - amount;
 
   const { error: updateError } = await supabase
     .from("savings_goals")
@@ -1023,17 +1047,26 @@ export async function recordManualSavingsAdjustment(formData: FormData) {
     throw new Error("Unauthorized");
   }
 
-  const type = formData.get("type") as "deposit" | "withdraw";
-  const amount = Number(formData.get("amount"));
+  const type = formData.get("type");
   const note = (formData.get("note") as string)?.trim() || undefined;
 
-  if (isNaN(amount) || amount <= 0) {
-    throw new Error("Invalid adjustment amount");
+  if (type !== "deposit" && type !== "withdraw") {
+    throw new Error("Invalid adjustment type");
   }
+  const amount = readRupiahAmount(formData.get("amount"));
 
   const { stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
   if (!stashWalletId) {
     throw new Error("Stash wallet not found");
+  }
+
+  if (type === "withdraw") {
+    const { currentBalance } = await getWalletBalanceForCheck(supabase, user.id, stashWalletId);
+    const available = Math.max(0, currentBalance);
+    readRupiahAmount(amount, {
+      max: available,
+      maxError: `Saldo tabungan tidak cukup. Saldo tersedia Rp ${formatRupiahInput(available)}.`,
+    });
   }
 
   const txId = crypto.randomUUID();
@@ -1071,9 +1104,7 @@ export async function sweepSurplusToSavings(amount: number, targetGoalId?: strin
     throw new Error("Unauthorized");
   }
 
-  if (isNaN(amount) || amount <= 0) {
-    throw new Error("Invalid sweep amount");
-  }
+  readRupiahAmount(amount);
 
   const { spendingWalletId, stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
   if (!stashWalletId) {
@@ -1140,7 +1171,7 @@ export async function deleteSavingsHistoryEntry(entryId: string) {
   // Check transaction details first to reverse goal allocations if applicable
   const { data: entry } = await supabase
     .from("wallet_transactions")
-    .select("id, type, amount, goal_id")
+    .select("id, type, amount, goal_id, from_wallet_id, to_wallet_id, expense_id")
     .eq("id", entryId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -1151,6 +1182,21 @@ export async function deleteSavingsHistoryEntry(entryId: string) {
   }
 
   const entryAmount = Number(entry.amount || 0);
+
+  // Deleting money that came into the stash must not leave it below 0.
+  const { stashWalletId } = await getOrCreateUserWallets(supabase, user.id);
+  if (stashWalletId) {
+    const removedInflow = entry.to_wallet_id === stashWalletId ? entryAmount : 0;
+    const removedOutflow = entry.from_wallet_id === stashWalletId && !entry.expense_id ? entryAmount : 0;
+    if (removedInflow > removedOutflow) {
+      const { currentBalance } = await getWalletBalanceForCheck(supabase, user.id, stashWalletId);
+      if (currentBalance - removedInflow + removedOutflow < 0) {
+        throw new Error(
+          `Catatan ini tidak bisa dihapus karena saldo tabungan akan minus. Saldo sekarang Rp ${formatRupiahInput(Math.max(0, currentBalance))}.`
+        );
+      }
+    }
+  }
 
   // If entry affected a goal, reverse the goal allocation
   if (entry.goal_id) {
