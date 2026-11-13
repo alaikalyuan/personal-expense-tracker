@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import SplitBillCreator from "@/app/split/new/SplitBillCreator";
@@ -31,12 +31,9 @@ export default async function EditSplitBillPage(props: {
     .eq("id", id)
     .single();
 
-  if (billError || !bill) {
-    notFound();
-  }
-
-  // Only the bill creator can edit the split bill
-  if (bill.creator_id !== user.id) {
+  // RLS returns no row to anyone but the creator, so a missing bill here can also
+  // mean "not yours". The friend view decides between showing it and a 404.
+  if (billError || !bill || bill.creator_id !== user.id) {
     redirect(`/split/${id}`);
   }
 

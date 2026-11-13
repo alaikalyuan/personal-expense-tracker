@@ -8,51 +8,44 @@ import {
   SplitItemRecord,
 } from "@/utils/splitCalculator";
 
+type SharedSplitBill = {
+  is_host: boolean;
+  bill: Omit<SplitBillRecord, "creator_id"> & { creator_id: string | null };
+  participants: SplitParticipantRecord[];
+  items: SplitItemRecord[];
+};
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function SplitBillPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
-
-  // 1. Fetch Split Bill (Publicly readable via RLS)
-  const { data: bill, error: billError } = await supabase
-    .from("split_bills")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (billError || !bill) {
+  if (!UUID_PATTERN.test(id)) {
     notFound();
   }
 
-  // 2. Fetch Participants
-  const { data: participants } = await supabase
-    .from("split_participants")
-    .select("*")
-    .eq("bill_id", id)
-    .order("is_creator", { ascending: false });
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
 
-  // 3. Fetch Items
-  const { data: items } = await supabase
-    .from("split_items")
-    .select("*")
-    .eq("bill_id", id);
+  // The split tables are readable by their creator only. Anyone with the link
+  // reads this one bill through a SECURITY DEFINER function that can't list others.
+  const { data, error } = await supabase.rpc("get_shared_split_bill", {
+    p_bill_id: id,
+  });
 
-  // 4. Check if current visitor is the host/creator
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const isHost = Boolean(user && user.id === bill.creator_id);
+  const shared = data as SharedSplitBill | null;
+  if (error || !shared) {
+    notFound();
+  }
 
   return (
     <main className="max-w-md mx-auto p-4 pb-28 font-sans">
       <SplitBillViewer
-        bill={bill as SplitBillRecord}
-        participants={(participants || []) as SplitParticipantRecord[]}
-        items={(items || []) as SplitItemRecord[]}
-        isHost={isHost}
+        bill={{ ...shared.bill, creator_id: shared.bill.creator_id ?? "" }}
+        participants={shared.participants}
+        items={shared.items}
+        isHost={shared.is_host}
       />
     </main>
   );
