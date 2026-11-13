@@ -6,6 +6,7 @@ import { useTranslation } from "@/utils/i18n/context";
 import Dialog from "@/app/ui/Dialog";
 import Button from "@/app/ui/Button";
 import { MoneyField } from "@/app/ui/Field";
+import { parseRupiahInput } from "@/utils/money";
 
 // Mount this only while it is open: each opening starts from the current budget.
 interface BudgetEditDialogProps {
@@ -76,9 +77,11 @@ export default function BudgetEditDialog({ onClose, period, currentBudget }: Bud
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!budgetInput || Number(budgetInput) <= 0) return;
+    const parsed = parseRupiahInput(budgetInput);
+    // MoneyField shows the parse error itself and the browser blocks the submit.
+    if (!parsed.ok) return;
     const formData = new FormData();
-    formData.set("budget", budgetInput);
+    formData.set("budget", String(parsed.value));
     try {
       setIsSubmitting(true);
       setSaveError(null);

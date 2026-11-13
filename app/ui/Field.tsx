@@ -1,7 +1,8 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { InputHTMLAttributes, SelectHTMLAttributes } from "react";
+import { formatRupiahInput, parseRupiahInput } from "@/utils/money";
 
 export const CONTROL_CLASS =
   "min-h-11 w-full rounded-xl border border-line bg-paper px-3 text-base text-ink placeholder:text-ink-soft/70 hover:border-ink-soft disabled:opacity-50";
@@ -84,9 +85,12 @@ interface MoneyFieldProps {
   label: string;
   hint?: string;
   error?: string | null;
-  /** Digits only, for example "15000". */
+  /**
+   * Plain digits ("15000") once the text parses, otherwise the text as
+   * typed ("15.000,50"). Read it with `parseRupiahInput`.
+   */
   value: string;
-  onChange: (digits: string) => void;
+  onChange: (value: string) => void;
   /** Form field name; the submitted value is the plain digits. */
   name?: string;
   prefix?: string;
@@ -94,9 +98,19 @@ interface MoneyFieldProps {
   required?: boolean;
   autoFocus?: boolean;
   disabled?: boolean;
+  /** Accept 0 as a valid amount. */
+  allowZero?: boolean;
+  /** Largest amount allowed, for example the balance that can be withdrawn. */
+  max?: number;
+  /** Message shown when the amount is above `max`. */
+  maxError?: string;
 }
 
-/** Groups thousands while typing ("15.000") and reports plain digits. */
+/**
+ * A rupiah amount. Groups thousands while typing ("15.000"); text that
+ * does not parse (a decimal comma, letters, a minus sign) is kept as typed,
+ * shown with an inline error once the field is left, and blocks the form.
+ */
 export function MoneyField({
   label,
   hint,
@@ -109,32 +123,55 @@ export function MoneyField({
   required,
   autoFocus,
   disabled,
+  allowZero,
+  max,
+  maxError,
 }: MoneyFieldProps) {
-  const display = value ? Number(value).toLocaleString("id-ID") : "";
+  const [touched, setTouched] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const parsed = value ? parseRupiahInput(value, { allowZero, max, maxError }) : null;
+  const parseError = parsed && !parsed.ok ? parsed.error : null;
+  const display = parsed?.ok ? formatRupiahInput(parsed.value) : value;
+  // An amount above `max` is shown straight away; a typing error once the field is left.
+  const overMax = parsed && !parsed.ok && max !== undefined && parseRupiahInput(value, { allowZero }).ok;
+  const shownError = error || (touched || overMax ? parseError : null);
+
+  useEffect(() => {
+    inputRef.current?.setCustomValidity(parseError ?? "");
+  }, [parseError]);
+
+  const handleChange = (text: string) => {
+    const result = parseRupiahInput(text, { allowZero: true });
+    onChange(result.ok && text.trim() ? String(result.value) : text);
+  };
 
   return (
-    <FieldShell label={label} hint={hint} error={error}>
+    <FieldShell label={label} hint={hint} error={shownError}>
       {({ id, describedBy }) => (
         <div className="relative">
           <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base font-semibold text-ink-soft">
             {prefix}
           </span>
           <input
+            ref={inputRef}
             id={id}
             type="text"
             inputMode="numeric"
             autoComplete="off"
             aria-describedby={describedBy}
-            aria-invalid={error ? true : undefined}
+            aria-invalid={shownError ? true : undefined}
             value={display}
-            onChange={(e) => onChange(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, ""))}
+            onChange={(e) => handleChange(e.target.value)}
+            onBlur={() => setTouched(true)}
+            onInvalid={() => setTouched(true)}
             placeholder={placeholder}
             required={required}
             disabled={disabled}
             data-autofocus={autoFocus ? "" : undefined}
             className={`${CONTROL_CLASS} pl-11 text-lg font-bold`}
           />
-          {name && <input type="hidden" name={name} value={value} />}
+          {name && <input type="hidden" name={name} value={parsed?.ok ? String(parsed.value) : value} />}
         </div>
       )}
     </FieldShell>
