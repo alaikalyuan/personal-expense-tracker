@@ -255,11 +255,11 @@ export async function processSubscriptionRenewals(targetUserId?: string) {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const activeUserId = targetUserId || user?.id;
+  // Callers that already verified the user pass its id, which saves an auth
+  // round trip. Row-level security still limits every read and write below
+  // to the session's own rows.
+  const activeUserId =
+    targetUserId || (await supabase.auth.getUser()).data.user?.id;
   if (!activeUserId) {
     return { processedCount: 0 };
   }

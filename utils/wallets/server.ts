@@ -249,7 +249,21 @@ export async function getPrimaryWallets(
   defaultWalletId: string | null;
 }> {
   const balances = await getWalletBalances(supabase, userId);
+  return pickPrimaryWallets(balances, userId);
+}
 
+/**
+ * Pick the primary spending and stash wallets from balances already loaded,
+ * with the same fallbacks as getPrimaryWallets.
+ */
+export function pickPrimaryWallets(
+  balances: WalletBalance[],
+  userId: string
+): {
+  spendingWallet: WalletBalance | null;
+  stashWallet: WalletBalance | null;
+  defaultWalletId: string | null;
+} {
   let spending = balances.find((b) => b.is_primary && b.kind === "spending") || null;
   if (!spending) {
     spending = balances.find((b) => b.kind === "spending") || null;

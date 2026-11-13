@@ -13,16 +13,22 @@ import {
 } from "date-fns";
 import DashboardClient from "./DashboardClient";
 import GuestLanding from "./GuestLanding";
-import { getNowInTimezone } from "@/utils/date";
+import { getNowInTimezone, getTodayString } from "@/utils/date";
 import { calculateStreak } from "@/utils/streak";
+import {
+  STREAK_WINDOW_ROW_LIMIT,
+  streakNeedsFullHistory,
+  streakWindowStart,
+} from "@/utils/streakWindow";
 import { getDictionaryServer } from "@/utils/i18n/server";
 import {
-  getPrimaryWallets,
+  pickPrimaryWallets,
   getWalletBalances,
   getMultiSakuEnabledServer,
   getSelectedSakuServer,
 } from "@/utils/wallets/server";
 import { processSubscriptionRenewals } from "@/app/subscriptions/actions";
+import type { PendingEmailTransaction } from "@/app/email-sync/actions";
 import { resolveBudgets } from "@/utils/budget";
 
 export default async function DashboardPage(props: {
@@ -48,8 +54,18 @@ export default async function DashboardPage(props: {
 
   const supabase = await createClient(cookieStore);
 
-  // No auth cookie means no session: skip the Supabase round trip entirely.
-  const user = hasAuthCookie ? (await supabase.auth.getUser()).data.user : null;
+  // The proxy has already called auth.getUser (and refreshed the session) for
+  // a document request. Here the JWT is verified locally against the
+  // project's asymmetric signing key, so there is no second auth round trip.
+  // No auth cookie means no session: skip Supabase entirely.
+  const claims = hasAuthCookie ? (await supabase.auth.getClaims()).data?.claims ?? null : null;
+  const user = claims
+    ? {
+        id: claims.sub,
+        is_anonymous: Boolean(claims.is_anonymous),
+        user_metadata: claims.user_metadata ?? null,
+      }
+    : null;
 
   if (!user) {
     return (
@@ -61,28 +77,7 @@ export default async function DashboardPage(props: {
     );
   }
 
-  const { locale } = await getDictionaryServer();
-
   const isGuest = Boolean(user.is_anonymous);
-
-  // Proactive sync: check and process any overdue / due renewals right as user loads the dashboard
-  if (!isGuest) {
-    try {
-      await processSubscriptionRenewals(user.id);
-    } catch (e) {
-      console.warn("Proactive subscription renewal sync failed:", e);
-    }
-  }
-
-  const multiSakuEnabled = isGuest
-    ? false
-    : await getMultiSakuEnabledServer(cookieStore, supabase, user.id);
-  const selectedSakuId = isGuest ? "all" : await getSelectedSakuServer(cookieStore);
-  const wallets = isGuest ? [] : await getWalletBalances(supabase, user.id);
-  const selectedWallet =
-    !isGuest && selectedSakuId !== "all"
-      ? wallets.find((w) => w.id === selectedSakuId) || null
-      : null;
 
   const now = getNowInTimezone();
 
@@ -113,64 +108,170 @@ export default async function DashboardPage(props: {
   const startOfLastMonthStr = format(startOfLastMonth, "yyyy-MM-dd");
   const priorMtdEndStr = format(priorMtdEndDate, "yyyy-MM-dd");
 
-  let expensesQuery = supabase
-    .from("expenses")
-    .select("*")
-    .eq("user_id", user.id)
-    .gte("spent_at", rangeStartStr)
-    .lte("spent_at", rangeEndStr);
+  const selectedSakuId = isGuest ? "all" : await getSelectedSakuServer(cookieStore);
+  const streakStartStr = streakWindowStart(now);
 
-  let priorMtdQuery = supabase
-    .from("expenses")
-    .select("amount")
-    .eq("user_id", user.id)
-    .gte("spent_at", startOfLastMonthStr)
-    .lte("spent_at", priorMtdEndStr);
-
-  if (multiSakuEnabled && selectedWallet) {
-    expensesQuery = expensesQuery.eq("wallet_id", selectedWallet.id);
-    priorMtdQuery = priorMtdQuery.eq("wallet_id", selectedWallet.id);
-  }
-
-  const [
-    { data: unifiedExpenses },
-    { data: allUserExpenseDates },
-    { data: priorMtdExpenses },
-    { data: upcomingSubscriptions },
-  ] = await Promise.all([
-    expensesQuery.order("spent_at", { ascending: false }),
-    supabase
+  // Every read the dashboard needs. Queries that don't depend on the wallet
+  // list start at once; the expense reads wait only for the wallet filter.
+  const loadDashboardData = async () => {
+    const streakWindowPromise = supabase
       .from("expenses")
       .select("spent_at")
       .eq("user_id", user.id)
-      .order("spent_at", { ascending: false }),
-    priorMtdQuery,
-    !isGuest
+      .gte("spent_at", streakStartStr)
+      .order("spent_at", { ascending: false })
+      .limit(STREAK_WINDOW_ROW_LIMIT);
+
+    const subscriptionsPromise = !isGuest
       ? supabase
           .from("subscriptions")
-          .select("id, name, price, billing_cycle, next_renewal_date, is_split, payment_platform, category, pay_from_wallet_id, split_config")
+          .select("id, name, price, billing_cycle, next_renewal_date, last_processed_date, is_split, payment_platform, category, pay_from_wallet_id, split_config")
           .eq("user_id", user.id)
           .eq("status", "active")
           .order("next_renewal_date", { ascending: true })
-      : Promise.resolve({ data: [] }),
-  ]);
+      : Promise.resolve({ data: [] });
 
-  const spentDates = (allUserExpenseDates || []).map((e) => e.spent_at);
-  const streakData = calculateStreak(spentDates, now, locale);
+    const pendingEmailPromise = !isGuest
+      ? supabase
+          .from("email_transactions")
+          .select(`
+            id,
+            source,
+            sender,
+            subject,
+            merchant_name,
+            amount,
+            currency,
+            transaction_date,
+            transaction_time,
+            reference_id,
+            suggested_category,
+            target_wallet_id,
+            status,
+            created_at
+          `)
+          .eq("user_id", user.id)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] });
+
+    // wallet_balances is read once; the fallback wallet is picked from it below.
+    const [multiSakuEnabled, balances] = await Promise.all([
+      isGuest ? false : getMultiSakuEnabledServer(cookieStore, supabase, user.id),
+      getWalletBalances(supabase, user.id),
+    ]);
+    const wallets = isGuest ? [] : balances;
+    const selectedWallet =
+      !isGuest && selectedSakuId !== "all"
+        ? wallets.find((w) => w.id === selectedSakuId) || null
+        : null;
+
+    let expensesQuery = supabase
+      .from("expenses")
+      .select("*")
+      .eq("user_id", user.id)
+      .gte("spent_at", rangeStartStr)
+      .lte("spent_at", rangeEndStr);
+
+    let priorMtdQuery = supabase
+      .from("expenses")
+      .select("amount")
+      .eq("user_id", user.id)
+      .gte("spent_at", startOfLastMonthStr)
+      .lte("spent_at", priorMtdEndStr);
+
+    if (multiSakuEnabled && selectedWallet) {
+      expensesQuery = expensesQuery.eq("wallet_id", selectedWallet.id);
+      priorMtdQuery = priorMtdQuery.eq("wallet_id", selectedWallet.id);
+    }
+
+    const [
+      { data: unifiedExpenses },
+      { data: streakWindowDates },
+      { data: priorMtdExpenses },
+      { data: upcomingSubscriptions },
+      { data: pendingEmailTransactions },
+    ] = await Promise.all([
+      expensesQuery.order("spent_at", { ascending: false }),
+      streakWindowPromise,
+      priorMtdQuery,
+      subscriptionsPromise,
+      pendingEmailPromise,
+    ]);
+
+    return {
+      multiSakuEnabled,
+      balances,
+      wallets,
+      unifiedExpenses,
+      streakWindowDates,
+      priorMtdExpenses,
+      upcomingSubscriptions: upcomingSubscriptions || [],
+      pendingEmailTransactions: (pendingEmailTransactions || []) as PendingEmailTransaction[],
+    };
+  };
+
+  const [{ locale }, firstLoad] = await Promise.all([
+    getDictionaryServer(),
+    loadDashboardData(),
+  ]);
+  let data = firstLoad;
+
+  // Subscription renewals log expenses and advance renewal dates, so they
+  // must land before the numbers are shown. The subscription list read above
+  // says whether any renewal is due; only then is the renewal run and the
+  // data read again. Most loads have nothing due and make no extra request.
+  if (!isGuest) {
+    const todayStr = getTodayString();
+    const hasDueRenewal = data.upcomingSubscriptions.some(
+      (sub: { next_renewal_date: string; last_processed_date: string | null }) =>
+        sub.next_renewal_date <= todayStr &&
+        sub.last_processed_date !== sub.next_renewal_date
+    );
+    if (hasDueRenewal) {
+      try {
+        const { processedCount } = await processSubscriptionRenewals(user.id);
+        if (processedCount > 0) {
+          data = await loadDashboardData();
+        }
+      } catch (e) {
+        console.warn("Proactive subscription renewal sync failed:", e);
+      }
+    }
+  }
+
+  const {
+    multiSakuEnabled,
+    balances,
+    wallets,
+    unifiedExpenses,
+    priorMtdExpenses,
+    upcomingSubscriptions,
+    pendingEmailTransactions,
+  } = data;
+
+  let spentDates: string[] = (data.streakWindowDates || []).map((e) => e.spent_at);
+  let streakData = calculateStreak(spentDates, now, locale);
+  if (streakNeedsFullHistory(spentDates, streakStartStr, streakData.currentStreak, now)) {
+    // Rare: the streak may reach past the window, so read the full history as before.
+    const { data: allUserExpenseDates } = await supabase
+      .from("expenses")
+      .select("spent_at")
+      .eq("user_id", user.id)
+      .order("spent_at", { ascending: false });
+    spentDates = (allUserExpenseDates || []).map((e) => e.spent_at);
+    streakData = calculateStreak(spentDates, now, locale);
+  }
 
   const priorMtdSpend = (priorMtdExpenses || []).reduce(
     (acc, curr) => acc + Number(curr.amount),
     0
   );
 
-  let fallbackWallet = null;
-  if (!multiSakuEnabled || selectedSakuId === "all") {
-    const { spendingWallet } = await getPrimaryWallets(
-      supabase,
-      user.id
-    );
-    fallbackWallet = spendingWallet;
-  }
+  const fallbackWallet =
+    !multiSakuEnabled || selectedSakuId === "all"
+      ? pickPrimaryWallets(balances, user.id).spendingWallet
+      : null;
 
   const { weeklyBudget, monthlyBudget } = resolveBudgets({
     user,
@@ -180,33 +281,6 @@ export default async function DashboardPage(props: {
     selectedSakuId,
     totalDaysInMonth,
   });
-
-  let pendingEmailTransactions: any[] = [];
-  if (!isGuest) {
-    const { data: pendingTxs } = await supabase
-      .from("email_transactions")
-      .select(`
-        id,
-        source,
-        sender,
-        subject,
-        merchant_name,
-        amount,
-        currency,
-        transaction_date,
-        transaction_time,
-        reference_id,
-        suggested_category,
-        target_wallet_id,
-        status,
-        created_at
-      `)
-      .eq("user_id", user.id)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
-
-    pendingEmailTransactions = pendingTxs || [];
-  }
 
   return (
     <DashboardClient
