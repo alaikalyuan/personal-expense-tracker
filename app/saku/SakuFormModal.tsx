@@ -6,6 +6,8 @@ import { useTranslation } from "@/utils/i18n/context";
 import { createWallet, updateWallet } from "./actions";
 import { WalletBalance } from "@/utils/wallets/server";
 import ModalOverlay from "@/app/ui/ModalOverlay";
+import { MoneyField } from "@/app/ui/Field";
+import { parseRupiahInput } from "@/utils/money";
 
 interface SakuFormModalProps {
   isOpen: boolean;
@@ -70,6 +72,16 @@ function SakuFormModalContent({
     if (!name.trim()) {
       setError(t.saku.name + " tidak boleh kosong.");
       return;
+    }
+
+    const opening = parseRupiahInput(openingBalance, { allowEmpty: true, allowZero: true });
+    const weekly = parseRupiahInput(weeklyBudget, { allowEmpty: true, allowZero: true });
+    const monthly = parseRupiahInput(monthlyBudget, { allowEmpty: true, allowZero: true });
+    for (const result of [opening, weekly, monthly]) {
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
     }
 
     setError(null);
@@ -264,20 +276,12 @@ function SakuFormModalContent({
 
           {/* Opening Balance (Only on create) */}
           {!isEditing && (
-            <div>
-              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                {t.saku.openingBalance} <span className="text-zinc-400 font-normal">(Opsional)</span>
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={openingBalance}
-                onChange={(e) => setOpeningBalance(e.target.value)}
-                placeholder="0"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 text-xs font-medium text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
+            <MoneyField
+              label={`${t.saku.openingBalance} (Opsional)`}
+              value={openingBalance}
+              onChange={setOpeningBalance}
+              allowZero
+            />
           )}
 
           {/* Spending Saku Specific Fields */}
@@ -302,35 +306,21 @@ function SakuFormModalContent({
               </div>
 
               {/* Budgets */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                    {t.saku.weeklyBudget}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={weeklyBudget}
-                    onChange={(e) => setWeeklyBudget(e.target.value)}
-                    placeholder="Contoh: 300000"
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 text-xs font-medium text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                    {t.saku.monthlyBudget}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={monthlyBudget}
-                    onChange={(e) => setMonthlyBudget(e.target.value)}
-                    placeholder="Contoh: 1200000"
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 text-xs font-medium text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <MoneyField
+                  label={t.saku.weeklyBudget}
+                  value={weeklyBudget}
+                  onChange={setWeeklyBudget}
+                  placeholder="300.000"
+                  allowZero
+                />
+                <MoneyField
+                  label={t.saku.monthlyBudget}
+                  value={monthlyBudget}
+                  onChange={setMonthlyBudget}
+                  placeholder="1.200.000"
+                  allowZero
+                />
               </div>
             </div>
           )}

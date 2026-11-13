@@ -25,6 +25,8 @@ import {
 } from "@/app/actions";
 import SavingsBalanceHistory from "./SavingsBalanceHistory";
 import ModalOverlay from "@/app/ui/ModalOverlay";
+import { MoneyField } from "@/app/ui/Field";
+import { parseRupiahInput } from "@/utils/money";
 
 export interface CompletedWeekData {
   weekId: string;
@@ -67,6 +69,9 @@ interface SavingsClientProps {
 
 const EMOJI_PRESETS = ["🎯", "🏖️", "🛡️", "💻", "📚", "🚗", "🏠", "🎁"];
 
+/** A whole-rupiah amount as MoneyField text. */
+const toAmountInput = (value: number) => String(Math.max(0, Math.floor(value)));
+
 export default function SavingsClient({
   weeklyBudget,
   completedWeeks,
@@ -82,7 +87,7 @@ export default function SavingsClient({
   isGuest = false,
   savingsHistory = [],
 }: SavingsClientProps) {
-  const { t, formatCurrency, currencySymbol, currency } = useTranslation();
+  const { t, formatCurrency, currencySymbol } = useTranslation();
 
   // Modals state
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
@@ -120,6 +125,17 @@ export default function SavingsClient({
   // Surplus weeks that contributed to unspent budget
   const surplusWeeks = completedWeeks.filter((w) => w.isSurplus && w.surplus > 0);
 
+  // Upper bounds for the money fields; the server checks the same limits.
+  const allocationMax = allocationSource === "core" ? availableCoreSavings : availableSurplus;
+  const withdrawableSavings = Math.max(0, coreSavings);
+  const adjustmentLimit =
+    adjustmentType === "withdraw"
+      ? {
+          max: withdrawableSavings,
+          maxError: `Saldo tabungan tidak cukup. Saldo tersedia ${formatCurrency(withdrawableSavings)}.`,
+        }
+      : {};
+
   // Loaded on demand: the confetti library is only needed after a goal is reached.
   const triggerConfetti = () => {
     import("canvas-confetti")
@@ -150,13 +166,14 @@ export default function SavingsClient({
 
   const handleSaveGoal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!goalName.trim() || !goalTarget || Number(goalTarget) <= 0) return;
+    const target = parseRupiahInput(goalTarget);
+    if (!goalName.trim() || !target.ok) return;
 
     try {
       setIsSubmitting(true);
       const formData = new FormData();
       formData.set("name", goalName.trim());
-      formData.set("target_amount", goalTarget);
+      formData.set("target_amount", String(target.value));
       formData.set("emoji", goalEmoji);
 
       if (editingGoal) {
@@ -187,9 +204,10 @@ export default function SavingsClient({
   // Allocation Handler (from Core Savings or Sisa Anggaran)
   const handleAllocate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!allocatingGoal || !allocationAmount) return;
-    const amountNum = Number(allocationAmount);
-    if (isNaN(amountNum) || amountNum <= 0) return;
+    if (!allocatingGoal) return;
+    const parsed = parseRupiahInput(allocationAmount, { max: allocationMax });
+    if (!parsed.ok) return;
+    const amountNum = parsed.value;
 
     try {
       setIsSubmitting(true);
@@ -214,9 +232,10 @@ export default function SavingsClient({
   // Withdrawal Handler
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!withdrawingGoal || !withdrawingAmount) return;
-    const amountNum = Number(withdrawingAmount);
-    if (isNaN(amountNum) || amountNum <= 0) return;
+    if (!withdrawingGoal) return;
+    const parsed = parseRupiahInput(withdrawingAmount, { max: withdrawingGoal.allocatedAmount });
+    if (!parsed.ok) return;
+    const amountNum = parsed.value;
 
     try {
       setIsSubmitting(true);
@@ -233,9 +252,9 @@ export default function SavingsClient({
   // Sweep Surplus Handler (Transfer to Core Savings or Goal)
   const handleSweep = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sweepAmount) return;
-    const amountNum = Number(sweepAmount);
-    if (isNaN(amountNum) || amountNum <= 0 || amountNum > availableSurplus) return;
+    const parsed = parseRupiahInput(sweepAmount, { max: availableSurplus });
+    if (!parsed.ok) return;
+    const amountNum = parsed.value;
 
     try {
       setIsSubmitting(true);
@@ -261,9 +280,9 @@ export default function SavingsClient({
   // Manual Core Savings Adjustment Handler
   const handleManualAdjustment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adjustmentAmount) return;
-    const amountNum = Number(adjustmentAmount);
-    if (isNaN(amountNum) || amountNum <= 0) return;
+    const parsed = parseRupiahInput(adjustmentAmount, adjustmentLimit);
+    if (!parsed.ok) return;
+    const amountNum = parsed.value;
 
     try {
       setIsSubmitting(true);
@@ -358,7 +377,7 @@ export default function SavingsClient({
           <button
             type="button"
             onClick={() => {
-              setSweepAmount(String(availableSurplus));
+              setSweepAmount(toAmountInput(availableSurplus));
               setSweepTargetGoalId(goals[0]?.id || "");
               setIsSweepModalOpen(true);
             }}
@@ -485,7 +504,7 @@ export default function SavingsClient({
                         type="button"
                         onClick={() => {
                           setWithdrawingGoal(goal);
-                          setWithdrawingAmount(String(allocated));
+                          setWithdrawingAmount(toAmountInput(allocated));
                         }}
                         className="min-h-11 flex-1 rounded-xl border border-line bg-card px-3 text-sm font-semibold text-ink hover:bg-paper"
                       >
@@ -502,7 +521,7 @@ export default function SavingsClient({
                         const maxPool = defaultSource === "core" ? availableCoreSavings : availableSurplus;
                         const maxNeeded = Math.max(0, target - allocated);
                         const suggested = Math.min(maxNeeded, maxPool);
-                        setAllocationAmount(String(suggested > 0 ? suggested : maxPool));
+                        setAllocationAmount(toAmountInput(suggested > 0 ? suggested : maxPool));
                       }}
                       className="min-h-11 flex-1 rounded-xl bg-accent px-3 text-sm font-bold text-on-accent hover:brightness-95 disabled:cursor-not-allowed disabled:bg-line disabled:text-ink-soft"
                     >
@@ -648,21 +667,14 @@ export default function SavingsClient({
                 />
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1 block">
-                  {t.savings.goalTargetLabel}
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0.01"
-                  step="any"
-                  value={goalTarget}
-                  onChange={(e) => setGoalTarget(e.target.value)}
-                  placeholder={t.savings.targetAmountPlaceholder}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
-                />
-              </div>
+              <MoneyField
+                label={t.savings.goalTargetLabel}
+                value={goalTarget}
+                onChange={setGoalTarget}
+                prefix={currencySymbol}
+                placeholder={t.savings.targetAmountPlaceholder}
+                required
+              />
 
               <div className="mt-2 flex items-center justify-end gap-2">
                 <button
@@ -720,7 +732,7 @@ export default function SavingsClient({
                       onClick={() => {
                         setAllocationSource("core");
                         const maxNeeded = Math.max(0, allocatingGoal.targetAmount - allocatingGoal.allocatedAmount);
-                        setAllocationAmount(String(Math.min(maxNeeded, availableCoreSavings)));
+                        setAllocationAmount(toAmountInput(Math.min(maxNeeded, availableCoreSavings)));
                       }}
                       className={`py-1.5 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                         allocationSource === "core"
@@ -735,7 +747,7 @@ export default function SavingsClient({
                       onClick={() => {
                         setAllocationSource("surplus");
                         const maxNeeded = Math.max(0, allocatingGoal.targetAmount - allocatingGoal.allocatedAmount);
-                        setAllocationAmount(String(Math.min(maxNeeded, availableSurplus)));
+                        setAllocationAmount(toAmountInput(Math.min(maxNeeded, availableSurplus)));
                       }}
                       className={`py-1.5 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                         allocationSource === "surplus"
@@ -749,24 +761,15 @@ export default function SavingsClient({
                 </div>
               )}
 
-              <div>
-                <div className="flex justify-between text-xs text-zinc-500 mb-1">
-                  <span>{t.savings.allocationAmountLabel}</span>
-                  <span>
-                    {t.savings.maxAvailable}: {formatCurrency(allocationSource === "core" ? availableCoreSavings : availableSurplus)}
-                  </span>
-                </div>
-                <input
-                  type="number"
-                  required
-                  min="0.01"
-                  step="any"
-                  max={allocationSource === "core" ? availableCoreSavings : availableSurplus}
-                  value={allocationAmount}
-                  onChange={(e) => setAllocationAmount(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
-                />
-              </div>
+              <MoneyField
+                label={t.savings.allocationAmountLabel}
+                hint={`${t.savings.maxAvailable}: ${formatCurrency(allocationMax)}`}
+                value={allocationAmount}
+                onChange={setAllocationAmount}
+                prefix={currencySymbol}
+                max={allocationMax}
+                required
+              />
 
               {/* Quick Preset Buttons */}
               <div className="flex items-center gap-2">
@@ -774,7 +777,7 @@ export default function SavingsClient({
                   type="button"
                   onClick={() => {
                     const maxPool = allocationSource === "core" ? availableCoreSavings : availableSurplus;
-                    setAllocationAmount(String(Math.round(maxPool * 0.5)));
+                    setAllocationAmount(toAmountInput(maxPool * 0.5));
                   }}
                   className="flex-1 py-1 text-xs font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
                 >
@@ -785,7 +788,7 @@ export default function SavingsClient({
                   onClick={() => {
                     const maxPool = allocationSource === "core" ? availableCoreSavings : availableSurplus;
                     const maxNeeded = Math.max(0, allocatingGoal.targetAmount - allocatingGoal.allocatedAmount);
-                    setAllocationAmount(String(Math.min(maxNeeded, maxPool)));
+                    setAllocationAmount(toAmountInput(Math.min(maxNeeded, maxPool)));
                   }}
                   className="flex-1 py-1 text-xs font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
                 >
@@ -803,7 +806,7 @@ export default function SavingsClient({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || Number(allocationAmount) <= 0}
+                  disabled={isSubmitting || !parseRupiahInput(allocationAmount, { max: allocationMax }).ok}
                   className="px-4 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-semibold hover:bg-teal-700 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
                 >
                   {isSubmitting ? t.common.saving : t.savings.confirmAllocate}
@@ -837,24 +840,15 @@ export default function SavingsClient({
             </p>
 
             <form onSubmit={handleWithdraw} className="mt-4 flex flex-col gap-3">
-              <div>
-                <div className="flex justify-between text-xs text-zinc-500 mb-1">
-                  <span>{t.savings.allocationAmountLabel}</span>
-                  <span>
-                    {t.savings.maxAllocated}: {formatCurrency(withdrawingGoal.allocatedAmount)}
-                  </span>
-                </div>
-                <input
-                  type="number"
-                  required
-                  min="0.01"
-                  step="any"
-                  max={withdrawingGoal.allocatedAmount}
-                  value={withdrawingAmount}
-                  onChange={(e) => setWithdrawingAmount(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
-                />
-              </div>
+              <MoneyField
+                label={t.savings.allocationAmountLabel}
+                hint={`${t.savings.maxAllocated}: ${formatCurrency(withdrawingGoal.allocatedAmount)}`}
+                value={withdrawingAmount}
+                onChange={setWithdrawingAmount}
+                prefix={currencySymbol}
+                max={withdrawingGoal.allocatedAmount}
+                required
+              />
 
               <div className="mt-3 flex items-center justify-end gap-2">
                 <button
@@ -866,7 +860,7 @@ export default function SavingsClient({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || Number(withdrawingAmount) <= 0}
+                  disabled={isSubmitting || !parseRupiahInput(withdrawingAmount, { max: withdrawingGoal.allocatedAmount }).ok}
                   className="px-4 py-1.5 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 text-xs font-semibold hover:opacity-90 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
                 >
                   {isSubmitting ? t.common.saving : t.savings.confirmWithdraw}
@@ -899,37 +893,28 @@ export default function SavingsClient({
             </p>
 
             <form onSubmit={handleSweep} className="mt-4 flex flex-col gap-3.5">
-              <div>
-                <div className="flex justify-between text-xs text-zinc-500 mb-1">
-                  <span>Nominal yang Dialirkan ({currencySymbol})</span>
-                  <span>
-                    {t.savings.maxAvailable}: {formatCurrency(availableSurplus)}
-                  </span>
-                </div>
-                <input
-                  type="number"
-                  required
-                  min="0.01"
-                  step="any"
-                  max={availableSurplus}
-                  value={sweepAmount}
-                  onChange={(e) => setSweepAmount(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 outline-none focus:border-amber-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
-                />
-              </div>
+              <MoneyField
+                label="Nominal yang Dialirkan"
+                hint={`${t.savings.maxAvailable}: ${formatCurrency(availableSurplus)}`}
+                value={sweepAmount}
+                onChange={setSweepAmount}
+                prefix={currencySymbol}
+                max={availableSurplus}
+                required
+              />
 
               {/* Presets */}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setSweepAmount(String(Math.round(availableSurplus * 0.5)))}
+                  onClick={() => setSweepAmount(toAmountInput(availableSurplus * 0.5))}
                   className="flex-1 py-1 text-xs font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
                 >
                   50% ({formatCurrency(Math.round(availableSurplus * 0.5))})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSweepAmount(String(availableSurplus))}
+                  onClick={() => setSweepAmount(toAmountInput(availableSurplus))}
                   className="flex-1 py-1 text-xs font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
                 >
                   Semua ({formatCurrency(availableSurplus)})
@@ -1002,7 +987,7 @@ export default function SavingsClient({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || Number(sweepAmount) <= 0 || Number(sweepAmount) > availableSurplus}
+                  disabled={isSubmitting || !parseRupiahInput(sweepAmount, { max: availableSurplus }).ok}
                   className="px-4 py-1.5 rounded-xl bg-accent text-on-accent text-xs font-semibold hover:brightness-95 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
                 >
                   {isSubmitting ? t.common.saving : t.savings.confirmSweep}
@@ -1060,21 +1045,20 @@ export default function SavingsClient({
                 </button>
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1 block">
-                  {t.savings.adjustmentAmountLabel}
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0.01"
-                  step="any"
-                  value={adjustmentAmount}
-                  onChange={(e) => setAdjustmentAmount(e.target.value)}
-                  placeholder={currency === "IDR" ? "cth. 250000" : "cth. 50"}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
-                />
-              </div>
+              <MoneyField
+                label={t.savings.adjustmentAmountLabel}
+                hint={
+                  adjustmentType === "withdraw"
+                    ? `Saldo tersedia: ${formatCurrency(withdrawableSavings)}`
+                    : undefined
+                }
+                value={adjustmentAmount}
+                onChange={setAdjustmentAmount}
+                prefix={currencySymbol}
+                placeholder="250.000"
+                {...adjustmentLimit}
+                required
+              />
 
               <div>
                 <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1 block">
@@ -1103,7 +1087,7 @@ export default function SavingsClient({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || Number(adjustmentAmount) <= 0}
+                  disabled={isSubmitting || !parseRupiahInput(adjustmentAmount, adjustmentLimit).ok}
                   className="px-4 py-1.5 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 text-xs font-semibold hover:opacity-90 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
                 >
                   {isSubmitting ? t.common.saving : t.common.save}

@@ -52,6 +52,7 @@ import { subDays, format, parseISO } from "date-fns";
 import { getActiveWallets } from "@/app/saku/actions";
 import { Wallet } from "@/utils/wallets/server";
 import ModalOverlay from "@/app/ui/ModalOverlay";
+import { formatRupiahInput, parseMoneyInput } from "@/utils/money";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -200,6 +201,11 @@ function QuickAddModalContent({
 
   // Form states (Standard mode)
   const [amount, setAmount] = useState<number>(0);
+  // Text typed into the amount field that the number alone can't show: input
+  // that doesn't parse, or decimals still being typed. Ignored once `amount`
+  // is changed by anything else (a chip, a quick-amount pill).
+  const [amountDraft, setAmountDraft] = useState<{ text: string; value: number; error: string | null } | null>(null);
+  const [showAmountError, setShowAmountError] = useState(false);
   const [category, setCategory] = useState<CategoryKey>("Food & Dining");
   const [name, setName] = useState<string>("");
   const [note, setNote] = useState<string>("");
@@ -236,6 +242,7 @@ function QuickAddModalContent({
   const [newChipName, setNewChipName] = useState("");
   const [newChipCategory, setNewChipCategory] = useState<CategoryKey>("Food & Dining");
   const [newChipAmount, setNewChipAmount] = useState("");
+  const [chipAmountError, setChipAmountError] = useState<string | null>(null);
   const [newChipEmoji, setNewChipEmoji] = useState("");
 
   // Submitting / Error state
@@ -590,6 +597,29 @@ function QuickAddModalContent({
 
   const clearAmount = () => {
     setAmount(0);
+    setAmountDraft(null);
+    setShowAmountError(false);
+  };
+
+  const amountDraftActive = amountDraft !== null && amountDraft.value === amount;
+  const amountError = amountDraftActive ? amountDraft.error : null;
+
+  const handleAmountChange = (text: string) => {
+    setShowAmountError(false);
+    if (!text.trim()) {
+      setAmount(0);
+      setAmountDraft(null);
+      return;
+    }
+    const parsed = parseMoneyInput(text, currency, { allowZero: true });
+    if (parsed.ok) {
+      setAmount(parsed.value);
+      // Rupiah is shown regrouped; other currencies keep the typed text so "10.0" can become "10.05".
+      setAmountDraft(currency === "IDR" ? null : { text, value: parsed.value, error: null });
+    } else {
+      setAmount(0);
+      setAmountDraft({ text, value: 0, error: parsed.error });
+    }
   };
 
   // Quick Chip click handler
@@ -608,6 +638,12 @@ function QuickAddModalContent({
     e.preventDefault();
     if (isSubmitting) return;
 
+    if (amountError) {
+      setShowAmountError(true);
+      setError(amountError);
+      amountInputRef.current?.focus();
+      return;
+    }
     if (!(amount > 0)) {
       setError(t.expenses.amountPositiveError);
       amountInputRef.current?.focus();
@@ -715,6 +751,7 @@ function QuickAddModalContent({
     setNewChipName("");
     setNewChipCategory("Food & Dining");
     setNewChipAmount("");
+    setChipAmountError(null);
     setNewChipEmoji("");
   };
 
@@ -723,6 +760,7 @@ function QuickAddModalContent({
     setNewChipName(chip.name);
     setNewChipCategory(chip.category);
     setNewChipAmount(chip.defaultAmount ? String(chip.defaultAmount) : "");
+    setChipAmountError(null);
     setNewChipEmoji(chip.emoji || "");
   };
 
@@ -730,8 +768,12 @@ function QuickAddModalContent({
     e.preventDefault();
     if (!newChipName.trim()) return;
 
-    const parsedAmt = newChipAmount ? parseInt(newChipAmount.replace(/\D/g, ""), 10) : undefined;
-    const cleanAmt = parsedAmt && !isNaN(parsedAmt) && parsedAmt > 0 ? parsedAmt : undefined;
+    const parsedAmt = parseMoneyInput(newChipAmount, currency, { allowEmpty: true, allowZero: true });
+    if (!parsedAmt.ok) {
+      setChipAmountError(parsedAmt.error);
+      return;
+    }
+    const cleanAmt = parsedAmt.value > 0 ? parsedAmt.value : undefined;
 
     let updatedList: QuickChip[];
 
@@ -1132,27 +1174,22 @@ function QuickAddModalContent({
                   type="text"
                   inputMode={currency === "IDR" ? "numeric" : "decimal"}
                   value={
-                    amount > 0
+                    amountDraftActive
+                      ? amountDraft.text
+                      : amount > 0
                       ? currency === "IDR"
-                        ? amount.toLocaleString("id-ID")
+                        ? formatRupiahInput(amount)
                         : String(amount)
                       : ""
                   }
-                  onChange={(e) => {
-                    if (currency === "IDR") {
-                      const digits = e.target.value.replace(/\D/g, "");
-                      setAmount(digits ? parseInt(digits, 10) : 0);
-                    } else {
-                      const clean = e.target.value.replace(/[^0-9.]/g, "");
-                      const parts = clean.split(".");
-                      const valStr = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join("")}` : clean;
-                      setAmount(valStr ? parseFloat(valStr) || 0 : 0);
-                    }
-                  }}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  onBlur={() => setShowAmountError(true)}
+                  aria-invalid={showAmountError && amountError ? true : undefined}
+                  aria-describedby={showAmountError && amountError ? "quick-add-amount-error" : undefined}
                   placeholder="0"
                   className="w-full bg-transparent text-2xl font-extrabold tracking-tight outline-none placeholder:text-zinc-300 text-zinc-900 dark:placeholder:text-zinc-600 dark:text-zinc-50"
                 />
-                {amount > 0 && (
+                {(amount > 0 || amountDraftActive) && (
                   <button
                     type="button"
                     onClick={clearAmount}
@@ -1163,6 +1200,11 @@ function QuickAddModalContent({
                   </button>
                 )}
               </div>
+              {showAmountError && amountError && (
+                <p id="quick-add-amount-error" role="alert" className="text-xs font-medium text-danger">
+                  {amountError}
+                </p>
+              )}
 
               {/* Quick Amount Pills */}
               <div className="grid grid-cols-5 gap-1.5">
@@ -1862,13 +1904,25 @@ function QuickAddModalContent({
                   ))}
                 </select>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode={currency === "IDR" ? "numeric" : "decimal"}
                   value={newChipAmount}
-                  onChange={(e) => setNewChipAmount(e.target.value)}
+                  onChange={(e) => {
+                    setNewChipAmount(e.target.value);
+                    setChipAmountError(null);
+                  }}
                   placeholder={t.expenses.defaultAmountOptional}
+                  aria-label={t.expenses.defaultAmountOptional}
+                  aria-invalid={chipAmountError ? true : undefined}
+                  aria-describedby={chipAmountError ? "chip-amount-error" : undefined}
                   className="w-1/2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs outline-none focus:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 />
               </div>
+              {chipAmountError && (
+                <p id="chip-amount-error" role="alert" className="text-xs font-medium text-danger">
+                  {chipAmountError}
+                </p>
+              )}
 
               <div className="flex items-center justify-between pt-1">
                 <button
