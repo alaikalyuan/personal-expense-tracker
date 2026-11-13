@@ -1,0 +1,10 @@
+import { open, txt, shot } from "./agent-D-h.mjs";
+const {b, ctx, page} = await open("journey");
+await page.goto("http://localhost:3100/saku"); await page.waitForTimeout(2000);
+await page.getByRole('button',{name:'Aktifkan Multi-Saku Sekarang'}).click(); await page.waitForTimeout(3500);
+console.log("URL", page.url());
+console.log("SAKU:", await page.evaluate(()=>document.body.innerText.replace(/\n+/g,' | ').slice(0,1800)));
+await shot(page,"D","K01-saku-enabled",{fullPage:true});
+console.log(await page.evaluate(()=>[...document.querySelectorAll('button,a')].filter(e=>e.getBoundingClientRect().height>0).map(e=>(e.innerText||e.getAttribute('aria-label')||e.title||'?').trim().replace(/\n/g,' ').slice(0,34)+'@'+Math.round(e.getBoundingClientRect().height)).join(' ; ')));
+await ctx.storageState({path:"../out/_D_journey_state.json"});
+await b.close();

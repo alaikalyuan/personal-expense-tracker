@@ -1,0 +1,10 @@
+import { open, goHome, txt, shot } from "./agent-D-h.mjs";
+const {b, ctx, page} = await open("journey");
+await goHome(page);
+await page.getByText('Semua Saku').first().click(); await page.waitForTimeout(500);
+await page.getByText('[A002] Saku Kos').first().click(); await page.waitForTimeout(2000);
+console.log("SAKU KOS:", await txt(page,620)); await shot(page,"D","K08-saku-kos-view");
+await page.getByText('[A002] Saku Kos').first().click(); await page.waitForTimeout(500);
+await page.getByText('Tabungan').first().click().catch(()=>{}); await page.waitForTimeout(2000);
+console.log("TABUNGAN VIEW:", await txt(page,520)); await shot(page,"D","K09-tabungan-saku-view");
+await b.close();

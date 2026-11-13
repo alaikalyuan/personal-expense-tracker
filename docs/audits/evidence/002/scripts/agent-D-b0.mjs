@@ -1,0 +1,13 @@
+import { launch, newContext, login, shot, BASE } from "./lib.mjs";
+const b = await launch();
+const ctx = await newContext(b, {});
+const page = await ctx.newPage();
+await login(page,"journey");
+await page.goto(BASE); await page.waitForLoadState("networkidle"); await page.waitForTimeout(2000);
+await shot(page,"D","B00-journey-fresh");
+console.log(await page.evaluate(()=>document.body.innerText));
+await ctx.storageState({path:"../out/_D_journey_state.json"});
+await page.getByRole('button',{name:'Buka menu'}).click(); await page.waitForTimeout(700);
+console.log("MENU:", await page.evaluate(()=>(document.querySelector('[role=dialog]')||document.body).innerText.replace(/\n+/g,' | ')));
+await shot(page,"D","B01-menu-signedin");
+await b.close();

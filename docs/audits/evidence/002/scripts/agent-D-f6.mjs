@@ -1,0 +1,14 @@
+import { open, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open("journey");
+await page.goto("http://localhost:3100/subscriptions"); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(2000);
+page.on('dialog',async d=>{console.log("NATIVE DIALOG:",d.type(),d.message()); await d.dismiss();});
+await page.getByRole('button',{name:'Jeda Langganan'}).click(); await page.waitForTimeout(2000);
+console.log("PAUSED:", await txt(page,800)); await shot(page,"D","F06-sub-paused");
+await page.reload(); await page.waitForTimeout(1500); console.log("PAUSED after reload:", await txt(page,500));
+console.log(await page.evaluate(()=>[...document.querySelectorAll('button')].filter(e=>e.getBoundingClientRect().height>0).map(e=>(e.innerText||e.getAttribute('aria-label')||e.title||'?').trim().slice(0,26)).join(' ; ')));
+await page.getByRole('button',{name:/Aktifkan|Lanjut|Resume|Jeda/}).first().click(); await page.waitForTimeout(2000);
+console.log("RESUMED:", await txt(page,500));
+await page.getByRole('button',{name:'Hapus'}).click(); await page.waitForTimeout(800);
+console.log("after Hapus click -> dialogs:", await page.locator('[role=dialog],[role=alertdialog]').count(), await page.evaluate(()=>document.body.innerText.includes('[A002] Spotify uji')));
+await shot(page,"D","F07-sub-delete-prompt");
+await b.close();

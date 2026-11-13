@@ -1,0 +1,20 @@
+import { open, goHome, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open();
+await goHome(page);
+await page.getByRole('button',{name:'Buka menu'}).click(); await page.waitForTimeout(600);
+await page.getByText('Budget Mingguan').click(); await page.waitForTimeout(800);
+const i=page.locator('[role=dialog] input[inputmode=numeric]'); await i.fill(""); await i.pressSequentially("300000");
+await page.getByRole('button',{name:'Simpan Anggaran'}).click(); await page.waitForTimeout(2500);
+await page.reload(); await page.waitForTimeout(1500);
+console.log("WEEKLY 300k:", await txt(page,420));
+await shot(page,"D","D02-weekly-300k");
+await page.getByRole('button',{name:'Bulanan',exact:true}).click(); await page.waitForTimeout(1500);
+console.log("MONTHLY after weekly=300k:", await txt(page,900));
+await shot(page,"D","D03-monthly-after-weekly");
+// monthly budget dialog? click budget card / menu label
+await page.getByRole('button',{name:'Buka menu'}).click(); await page.waitForTimeout(600);
+console.log("menu budget row:", await page.evaluate(()=>[...document.querySelectorAll('[role=dialog] *')].filter(e=>/Budget/.test(e.innerText||'')&&e.children.length<3).map(e=>e.innerText.replace(/\n+/g,' | ')).slice(0,4)));
+await page.getByText(/^Budget (Bulanan|Mingguan)/).first().click(); await page.waitForTimeout(700);
+console.log("dialog in monthly:", await page.evaluate(()=>[...document.querySelectorAll('[role=dialog]')].slice(-1).map(d=>d.innerText.replace(/\n+/g,' | ')+' // '+[...d.querySelectorAll('input')].map(i=>i.value)).join('')));
+await shot(page,"D","D04-budget-dialog-monthly");
+await b.close();

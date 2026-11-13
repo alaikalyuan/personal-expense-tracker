@@ -1,0 +1,14 @@
+import { open, goHome, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open();
+await goHome(page);
+await page.getByRole('button',{name:'Bagikan / Ekspor'}).click(); await page.waitForTimeout(1000);
+await shot(page,"D","D07-export-weekly");
+const dlg = ()=>page.evaluate(()=>[...document.querySelectorAll('[role=dialog]')].slice(-1).map(d=>d.innerText.replace(/\n+/g,' | ')).join(''));
+console.log("EXPORT WEEKLY:", await dlg());
+console.log(await page.evaluate(()=>[...document.querySelectorAll('[role=dialog]')].slice(-1)[0].querySelectorAll('button')? [...[...document.querySelectorAll('[role=dialog]')].slice(-1)[0].querySelectorAll('button,a')].map(e=>e.tagName+':'+(e.innerText||e.getAttribute('aria-label')||'').trim().slice(0,30)).join(' ; '):''));
+await page.keyboard.press("Escape"); await page.waitForTimeout(500);
+await page.getByRole('button',{name:'Bulanan',exact:true}).click(); await page.waitForTimeout(1500);
+await page.getByRole('button',{name:'Bagikan / Ekspor'}).click(); await page.waitForTimeout(1000);
+await shot(page,"D","D08-export-monthly");
+console.log("EXPORT MONTHLY:", await dlg());
+await b.close();

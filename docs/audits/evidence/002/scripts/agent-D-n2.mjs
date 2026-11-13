@@ -1,0 +1,15 @@
+import { open, goHome, txt, shot, BASE } from "./agent-D-h.mjs";
+const {b, ctx, page} = await open("journey");
+await ctx.grantPermissions(['notifications'],{origin:BASE});
+const net=[]; page.on('request',r=>{ if(r.method()==='POST') net.push(r.url().replace(BASE,'')); }); page.on('response',async r=>{ if(/notifications/.test(r.url())) net.push('RESP '+r.status()+' '+r.url().replace(BASE,'')); });
+const cons=[]; page.on('console',m=>{ if(['error','warning'].includes(m.type())) cons.push(m.text().slice(0,200)); });
+await goHome(page);
+await page.getByRole('button',{name:'Buka menu'}).click(); await page.waitForTimeout(600);
+await page.getByText('Notifikasi & Pengingat').click(); await page.waitForTimeout(1500);
+const dl=()=>page.evaluate(()=>[...document.querySelectorAll('[role=dialog]')].slice(-1).map(d=>d.innerText.replace(/\n+/g,' | ')).join(''));
+console.log("NOTIF (granted):", (await dl()).slice(0,300)); await shot(page,"D","N02-notif-granted");
+await page.getByRole('button',{name:'Aktifkan'}).click().catch(()=>console.log("no Aktifkan button")); await page.waitForTimeout(4000);
+console.log("AFTER AKTIFKAN:", (await dl()).slice(0,420)); await shot(page,"D","N03-notif-after-activate");
+console.log("btns:", await page.evaluate(()=>[...document.querySelectorAll('[role=dialog] button')].map(b=>b.innerText.trim())));
+console.log("net:",net,"console:",cons);
+await b.close();

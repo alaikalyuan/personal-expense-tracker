@@ -1,0 +1,23 @@
+import { open, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open("journey");
+await page.goto("http://localhost:3100/savings"); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(2000);
+const snap=async(l)=>{ await page.waitForTimeout(1500); console.log(l, await page.evaluate(()=>{const t=document.body.innerText.replace(/\n+/g,' | '); const g=(k,n)=>t.slice(t.indexOf(k),t.indexOf(k)+n); return g('Tabungan Pokok',110)+' ## '+g('Total hemat',60)+' ## '+g('[A002] Laptop uji',70)+' ## '+g('Total Masuk',50)+' '+g('Total Keluar',30);})); };
+const d=()=>page.locator('[role=dialog]').last();
+page.on('dialog',async x=>{console.log("NATIVE:",x.type(),x.message()); await x.dismiss();});
+await page.getByRole('button',{name:'Isi target'}).click(); await page.waitForTimeout(600);
+console.log("ALLOC DIALOG:", await d().innerText().then(t=>t.replace(/\n+/g,' | ')));
+await shot(page,"D","S11-alloc-dialog");
+await d().locator('input[type=number]').fill("50000"); await d().getByRole('button',{name:/Simpan|Alokasikan|Isi|Pindah/}).last().click(); await snap("T4 allocate 50.000:");
+await page.getByRole('button',{name:'Ambil dari target'}).click(); await page.waitForTimeout(600);
+console.log("DEALLOC DIALOG:", await d().innerText().then(t=>t.replace(/\n+/g,' | ')));
+await d().locator('input[type=number]').fill("20000"); await d().getByRole('button',{name:/Simpan|Ambil|Tarik|Kembalikan/}).last().click(); await snap("T5 take 20.000 back from target:");
+await page.getByRole('button',{name:'Catat setor atau tarik'}).click(); await page.waitForTimeout(600);
+await d().getByText(/Tarik dari Tabungan/).click(); await d().locator('input[type=number]').fill("30000"); await d().locator('input[type=text]').fill("[A002] tarik uji");
+await d().getByRole('button',{name:'Simpan'}).click(); await snap("T6 withdraw 30.000:");
+// try overdraw
+await page.getByRole('button',{name:'Catat setor atau tarik'}).click(); await page.waitForTimeout(600);
+await d().getByText(/Tarik dari Tabungan/).click(); await d().locator('input[type=number]').fill("999999999");
+await d().getByRole('button',{name:'Simpan'}).click(); await page.waitForTimeout(1500);
+console.log("OVERDRAW attempt -> dialog open:", await page.locator('[role=dialog]').count(), await page.evaluate(()=>[...document.querySelectorAll('[role=dialog]')].slice(-1).map(x=>x.innerText.replace(/\n+/g,' | ').slice(0,300)).join('')));
+await shot(page,"D","S12-overdraw");
+await b.close();

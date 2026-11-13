@@ -1,0 +1,16 @@
+import { open, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open("journey");
+await page.goto("http://localhost:3100/subscriptions"); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(2000);
+await page.getByRole('button',{name:'Edit'}).click(); await page.waitForTimeout(700);
+console.log("EDIT FORM state:", await page.evaluate(()=>[...document.querySelectorAll('input,select')].filter(e=>e.getBoundingClientRect().height>0).map(e=>e.type+'|v='+(e.type==='checkbox'?e.checked:e.value)+'|ph='+e.placeholder).join('\n')));
+console.log("friend chips:", await page.evaluate(()=>{const t=document.body.innerText; const i=t.indexOf('Tambah Teman'); return t.slice(i,i+200).replace(/\n+/g,' | ')}));
+const price=page.locator('input[type=number]').first(); await price.fill("35990");
+await shot(page,"D","F05-sub-edit");
+await page.getByRole('button',{name:/Simpan|Perbarui|Update/}).last().click(); await page.waitForTimeout(2500);
+console.log("AFTER EDIT:", await txt(page,700));
+await page.reload(); await page.waitForTimeout(1800);
+console.log("AFTER RELOAD:", await txt(page,800));
+await page.getByRole('button',{name:'Edit'}).click(); await page.waitForTimeout(700);
+console.log("REOPEN state:", await page.evaluate(()=>[...document.querySelectorAll('input,select')].filter(e=>e.getBoundingClientRect().height>0).map(e=>e.type+'|v='+(e.type==='checkbox'?e.checked:e.value)).join(' ; ')));
+console.log("friends:", await page.evaluate(()=>document.body.innerText.includes('[A002] Rina')));
+await b.close();

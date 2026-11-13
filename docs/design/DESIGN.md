@@ -1,6 +1,6 @@
 # SakuTrack design direction: Warung
 
-Chosen by the owner on 2026-11-11 after audit 001 (`anti-slop/audit-001-2026-11-11.md`).
+Chosen by the owner on 2026-11-11 after audit 001 (`docs/audits/001-initial-audit.md`).
 
 **Design read:** a daily money notebook for Indonesian college students, in a warm paper-and-ink language.
 

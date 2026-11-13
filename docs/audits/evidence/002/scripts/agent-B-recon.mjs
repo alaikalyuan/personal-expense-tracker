@@ -1,0 +1,11 @@
+import { launch, newContext, login, BASE } from "./lib.mjs";
+const b = await launch();
+const ctx = await newContext(b, { theme: "light", hasTouch:true, isMobile:true });
+const page = await ctx.newPage();
+await login(page, "typical");
+await page.goto(BASE + "/"); await page.waitForLoadState("networkidle");
+const list = await page.evaluate(() => [...document.querySelectorAll('a[href],button,input,select,textarea,[role=tab],[role=button],summary')].filter(e=>e.getBoundingClientRect().width>0).map(e=>`${e.tagName.toLowerCase()}|role=${e.getAttribute('role')||''}|name=${(e.getAttribute('aria-label')||e.innerText||e.placeholder||'').trim().replace(/\s+/g,' ').slice(0,40)}|href=${e.getAttribute('href')||''}|exp=${e.getAttribute('aria-expanded')||''}`));
+console.log(list.join("\n"));
+await page.goto(BASE + "/saku"); await page.waitForLoadState("networkidle");
+console.log(await page.evaluate(()=>[...document.querySelectorAll('a[href]')].map(a=>a.getAttribute('href')).join(',')));
+await b.close();

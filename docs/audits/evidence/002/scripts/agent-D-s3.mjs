@@ -1,0 +1,18 @@
+import { open, txt, shot } from "./agent-D-h.mjs";
+const {b, page} = await open("journey");
+await page.goto("http://localhost:3100/savings"); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(2000);
+const posts=[]; page.on('request',r=>{if(r.method()==='POST')posts.push(1)});
+await page.getByRole('button',{name:'Buat Target Tabungan'}).click(); await page.waitForTimeout(700);
+await page.locator('[role=dialog] input[type=text]').fill("[A002] Laptop uji");
+const num=page.locator('[role=dialog] input[type=number]');
+await num.click(); await num.pressSequentially("2.000.000");
+console.log("typed dotted -> DOM value:", JSON.stringify(await num.inputValue()), "| valid:", await num.evaluate(e=>e.validity.valid+' badInput='+e.validity.badInput));
+await page.getByRole('button',{name:'Simpan'}).click(); await page.waitForTimeout(1200);
+console.log("POSTs after Simpan with dotted:", posts.length, "| dialog still open:", await page.locator('[role=dialog]').count(), "|", await page.evaluate(()=>[...document.querySelectorAll('[role=dialog]')].slice(-1).map(d=>d.innerText.replace(/\n+/g,' | ').slice(-200)).join('')));
+await shot(page,"D","S06-goal-dotted-error");
+await num.fill("2000000");
+await page.getByRole('button',{name:'Simpan'}).click(); await page.waitForTimeout(2500);
+console.log("POSTs:",posts.length);
+console.log("AFTER GOAL:", await page.evaluate(()=>document.body.innerText.replace(/\n+/g,' | ').slice(0,1600)));
+await shot(page,"D","S07-goal-created");
+await b.close();

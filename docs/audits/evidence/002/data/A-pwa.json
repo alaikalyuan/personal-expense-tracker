@@ -1,0 +1,126 @@
+{
+ "afterTypical": {
+  "regs": [
+   {
+    "scope": "http://localhost:3100/",
+    "active": "activated",
+    "script": "http://localhost:3100/sw.js",
+    "waiting": false
+   }
+  ],
+  "controller": true,
+  "caches": {
+   "sakutrack-offline-v1": [
+    "http://localhost:3100/offline.html"
+   ]
+  }
+ },
+ "savingsHeaders": {
+  "status": 200,
+  "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+  "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding"
+ },
+ "swHeaders": {
+  "status": 200,
+  "cacheControl": "public, max-age=0",
+  "ct": "application/javascript; charset=UTF-8"
+ },
+ "manifest": {
+  "status": 200,
+  "ct": "application/manifest+json",
+  "body": {
+   "name": "SakuTrack : Student Budget Tracker",
+   "short_name": "SakuTrack",
+   "description": "Catat pengeluaran mingguan kuliah dan pribadi",
+   "start_url": "/",
+   "id": "/",
+   "scope": "/",
+   "display": "standalone",
+   "orientation": "portrait",
+   "background_color": "#fff8ec",
+   "theme_color": "#fff8ec",
+   "icons": [
+    {
+     "src": "/icons/icon-192.png",
+     "sizes": "192x192",
+     "type": "image/png",
+     "purpose": "any"
+    },
+    {
+     "src": "/icons/icon-512.png",
+     "sizes": "512x512",
+     "type": "image/png",
+     "purpose": "any"
+    },
+    {
+     "src": "/icons/icon-maskable-192.png",
+     "sizes": "192x192",
+     "type": "image/png",
+     "purpose": "maskable"
+    },
+    {
+     "src": "/icons/icon-maskable-512.png",
+     "sizes": "512x512",
+     "type": "image/png",
+     "purpose": "maskable"
+    }
+   ]
+  }
+ },
+ "offlineHtml": {
+  "status": 200,
+  "cacheControl": "public, max-age=0"
+ },
+ "signOutFound": true,
+ "afterSignOutUrl": "/",
+ "afterSignOutCookies": 0,
+ "emptyOnlineText": "Jumat, 13 Nov 9 Nov - 15 Nov 0 Mingguan Bulanan Sisa hari ini Rp 166.667 Aman. Rp 500.000 untuk 3 hari lagi Rp 0 dari Rp 500.000 minggu ini Entri Terbaru Hari Ini 0 Minggu Ini 0 Belum ada pengeluaran ",
+ "emptyHasA002Online": false,
+ "afterEmpty": {
+  "regs": [
+   {
+    "scope": "http://localhost:3100/",
+    "active": "activated",
+    "script": "http://localhost:3100/sw.js",
+    "waiting": false
+   }
+  ],
+  "controller": true,
+  "caches": {
+   "sakutrack-offline-v1": [
+    "http://localhost:3100/offline.html"
+   ]
+  }
+ },
+ "offlineEmpty": {
+  "/": {
+   "status": 200,
+   "title": "Tidak ada koneksi : SakuTrack",
+   "text": "Tidak ada koneksi SakuTrack butuh internet untuk memuat dan menyimpan catatanmu. Data yang sudah tersimpan tetap aman. You are offline. SakuTrack needs a connection to load and save your entries. What you already saved is safe. Coba lagi",
+   "hasA002": false,
+   "hasTypicalMarkers": false
+  },
+  "/savings": {
+   "status": 200,
+   "title": "Tidak ada koneksi : SakuTrack",
+   "text": "Tidak ada koneksi SakuTrack butuh internet untuk memuat dan menyimpan catatanmu. Data yang sudah tersimpan tetap aman. You are offline. SakuTrack needs a connection to load and save your entries. What you already saved is safe. Coba lagi",
+   "hasA002": false,
+   "hasTypicalMarkers": false
+  }
+ },
+ "signedOutCookies2": 0,
+ "offlineSignedOut": {
+  "/": {
+   "status": 200,
+   "title": "Tidak ada koneksi : SakuTrack",
+   "text": "Tidak ada koneksi SakuTrack butuh internet untuk memuat dan menyimpan catatanmu. Data yang sudah tersimpan tetap aman. You are offline. SakuTrack needs a connection to load and save your entries. What you already saved is safe. Coba lagi",
+   "hasA002": false
+  },
+  "/savings": {
+   "status": 200,
+   "title": "Tidak ada koneksi : SakuTrack",
+   "text": "Tidak ada koneksi SakuTrack butuh internet untuk memuat dan menyimpan catatanmu. Data yang sudah tersimpan tetap aman. You are offline. SakuTrack needs a connection to load and save your entries. What you already saved is safe. Coba lagi",
+   "hasA002": false
+  }
+ }
+}

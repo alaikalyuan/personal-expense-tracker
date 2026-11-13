@@ -1,0 +1,9 @@
+import { launch, newContext, login, BASE } from "./lib.mjs";
+const b = await launch(); const ctx = await newContext(b,{hasTouch:true,isMobile:true}); const page = await ctx.newPage(); await login(page,"typical");
+const chk = async (n) => console.log(n, JSON.stringify(await page.evaluate(()=>{const d=document.querySelector("[role=dialog]");const req=[...d.querySelectorAll("input[required],select[required],textarea[required]")];return {requiredFields:req.length,asterisks:(d.innerText.match(/\*/g)||[]).length,wajib:/wajib|required/i.test(d.innerText),novalidate:d.querySelector("form")?.noValidate,ariaRequired:d.querySelectorAll("[aria-required=true]").length,errorRegions:d.querySelectorAll("[role=alert],[aria-invalid=true]").length,labelsNotFor:[...d.querySelectorAll("label")].filter(l=>!l.htmlFor&&!l.querySelector("input,select,textarea")).length,labelsTotal:d.querySelectorAll("label").length}})));
+await page.goto(BASE+"/subscriptions"); await page.waitForLoadState("networkidle"); await page.getByRole("button",{name:"Tambah",exact:true}).click(); await page.waitForTimeout(600); await chk("sub-add");
+await page.goto(BASE+"/savings"); await page.waitForLoadState("networkidle"); await page.getByRole("button",{name:"Tambah Target Baru"}).click(); await page.waitForTimeout(600); await chk("goal-create");
+await page.goto(BASE+"/"); await page.waitForLoadState("networkidle"); await page.getByRole("button",{name:"Tambah pengeluaran"}).click(); await page.waitForTimeout(700); await page.getByRole("button",{name:"Standar",exact:true}).click(); await page.waitForTimeout(400); await chk("add-standard");
+// is empty-amount submit blocked client side? check disabled state only (no click)
+console.log("add-standard submit disabled with empty amount:", await page.evaluate(()=>[...document.querySelectorAll("[role=dialog] button[type=submit]")].map(b=>b.disabled)));
+await b.close();

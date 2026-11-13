@@ -1,0 +1,10 @@
+import { launch, newContext, login, BASE } from "./lib.mjs";
+const b = await launch(); const ctx = await newContext(b, {}); const page = await ctx.newPage();
+await login(page,"journey");
+await page.goto(BASE); await page.waitForLoadState("networkidle").catch(()=>{}); await page.waitForTimeout(1500);
+await page.getByText('Semua Saku').first().click().catch(()=>{}); await page.waitForTimeout(300);
+await page.getByRole('button',{name:'Minggu Ini'}).click().catch(()=>{}); await page.waitForTimeout(600);
+const t=await page.evaluate(()=>document.body.innerText);
+console.log("slow quick rows:", (t.match(/dup-test slow 5rb|dup-test slow(?! std)/g)||[]).length, "| std rows:", (t.match(/dup-test slow std/g)||[]).length, "| total tx text:", t.match(/Minggu Ini\s*\d+/)?.[0]);
+console.log(t.replace(/\n+/g,' | ').slice(200,420));
+await b.close();
