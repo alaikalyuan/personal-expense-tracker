@@ -56,6 +56,8 @@ export interface ParticipantCalculation {
   serviceShare: number;
   discountShare: number;
   feeShare: number;
+  /** totalOwed minus the rounded lines above it, so a breakdown always adds up to its total. */
+  roundingShare: number;
   totalOwed: number;
   isPaid: boolean;
   items: ParticipantItemBreakdown[];
@@ -68,8 +70,20 @@ export interface SplitCalculationSummary {
   discountAmount: number;
   extraFee: number;
   grandTotal: number;
+  /** Sum of every share minus the exact bill total: the "Pembulatan" line. */
   roundingDiff: number;
+  /** Itemized items nobody is assigned to. Their cost is in no one's share. */
+  unassignedItems: { itemId: string; name: string; total: number }[];
   participants: ParticipantCalculation[];
+}
+
+/** Itemized items that nobody is assigned to (assignees that aren't participants don't count). */
+export function findUnassignedItems<T extends { assigned_participant_ids: string[] }>(
+  items: T[],
+  participantIds: string[]
+): T[] {
+  const known = new Set(participantIds);
+  return items.filter((item) => !(item.assigned_participant_ids || []).some((id) => known.has(id)));
 }
 
 /**
@@ -107,6 +121,7 @@ export function calculateSplitBreakdown(
       serviceShare: 0,
       discountShare: 0,
       feeShare: 0,
+      roundingShare: 0,
       totalOwed: 0,
       isPaid: Boolean(p.is_paid),
       items: [],
@@ -115,6 +130,7 @@ export function calculateSplitBreakdown(
 
   // Calculate items subtotal and per-participant allocations
   let overallSubtotal = 0;
+  const unassignedItems: SplitCalculationSummary["unassignedItems"] = [];
 
   if (bill.split_mode === "equal") {
     // In equal mode, sum all items and divide equally
@@ -143,11 +159,15 @@ export function calculateSplitBreakdown(
       const itemTotal = Math.max(0, Number(item.price || 0)) * Math.max(1, Number(item.quantity || 1));
       overallSubtotal += itemTotal;
 
-      const assigned = item.assigned_participant_ids && item.assigned_participant_ids.length > 0
-        ? item.assigned_participant_ids
-        : participants.map((p) => p.id); // fallback: split with all if none selected
+      // Only assignees who are participants of this bill. An item with none stays
+      // unassigned: it is never spread over everyone behind the host's back.
+      const assigned = (item.assigned_participant_ids || []).filter((pId) => participantMap.has(pId));
+      if (assigned.length === 0) {
+        unassignedItems.push({ itemId: item.id, name: item.name, total: itemTotal });
+        return;
+      }
 
-      const splitCount = Math.max(1, assigned.length);
+      const splitCount = assigned.length;
       const sharePerPerson = itemTotal / splitCount;
 
       assigned.forEach((pId) => {
@@ -186,6 +206,8 @@ export function calculateSplitBreakdown(
     calc.discountShare = Math.round(discountTotal * ratio);
     calc.feeShare = Math.round(feeTotal / numParticipants); // fees (like delivery) are typically shared equally per person
 
+    const shownLinesTotal =
+      Math.round(calc.itemsSubtotal) + calc.taxShare + calc.serviceShare + calc.feeShare - calc.discountShare;
     const rawOwed = Math.max(
       0,
       calc.itemsSubtotal + calc.taxShare + calc.serviceShare + calc.feeShare - calc.discountShare
@@ -197,6 +219,7 @@ export function calculateSplitBreakdown(
     } else {
       calc.totalOwed = Math.round(rawOwed);
     }
+    calc.roundingShare = calc.totalOwed - shownLinesTotal;
 
     runningGrandTotal += calc.totalOwed;
     resultParticipants.push(calc);
@@ -206,6 +229,10 @@ export function calculateSplitBreakdown(
     0,
     overallSubtotal + overallTax + overallService + feeTotal - discountTotal
   );
+  // The part of the bill that sits on unassigned items (with their tax and service).
+  const unassignedSubtotal = unassignedItems.reduce((sum, it) => sum + it.total, 0);
+  const unassignedAmount = unassignedSubtotal * (1 + taxRate + serviceRate);
+  const allocatedExact = Math.round(calculatedGrandTotal - unassignedAmount);
 
   return {
     subtotal: Math.round(overallSubtotal),
@@ -214,7 +241,8 @@ export function calculateSplitBreakdown(
     discountAmount: Math.round(discountTotal),
     extraFee: Math.round(feeTotal),
     grandTotal: runningGrandTotal > 0 ? runningGrandTotal : Math.round(calculatedGrandTotal),
-    roundingDiff: runningGrandTotal - Math.round(calculatedGrandTotal),
+    roundingDiff: unassignedItems.length > 0 ? 0 : runningGrandTotal - allocatedExact,
+    unassignedItems,
     participants: resultParticipants,
   };
 }
@@ -223,7 +251,8 @@ export function calculateSplitBreakdown(
  * Client-side LocalStorage cache manager for split calculations.
  * Calculates once, caches in browser, and serves instantly on repeat visits.
  */
-const CACHE_PREFIX = "pet_split_calc_";
+// v2: results carry roundingShare and unassignedItems; older cached results don't.
+const CACHE_PREFIX = "pet_split_calc_v2_";
 const DRAFT_KEY = "pet_split_creator_draft";
 
 export function getCachedOrCalculateSplit(
