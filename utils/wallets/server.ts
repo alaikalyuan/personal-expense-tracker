@@ -284,7 +284,7 @@ export function pickPrimaryWallets(
       is_primary: true,
       track_balance: false,
       opening_balance: 0,
-      weekly_budget: 500000,
+      weekly_budget: null,
       monthly_budget: null,
       sort_order: 0,
       archived_at: null,

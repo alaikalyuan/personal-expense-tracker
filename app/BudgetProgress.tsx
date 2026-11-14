@@ -29,6 +29,8 @@ interface BudgetProgressProps {
   onPaySubscription?: (id: string, name: string) => Promise<void>;
   /** Opens the budget dialog, which the dashboard renders outside this card. */
   onEditBudget?: () => void;
+  /** Replaces the "set a budget" prompt, e.g. for a savings Saku that has no spending budget. */
+  noBudgetText?: string;
 }
 
 /** The period line under the day's summary: spent of budget, the bar, and what is still due. */
@@ -44,6 +46,7 @@ export default function BudgetProgress({
   dueSubscriptions,
   onPaySubscription,
   onEditBudget,
+  noBudgetText,
 }: BudgetProgressProps) {
   const { t, formatCurrency } = useTranslation();
   const [isExempting, setIsExempting] = useState(false);
@@ -76,7 +79,7 @@ export default function BudgetProgress({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-ink-soft">{weeklyBudget > 0 ? spentOfBudget : t.home.noBudget}</p>
+        <p className="text-sm text-ink-soft">{weeklyBudget > 0 ? spentOfBudget : noBudgetText ?? t.home.noBudget}</p>
         {/* Changing an existing budget lives in the menu; the card only asks when none is set. */}
         {weeklyBudget <= 0 && onEditBudget && (
           <button

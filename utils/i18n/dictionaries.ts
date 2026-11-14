@@ -86,6 +86,7 @@ export interface Dictionary {
     statusOverToday: string;
     statusOverPeriod: string;
     noBudget: string;
+    noBudgetStash: string;
     setBudget: string;
     spentOfBudgetWeek: string;
     spentOfBudgetMonth: string;
@@ -198,6 +199,11 @@ export interface Dictionary {
     momVsSameTime: string;
     projectedSafeNote: string;
     projectedExceedNote: string;
+    underBudgetBadge: string;
+    overBudgetBadge: string;
+    noBudgetNote: string;
+    momLowerBadge: string;
+    momHigherBadge: string;
   };
   streak: {
     title: string;
@@ -279,6 +285,8 @@ export interface Dictionary {
     tabCsv: string;
     recapTitle: string;
     recapWeek: string;
+    recapMonth: string;
+    recapBudgetNotSet: string;
     recapTotal: string;
     recapBudget: string;
     recapRemaining: string;
@@ -335,7 +343,9 @@ export interface Dictionary {
     currentDailyAvg: string;
     basedOnElapsedDays: string;
     lastWeekDailyAvg: string;
-    acrossAllDays: string;
+    sameDaysBasis: string;
+    noBaseline: string;
+    pacingEven: string;
     pacingSaving: string;
     pacingOver: string;
     trendTitle: string;
@@ -428,6 +438,7 @@ export interface Dictionary {
     // Budget Surplus
     budgetSurplusTitle: string;
     budgetSurplusSubtitle: string;
+    budgetSurplusNoBudget: string;
     availableSurplus: string;
     totalSurplusEarned: string;
     sweptSurplusTotal: string;
@@ -1059,6 +1070,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       statusOverToday: "Besok jatahnya jadi {amount} per hari",
       statusOverPeriod: "Sudah lewat {amount} dari budget",
       noBudget: "Belum ada budget. Atur dulu biar ada patokan harian.",
+      noBudgetStash: "Saku tabungan tidak punya budget belanja.",
       setBudget: "Atur budget",
       spentOfBudgetWeek: "{spent} dari {budget} minggu ini",
       spentOfBudgetMonth: "{spent} dari {budget} bulan ini",
@@ -1158,7 +1170,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       cardTitle: "Proyeksi Pengeluaran Bulanan",
       projectedEndMonth: "Estimasi Akhir Bulan",
       dailyVelocity: "Kecepatan Harian",
-      targetDailyPace: "Batas Aman Harian",
+      targetDailyPace: "Jatah Harian",
       paceSafe: "Aman & Terkendali",
       paceTight: "Mendekati Batas",
       paceExceeded: "Beresiko Overbudget",
@@ -1171,6 +1183,11 @@ export const dictionaries: Record<Locale, Dictionary> = {
       momVsSameTime: "vs periode sama bulan lalu",
       projectedSafeNote: "Di kecepatan belanja saat ini, kamu diproyeksikan hemat",
       projectedExceedNote: "Di kecepatan belanja saat ini, kamu berpotensi melebihi target sebesar",
+      underBudgetBadge: "{amount} di bawah budget",
+      overBudgetBadge: "{amount} di atas budget",
+      noBudgetNote: "Belum ada budget bulanan, jadi proyeksi ini belum punya patokan. Atur budget untuk melihat jatah harianmu.",
+      momLowerBadge: "{percent}% lebih hemat ({amount})",
+      momHigherBadge: "{percent}% lebih tinggi ({amount})",
     },
     streak: {
       title: "Logging Streak",
@@ -1252,9 +1269,11 @@ export const dictionaries: Record<Locale, Dictionary> = {
       tabCsv: "Unduh CSV",
       recapTitle: "Laporan Pengeluaran SakuTrack",
       recapWeek: "Minggu",
+      recapMonth: "Bulan",
+      recapBudgetNotSet: "Belum diatur",
       recapTotal: "Total Pengeluaran",
       recapBudget: "Target Anggaran",
-      recapRemaining: "Sisa Saldo",
+      recapRemaining: "Sisa Anggaran",
       recapOverBudget: "Kelebihan Anggaran",
       recapDailyAvg: "Rata-rata Harian",
       recapTopCategories: "Rincian Kategori Terbesar",
@@ -1309,7 +1328,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       currentDailyAvg: "Rata-rata Harian Saat Ini",
       basedOnElapsedDays: "Berdasarkan {days} hari berjalan",
       lastWeekDailyAvg: "Rata-rata Harian Minggu Lalu",
-      acrossAllDays: "Rata-rata selama 7 hari",
+      sameDaysBasis: "Berdasarkan {days} hari pertama minggu lalu",
+      noBaseline: "Minggu lalu belum ada pengeluaran di hari yang sama, jadi belum ada pembanding.",
+      pacingEven: "Rata-rata harianmu sama dengan minggu lalu.",
       pacingSaving: "Kamu lebih hemat ~{amount} per hari sejauh ini!",
       pacingOver: "Pacing ~{amount} lebih boros per hari dibanding minggu lalu.",
       trendTitle: "Perbandingan Tren Harian",
@@ -1405,7 +1426,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       manageCoreSavings: "Kelola Saldo",
       // Budget Surplus
       budgetSurplusTitle: "Sisa Anggaran Mingguan",
-      budgetSurplusSubtitle: "Hasil disiplin belanja mingguan yang berhasil dihemat",
+      budgetSurplusSubtitle: "Perkiraan: budget mingguan saat ini dikurangi pengeluaran rutin, untuk tiap minggu yang sudah selesai sejak akunmu dibuat dan ada catatannya.",
+      budgetSurplusNoBudget: "Atur budget mingguan dulu. Sisa anggaran dihitung dari budget itu.",
       availableSurplus: "Sisa Belum Dialirkan",
       totalSurplusEarned: "Total hemat",
       sweptSurplusTotal: "sudah dipindah",
@@ -2042,6 +2064,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       statusOverToday: "Tomorrow's share becomes {amount} a day",
       statusOverPeriod: "{amount} over budget",
       noBudget: "No budget yet. Set one to get a daily number.",
+      noBudgetStash: "A savings Saku has no spending budget.",
       setBudget: "Set budget",
       spentOfBudgetWeek: "{spent} of {budget} this week",
       spentOfBudgetMonth: "{spent} of {budget} this month",
@@ -2141,7 +2164,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       cardTitle: "Projected Monthly Burn",
       projectedEndMonth: "Month-End Estimate",
       dailyVelocity: "Daily Velocity",
-      targetDailyPace: "Safe Target Pace",
+      targetDailyPace: "Daily Allowance",
       paceSafe: "Safe & On Track",
       paceTight: "Pacing Tight",
       paceExceeded: "Risk of Overspending",
@@ -2154,6 +2177,11 @@ export const dictionaries: Record<Locale, Dictionary> = {
       momVsSameTime: "vs same period last month",
       projectedSafeNote: "At your current pace, you are projected to save",
       projectedExceedNote: "At your current pace, you are projected to exceed target by",
+      underBudgetBadge: "{amount} under budget",
+      overBudgetBadge: "{amount} over budget",
+      noBudgetNote: "No monthly budget yet, so this projection has nothing to measure against. Set a budget to see your daily allowance.",
+      momLowerBadge: "{percent}% lower ({amount})",
+      momHigherBadge: "{percent}% higher ({amount})",
     },
     streak: {
       title: "Logging Streak",
@@ -2235,9 +2263,11 @@ export const dictionaries: Record<Locale, Dictionary> = {
       tabCsv: "Download CSV",
       recapTitle: "SakuTrack Expense Report",
       recapWeek: "Week",
+      recapMonth: "Month",
+      recapBudgetNotSet: "Not set",
       recapTotal: "Total Spent",
       recapBudget: "Budget Target",
-      recapRemaining: "Remaining Balance",
+      recapRemaining: "Budget Left",
       recapOverBudget: "Over Budget by",
       recapDailyAvg: "Daily Average",
       recapTopCategories: "Top Spending Categories",
@@ -2292,7 +2322,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       currentDailyAvg: "Current Daily Avg",
       basedOnElapsedDays: "Based on {days} elapsed days",
       lastWeekDailyAvg: "Last Week Daily Avg",
-      acrossAllDays: "Across all 7 days",
+      sameDaysBasis: "Based on the first {days} days of last week",
+      noBaseline: "No spending last week over the same days, so there is nothing to compare yet.",
+      pacingEven: "Your daily average matches last week.",
       pacingSaving: "You are spending ~{amount} less per day so far!",
       pacingOver: "Pacing ~{amount} more per day than last week.",
       trendTitle: "Daily Trend Comparison",
@@ -2388,7 +2420,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
       manageCoreSavings: "Manage Balance",
       // Budget Surplus
       budgetSurplusTitle: "Weekly Budget Surplus",
-      budgetSurplusSubtitle: "Disciplined spending leftovers saved from past weeks",
+      budgetSurplusSubtitle: "An estimate: your current weekly budget minus regular spending, for each finished week since you created your account that has entries.",
+      budgetSurplusNoBudget: "Set a weekly budget first. The leftover is worked out from it.",
       availableSurplus: "Available to Transfer",
       totalSurplusEarned: "Total saved",
       sweptSurplusTotal: "already moved",

@@ -83,7 +83,7 @@ function SakuFormModalContent({
     formData.append("color", color);
     formData.append("track_balance", String(kind === "stash" ? true : trackBalance));
 
-    if (!isEditing && openingBalance) {
+    if (!isEditing && openingBalance && (kind === "stash" || trackBalance)) {
       formData.append("opening_balance", openingBalance);
     }
     if (kind === "spending") {
@@ -262,8 +262,9 @@ function SakuFormModalContent({
             </div>
           </div>
 
-          {/* Opening Balance (Only on create) */}
-          {!isEditing && (
+          {/* Opening Balance (only on create). It is recorded only when the balance is
+              tracked, so it is asked for only then; otherwise it would vanish. */}
+          {!isEditing && (kind === "stash" || trackBalance) && (
             <div>
               <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                 {t.saku.openingBalance} <span className="text-zinc-400 font-normal">(Opsional)</span>

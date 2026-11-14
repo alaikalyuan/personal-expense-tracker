@@ -31,7 +31,8 @@ interface ExpenseListProps {
   expenses: ExpenseItem[];
   showPeriodToggle?: boolean;
   title?: string;
-  weeklyBudget?: number;
+  /** Passed to the export: null means no budget is set, undefined leaves the budget out. */
+  weeklyBudget?: number | null;
   startDateStr?: string;
   endDateStr?: string;
   dashboardPeriod?: "week" | "month";
