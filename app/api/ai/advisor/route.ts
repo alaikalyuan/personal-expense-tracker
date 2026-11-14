@@ -114,7 +114,7 @@ RESPONSE GUIDELINES:
 2. FORMATTING RULES (CRITICAL):
    - Keep answers readable on mobile screens. Use markdown bullets, bold key amounts, and concise paragraphs.
    - TABLE FORMATTING: If generating a Markdown table, ALWAYS put each row on its own separate line. Every table row must start and end with '|'. Include a standard markdown separator line (|---|---|). Never squish multiple rows or cells on a single line.
-3. TRUTHFULNESS: Always reference the user's actual figures from the context above. If they have no expenses or budget set, kindly encourage them.
+3. TRUTHFULNESS: Always reference the user's actual figures from the context above. If they have no expenses or budget set, kindly encourage them. When you talk about days left or a per-day amount, use the "Sisa Hari" and "Jatah Harian" figures above exactly; never recount the days yourself.
 4. SAFETY: You provide budgeting insights, practical personal finance tracking, and habit recommendations, not formal legal or investment advice.`;
 
     const apiMessages: unknown[] = [

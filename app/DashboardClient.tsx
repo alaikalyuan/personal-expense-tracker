@@ -32,6 +32,7 @@ import BreakdownCard, { DaySpend, WeekSpend, CategorySpend } from "./BreakdownCa
 import ExpenseList, { ExpenseItem } from "./ExpenseList";
 import { useTranslation } from "@/utils/i18n/context";
 import { calculateExemptTotals, isExpenseExempt } from "@/utils/exemptions";
+import { dailyAllowance, daysLeftInPeriod } from "@/utils/budget";
 import UpgradeAccountModal from "./UpgradeAccountModal";
 import SakuSwitcher from "./SakuSwitcher";
 import { WalletBalance } from "@/utils/wallets/server";
@@ -45,8 +46,9 @@ interface DashboardClientProps {
   initialCadence: "week" | "month";
   allExpenses: ExpenseItem[];
   priorMtdSpend: number;
-  weeklyBudget: number;
-  monthlyBudget: number;
+  /** null when the user has not set a budget for that period. */
+  weeklyBudget: number | null;
+  monthlyBudget: number | null;
   streakData: StreakData;
   nowIso: string;
   isGuest?: boolean;
@@ -178,9 +180,11 @@ export default function DashboardClient({
     exemptCount,
   } = useMemo(() => calculateExemptTotals(activeExpenses), [activeExpenses]);
 
-  // Budgets
+  // Budgets: null means none is set, and nothing below invents one.
   const activeBudget = isMonth ? monthlyBudget : weeklyBudget;
-  const isOverBudget = activeBudget > 0 && regularTotal > activeBudget;
+  const hasBudget = activeBudget !== null && activeBudget > 0;
+  const budgetAmount = hasBudget ? activeBudget : 0;
+  const isOverBudget = hasBudget && regularTotal > budgetAmount;
 
   // Day index & pacing
   const todayDayIndex = (now.getDay() + 6) % 7 + 1;
@@ -284,21 +288,24 @@ export default function DashboardClient({
 
   // Anomaly suggestion
   const unexemptAnomaly = useMemo(() => {
-    if (activePeriodTotal <= activeBudget) return null;
+    if (!hasBudget || activePeriodTotal <= budgetAmount) return null;
     return (
       activeExpenses.find((e) => {
         if (isExpenseExempt(e)) return false;
         const amt = Number(e.amount);
-        return amt >= activeBudget * 0.3 || amt >= 300000;
+        return amt >= budgetAmount * 0.3 || amt >= 300000;
       }) || null
     );
-  }, [activePeriodTotal, activeBudget, activeExpenses]);
+  }, [hasBudget, activePeriodTotal, budgetAmount, activeExpenses]);
 
   // Selected wallet object
   const selectedWalletObj = useMemo(() => {
     if (!multiSakuEnabled || selectedSakuId === "all") return null;
     return wallets.find((w) => w.id === selectedSakuId) || null;
   }, [wallets, selectedSakuId, multiSakuEnabled]);
+
+  // A savings Saku holds money; it has no spending budget to set or show.
+  const isStashView = selectedWalletObj?.kind === "stash";
 
   // Check if subscription matches active wallet view
   const isSubForSelectedWallet = useCallback(
@@ -401,11 +408,11 @@ export default function DashboardClient({
     return calculateExemptTotals(todays).regularTotal;
   }, [activeExpenses, todayStr]);
 
-  const daysLeft = isMonth ? Math.max(totalDaysInMonth - currentDay + 1, 1) : Math.max(7 - todayDayIndex + 1, 1);
-  const periodRemaining = activeBudget - regularTotal;
-  const todayShare = (activeBudget - (regularTotal - todayRegular)) / daysLeft;
+  const daysLeft = daysLeftInPeriod(cadence, now, totalDaysInMonth);
+  const periodRemaining = budgetAmount - regularTotal;
+  // The one daily figure for this view; the month card's allowance uses it too.
+  const todayShare = dailyAllowance(budgetAmount, regularTotal - todayRegular, daysLeft);
   const leftToday = Math.round(todayShare - todayRegular);
-  const hasBudget = activeBudget > 0;
   const overToday = hasBudget && !isOverBudget && leftToday < 0;
 
   let focalLabel = t.home.leftToday;
@@ -480,7 +487,9 @@ export default function DashboardClient({
           <UserMenu
             isGuest={isGuest}
             multiSakuEnabled={multiSakuEnabled}
-            budget={{ period: cadence, amount: activeBudget, onEdit: () => setIsBudgetOpen(true) }}
+            budget={
+              isStashView ? undefined : { period: cadence, amount: budgetAmount, onEdit: () => setIsBudgetOpen(true) }
+            }
             onOpenUpgrade={(mode = "signup") => {
               setAuthModalMode(mode);
               setAuthModalError(null);
@@ -517,7 +526,8 @@ export default function DashboardClient({
             <BudgetProgress
               period={cadence}
               weeklyTotal={activePeriodTotal}
-              weeklyBudget={activeBudget}
+              weeklyBudget={budgetAmount}
+              noBudgetText={isStashView ? t.home.noBudgetStash : undefined}
               regularTotal={regularTotal}
               exemptTotal={exemptTotal}
               exemptCount={exemptCount}
@@ -533,7 +543,7 @@ export default function DashboardClient({
               projectedSubscriptionsTotal={projectedSubscriptionsTotal}
               dueSubscriptions={dueSubscriptions}
               onPaySubscription={handlePaySubscription}
-              onEditBudget={() => setIsBudgetOpen(true)}
+              onEditBudget={isStashView ? undefined : () => setIsBudgetOpen(true)}
             />
           </div>
         </section>
@@ -589,7 +599,7 @@ export default function DashboardClient({
         showPeriodToggle={true}
         dashboardPeriod={cadence}
         title={t.dashboard.recentEntries}
-        weeklyBudget={activeBudget}
+        weeklyBudget={isStashView ? undefined : hasBudget ? budgetAmount : null}
         startDateStr={activeStartStr}
         endDateStr={activeEndStr}
         wallets={wallets}
@@ -615,12 +625,13 @@ export default function DashboardClient({
         </div>
       </dl>
 
-      {isMonth && (
+      {isMonth && !isStashView && (
         <ProjectedBurnCard
           monthTotal={activePeriodTotal}
           regularTotal={regularTotal}
           exemptTotal={exemptTotal}
-          monthlyBudget={monthlyBudget}
+          monthlyBudget={hasBudget ? budgetAmount : null}
+          dailyAllowance={hasBudget && !isOverBudget ? Math.round(todayShare) : 0}
           elapsedDays={currentDay}
           totalDays={totalDaysInMonth}
           priorMtdSpend={priorMtdSpend}
@@ -637,7 +648,7 @@ export default function DashboardClient({
 
       {/* The welcome screen lives in GuestLanding, before a session exists */}
       {isBudgetOpen && (
-        <BudgetEditDialog period={cadence} currentBudget={activeBudget} onClose={() => setIsBudgetOpen(false)} />
+        <BudgetEditDialog period={cadence} currentBudget={budgetAmount} onClose={() => setIsBudgetOpen(false)} />
       )}
 
       <UpgradeAccountModal
