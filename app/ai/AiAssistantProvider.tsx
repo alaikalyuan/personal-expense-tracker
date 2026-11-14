@@ -147,10 +147,18 @@ export function AiAssistantProvider({
 
   // Refresh usage when modal opens or API key changes
   useEffect(() => {
-    if (isOpen) {
-      refreshUsage();
-    }
-  }, [isOpen, refreshUsage]);
+    if (!isOpen) return;
+    getDailyAiUsageAction()
+      .then((res) =>
+        setUsage({
+          count: res.count,
+          limit: res.limit,
+          remaining: res.remaining,
+          isPersonalKey: Boolean(apiKey && apiKey.trim().length > 0),
+        })
+      )
+      .catch((err) => console.warn("Failed to fetch daily AI usage:", err));
+  }, [isOpen, apiKey]);
 
   // Persist messages thread to localStorage
   useEffect(() => {
@@ -325,8 +333,8 @@ export function AiAssistantProvider({
             }
           }
         }
-      } catch (err: any) {
-        setErrorMessage(err?.message || t.aiAdvisor.networkError);
+      } catch (err: unknown) {
+        setErrorMessage((err as { message?: string } | null)?.message || t.aiAdvisor.networkError);
       } finally {
         setIsLoading(false);
         setStatusLabel(null);
