@@ -67,7 +67,7 @@ Risk: if the RPC ships before the friend view is switched over (or the reverse),
 
 - **Findings:** A002-02, A002-03, A002-13 (and the Audit 001 #33 carry-over)
 - **Depends on:** nothing
-- **Status:** TODO
+- **Status:** DONE (2026-11-14). PR #12 merged as `9f58bd6`. Not checked in a signed-in browser. Known gaps: balance checks read then write (a race could pass two withdrawals; needs a DB constraint or RPC), the withdrawal cap is the total stash rather than the unallocated part, and the sweep action does not check the surplus on the server
 
 What changes:
 1. `MoneyField` in `app/ui/Field.tsx` already exists (used by `BudgetEditDialog`, `ExpenseList`). Pull its parsing into `utils/money.ts` (`parseRupiahInput`) with clear rules: `2.000.000` → 2000000; `15.000,50` → rejected with a message (rupiah has no decimals in practice); a negative or non-numeric value → rejected.
@@ -81,7 +81,7 @@ Checks: typing `2.000.000` stores 2000000 in every money field; a withdrawal abo
 
 - **Findings:** A002-04, A002-35, A002-18 (the item inputs are in the same component)
 - **Depends on:** WS0 (same feature, merge WS0 first)
-- **Status:** TODO
+- **Status:** IN REVIEW (2026-11-14). Branch `fix/a002-ws2-split-allocation`. The creator page is untested in a browser (it needs a registered account)
 
 What changes:
 1. `handleRemoveParticipant` (`SplitBillCreator.tsx:469-480`): when the removed person was an item's only assignee, the item becomes "Belum dibagi" and is highlighted, instead of spreading to everyone.
@@ -116,7 +116,7 @@ Checks: re-run `agent-B-axe-routes.mjs` and `agent-B-dialogs*.mjs`, with 0 `labe
 
 - **Findings:** A002-10, -14, -15, -16, -30, -37, -47, -49
 - **Depends on:** nothing (pure logic and copy)
-- **Status:** TODO
+- **Status:** DONE (2026-11-14). PR #10 merged as `c7d24d7`. Not checked in a signed-in browser. Left as found: the AI snapshot's week total ignores days that fall in the previous month and isn't filtered by the selected Saku
 
 1. Remove the Rp 500.000 fallback (`utils/budget.ts:51,74`, `utils/wallets/server.ts:273`). With no budget set, the dashboard shows an "Atur budget" state and exports omit the budget (A002-10, and A002-49 for stash Saku).
 2. Export average divides by the days elapsed in the period; the monthly recap is labelled "Bulan" (A002-14, `ExportShareModal.tsx:117`).
@@ -146,7 +146,7 @@ Checks: unit tests on `utils/budget.ts` and the compare maths; a fresh account s
 
 - **Findings:** A002-20, -21 (P2), A002-28, -40, -41, -42 (P3)
 - **Depends on:** nothing
-- **Status:** TODO
+- **Status:** DONE except A002-21 (2026-11-14). PR #11 merged as `67e35d3`. Signed-out `/` first-load JS −68.8 KB gzip. CI runs tsc, lint, tests and build on every PR. A002-21 (LCP) still needs a performance trace. Trade-off: the dashboard verifies the JWT locally, so a session revoked elsewhere stays valid there for up to an hour
 
 1. Dashboard server work (`app/page.tsx`): one `auth.getUser` per request (pass the user into `processSubscriptionRenewals`), wallet balances read once, a bounded streak query, independent queries in one `Promise.all`, and renewal writes moved out of render.
 2. Lazy-load `UpgradeAccountModal`, QR and confetti; confetti respects reduced motion (A002-28, -41).
