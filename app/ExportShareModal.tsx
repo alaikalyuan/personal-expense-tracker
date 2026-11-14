@@ -14,13 +14,16 @@ import {
 import { useTranslation } from "@/utils/i18n/context";
 import { ExpenseItem } from "./ExpenseList";
 import { parseISO } from "date-fns";
+import { getTodayString } from "@/utils/date";
+import { budgetOrNull, daysElapsedInPeriod, periodKindOf } from "@/utils/budget";
 import ModalOverlay from "@/app/ui/ModalOverlay";
 
 interface ExportShareModalProps {
   isOpen: boolean;
   onClose: () => void;
   expenses: ExpenseItem[];
-  weeklyBudget?: number;
+  /** The period's budget. null: none set (the recap says so); undefined: not applicable (omitted). */
+  weeklyBudget?: number | null;
   startDateStr?: string;
   endDateStr?: string;
   wallets?: Array<{ id: string; name: string; emoji?: string }>;
@@ -30,7 +33,7 @@ export default function ExportShareModal({
   isOpen,
   onClose,
   expenses,
-  weeklyBudget = 0,
+  weeklyBudget,
   startDateStr,
   endDateStr,
   wallets = [],
@@ -47,9 +50,18 @@ export default function ExportShareModal({
   // Compute summary stats for the recap
   const summary = useMemo(() => {
     const total = expenses.reduce((acc, curr) => acc + Number(curr.amount), 0);
-    const budget = Number(weeklyBudget || 0);
-    const remaining = budget - total;
+    const budget = budgetOrNull(weeklyBudget);
+    const budgetNotSet = weeklyBudget === null;
+    const remaining = (budget ?? 0) - total;
     const isOver = remaining < 0;
+
+    // Average over the days of the period that have started, not a fixed 7.
+    const todayStr = getTodayString();
+    const expenseDates = expenses.map((e) => e.spent_at.slice(0, 10)).sort();
+    const periodStart = startDateStr || expenseDates[0] || todayStr;
+    const periodEnd = endDateStr || todayStr;
+    const elapsedDays = daysElapsedInPeriod(periodStart, periodEnd, todayStr);
+    const periodKind = startDateStr && endDateStr ? periodKindOf(startDateStr, endDateStr) : null;
 
     // Category aggregations
     const categoryTotals: Record<string, number> = {};
@@ -112,9 +124,11 @@ export default function ExportShareModal({
     return {
       total,
       budget,
+      budgetNotSet,
       remaining,
       isOver,
-      dailyAvg: Math.round(total / 7),
+      periodKind,
+      dailyAvg: Math.round(total / elapsedDays),
       topCategories,
       walletBreakdown,
       largestExpense,
@@ -127,14 +141,17 @@ export default function ExportShareModal({
     const lines: string[] = [];
     lines.push(`📊 *${t.exportShare.recapTitle}*`);
     if (summary.dateRangeText) {
-      lines.push(`🗓️ ${t.exportShare.recapWeek}: ${summary.dateRangeText}`);
+      const periodLabel = summary.periodKind === "month" ? t.exportShare.recapMonth : t.exportShare.recapWeek;
+      lines.push(`🗓️ ${periodLabel}: ${summary.dateRangeText}`);
     }
     lines.push("");
     lines.push(
       `💰 *${t.exportShare.recapTotal}:* ${formatCurrency(summary.total)}`
     );
 
-    if (summary.budget > 0) {
+    if (summary.budgetNotSet) {
+      lines.push(`🎯 *${t.exportShare.recapBudget}:* ${t.exportShare.recapBudgetNotSet}`);
+    } else if (summary.budget !== null) {
       lines.push(
         `🎯 *${t.exportShare.recapBudget}:* ${formatCurrency(summary.budget)}`
       );

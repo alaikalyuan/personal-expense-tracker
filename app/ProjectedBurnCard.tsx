@@ -7,7 +7,10 @@ interface ProjectedBurnCardProps {
   monthTotal: number;
   regularTotal: number;
   exemptTotal: number;
-  monthlyBudget: number;
+  /** null when no monthly budget is set: the card then shows the projection only. */
+  monthlyBudget: number | null;
+  /** The dashboard's daily allowance for today, so the month view shows one daily figure. */
+  dailyAllowance: number;
   elapsedDays: number;
   totalDays: number;
   priorMtdSpend: number;
@@ -18,6 +21,7 @@ export default function ProjectedBurnCard({
   regularTotal,
   exemptTotal,
   monthlyBudget,
+  dailyAllowance,
   elapsedDays,
   totalDays,
   priorMtdSpend,
@@ -25,26 +29,22 @@ export default function ProjectedBurnCard({
   const { t, formatCurrency, locale } = useTranslation();
 
   const safeElapsedDays = Math.max(elapsedDays, 1);
-  const remainingDays = Math.max(totalDays - elapsedDays, 0);
+  const hasBudget = monthlyBudget !== null && monthlyBudget > 0;
+  const budget = hasBudget ? monthlyBudget : 0;
 
   // Velocity: regular spend per day (excludes one-offs from daily multiplication)
   const dailyVelocity = regularTotal / safeElapsedDays;
   const projectedRegular = Math.round(dailyVelocity * totalDays);
   const projectedTotal = projectedRegular + exemptTotal;
 
-  // Safe pace to stay within budget
-  const budgetRemaining = Math.max(monthlyBudget - regularTotal, 0);
-  const safeTargetDailyPace = remainingDays > 0 ? Math.round(budgetRemaining / remainingDays) : 0;
-
   // Month progress vs Budget consumed
   const monthElapsedPercent = Math.min(Math.round((elapsedDays / totalDays) * 100), 100);
-  const budgetConsumedPercent =
-    monthlyBudget > 0 ? Math.min(Math.round((regularTotal / monthlyBudget) * 100), 100) : 0;
+  const budgetConsumedPercent = hasBudget ? Math.min(Math.round((regularTotal / budget) * 100), 100) : 0;
 
   // Pace status determination
-  const isOverBudgetAlready = monthlyBudget > 0 && regularTotal > monthlyBudget;
-  const isProjectedOver = monthlyBudget > 0 && projectedTotal > monthlyBudget;
-  const projectedDiff = Math.abs(projectedTotal - monthlyBudget);
+  const isOverBudgetAlready = hasBudget && regularTotal > budget;
+  const isProjectedOver = hasBudget && projectedTotal > budget;
+  const projectedDiff = Math.abs(projectedTotal - budget);
 
   const paceStatus = isOverBudgetAlready || isProjectedOver
     ? "danger"
@@ -81,6 +81,7 @@ export default function ProjectedBurnCard({
           </div>
         </div>
 
+        {hasBudget && (
         <span
           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
             paceStatus === "safe"
@@ -101,6 +102,7 @@ export default function ProjectedBurnCard({
             ? t.burnRate.paceTight
             : t.burnRate.paceExceeded}
         </span>
+        )}
       </div>
 
       {/* Main Projected Amount Banner */}
@@ -112,27 +114,30 @@ export default function ProjectedBurnCard({
           <span className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
             {formatCurrency(projectedTotal)}
           </span>
-          {monthlyBudget > 0 && (
+          {hasBudget && (
             <span className={`text-xs font-semibold ${
               isProjectedOver
                 ? "text-rose-600 dark:text-rose-400"
                 : "text-emerald-600 dark:text-emerald-400"
             }`}>
-              {isProjectedOver
-                ? `+${formatCurrency(projectedDiff)}`
-                : `-${formatCurrency(projectedDiff)}`}
+              {(isProjectedOver ? t.burnRate.overBudgetBadge : t.burnRate.underBudgetBadge).replace(
+                "{amount}",
+                formatCurrency(projectedDiff)
+              )}
             </span>
           )}
         </div>
         <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-          {isProjectedOver
+          {!hasBudget
+            ? t.burnRate.noBudgetNote
+            : isProjectedOver
             ? `${t.burnRate.projectedExceedNote} ${formatCurrency(projectedDiff)}.`
             : `${t.burnRate.projectedSafeNote} ${formatCurrency(projectedDiff)}.`}
         </p>
       </div>
 
-      {/* Velocity vs Safe Pace micro-shelf */}
-      <div className="grid grid-cols-2 gap-3 pt-1">
+      {/* Velocity vs the dashboard's daily allowance */}
+      <div className={`grid gap-3 pt-1 ${hasBudget ? "grid-cols-2" : "grid-cols-1"}`}>
         <div className="rounded-xl border border-zinc-200/70 bg-white/50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900/40">
           <p className="text-xs font-medium text-zinc-500">
             {t.burnRate.dailyVelocity}
@@ -142,14 +147,16 @@ export default function ProjectedBurnCard({
           </p>
         </div>
 
-        <div className="rounded-xl border border-zinc-200/70 bg-white/50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900/40">
-          <p className="text-xs font-medium text-zinc-500">
-            {t.burnRate.targetDailyPace}
-          </p>
-          <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
-            {formatCurrency(safeTargetDailyPace)}/{locale === "id" ? "hari" : "day"}
-          </p>
-        </div>
+        {hasBudget && (
+          <div className="rounded-xl border border-zinc-200/70 bg-white/50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900/40">
+            <p className="text-xs font-medium text-zinc-500">
+              {t.burnRate.targetDailyPace}
+            </p>
+            <p className="mt-0.5 text-xs font-bold text-zinc-800 dark:text-zinc-200">
+              {formatCurrency(Math.max(dailyAllowance, 0))}/{locale === "id" ? "hari" : "day"}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* MoM Pacing Comparison Badge */}
@@ -163,14 +170,18 @@ export default function ProjectedBurnCard({
               <>
                 <TrendingUp className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
                 <span className="text-rose-600 dark:text-rose-400">
-                  +{momPercent}% (+{formatCurrency(momDiff)})
+                  {t.burnRate.momHigherBadge
+                    .replace("{percent}", String(momPercent))
+                    .replace("{amount}", formatCurrency(momDiff))}
                 </span>
               </>
             ) : momDiff < 0 ? (
               <>
                 <TrendingDown className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                 <span className="text-emerald-600 dark:text-emerald-400">
-                  -{momPercent}% (-{formatCurrency(Math.abs(momDiff))})
+                  {t.burnRate.momLowerBadge
+                    .replace("{percent}", String(momPercent))
+                    .replace("{amount}", formatCurrency(Math.abs(momDiff)))}
                 </span>
               </>
             ) : (

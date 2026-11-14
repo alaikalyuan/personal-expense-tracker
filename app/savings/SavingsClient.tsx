@@ -359,7 +359,9 @@ export default function SavingsClient({
         <p className="mt-1 text-2xl font-extrabold tracking-tight text-ink tabular-nums">
           {formatCurrency(availableSurplus)}
         </p>
-        <p className="mt-1 text-sm text-ink-soft">{t.savings.budgetSurplusSubtitle}</p>
+        <p className="mt-1 text-sm text-ink-soft">
+          {weeklyBudget > 0 ? t.savings.budgetSurplusSubtitle : t.savings.budgetSurplusNoBudget}
+        </p>
         <p className="mt-2 text-sm text-ink-soft">
           {t.savings.totalSurplusEarned}{" "}
           <span className="whitespace-nowrap font-semibold text-ink tabular-nums">{formatCurrency(unspentSurplusTotal)}</span>
