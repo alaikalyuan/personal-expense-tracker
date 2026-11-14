@@ -7,6 +7,8 @@ import { transferBetweenWallets } from "./actions";
 import { WalletBalance } from "@/utils/wallets/server";
 import { getTodayString } from "@/utils/date";
 import ModalOverlay from "@/app/ui/ModalOverlay";
+import { MoneyField } from "@/app/ui/Field";
+import { parseRupiahInput } from "@/utils/money";
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -38,21 +40,25 @@ export default function TransferModal({
 
   const fromWallet = wallets.find((w) => w.id === fromWalletId);
   const toWallet = wallets.find((w) => w.id === toWalletId);
+  // Matches the server: a stash or a saku that tracks its balance can't go below 0.
+  const sourceLimited = Boolean(fromWallet && (fromWallet.kind === "stash" || fromWallet.track_balance));
+  const sourceAvailable = sourceLimited && fromWallet ? Math.max(0, fromWallet.current_balance) : undefined;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const numAmount = Number(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setError("Nominal transfer harus lebih besar dari 0.");
+    const parsed = parseRupiahInput(amount);
+    if (!parsed.ok) {
+      setError(parsed.error);
       return;
     }
+    const numAmount = parsed.value;
 
     if (fromWalletId === toWalletId) {
       setError("Saku asal dan saku tujuan tidak boleh sama.");
       return;
     }
 
-    if (fromWallet && fromWallet.track_balance && numAmount > fromWallet.current_balance) {
+    if (sourceLimited && fromWallet && numAmount > fromWallet.current_balance) {
       setError(`Saldo saku ${fromWallet.name} tidak mencukupi (${formatCurrency(fromWallet.current_balance)}).`);
       return;
     }
@@ -141,21 +147,20 @@ export default function TransferModal({
           </div>
 
           {/* Amount */}
-          <div>
-            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-              {t.saku.amount}
-            </label>
-            <input
-              type="number"
-              min="1"
-              step="any"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Contoh: 150000"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 text-xs font-medium text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-              required
-            />
-          </div>
+          <MoneyField
+            label={t.saku.amount}
+            hint={sourceAvailable !== undefined ? `Saldo tersedia: ${formatCurrency(sourceAvailable)}` : undefined}
+            value={amount}
+            onChange={setAmount}
+            placeholder="150.000"
+            max={sourceAvailable}
+            maxError={
+              sourceAvailable !== undefined && fromWallet
+                ? `Saldo saku ${fromWallet.name} tidak mencukupi (${formatCurrency(sourceAvailable)}).`
+                : undefined
+            }
+            required
+          />
 
           {/* Note */}
           <div>

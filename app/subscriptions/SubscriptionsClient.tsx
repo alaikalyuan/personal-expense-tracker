@@ -49,6 +49,8 @@ import { getTodayString } from "@/utils/date";
 import type { Wallet } from "@/utils/wallets/server";
 import AiHeaderButton from "@/app/ai/AiHeaderButton";
 import ModalOverlay from "@/app/ui/ModalOverlay";
+import { MoneyField } from "@/app/ui/Field";
+import { parseMoneyInput } from "@/utils/money";
 
 interface SubscriptionsClientProps {
   initialSubscriptions: SubscriptionRecord[];
@@ -66,7 +68,7 @@ export default function SubscriptionsClient({
   defaultWalletId = null,
 }: SubscriptionsClientProps) {
   const router = useRouter();
-  const { formatCurrency, currencySymbol, t } = useTranslation();
+  const { formatCurrency, currencySymbol, currency, t } = useTranslation();
   const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>(initialSubscriptions);
   const [activeTab, setActiveTab] = useState<"all" | "split" | "personal">("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,6 +77,7 @@ export default function SubscriptionsClient({
   // Form State
   const [name, setName] = useState("");
   const [price, setPrice] = useState<string>("");
+  const [priceError, setPriceError] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const [nextRenewalDate, setNextRenewalDate] = useState(getTodayString());
   const [paymentPlatform, setPaymentPlatform] = useState("Google Play");
@@ -151,6 +154,7 @@ export default function SubscriptionsClient({
     setEditingSub(null);
     setName("");
     setPrice("");
+    setPriceError(null);
     setBillingCycle("monthly");
     setNextRenewalDate(getTodayString());
     setPaymentPlatform("Google Play");
@@ -172,6 +176,7 @@ export default function SubscriptionsClient({
     setEditingSub(sub);
     setName(sub.name);
     setPrice(String(sub.price));
+    setPriceError(null);
     setBillingCycle(sub.billing_cycle);
     setNextRenewalDate(sub.next_renewal_date);
     setPaymentPlatform(sub.payment_platform);
@@ -192,6 +197,7 @@ export default function SubscriptionsClient({
   const selectPreset = (preset: SubscriptionPreset) => {
     setName(preset.name);
     setPrice(String(preset.defaultPrice));
+    setPriceError(null);
     setCategory(preset.defaultCategory);
     setPaymentPlatform(preset.suggestedPlatform);
   };
@@ -213,7 +219,13 @@ export default function SubscriptionsClient({
     e.preventDefault();
     if (!name.trim()) return;
 
-    const numPrice = Number(price) || 0;
+    const parsedPrice = parseMoneyInput(price, currency, { allowZero: true });
+    if (!parsedPrice.ok) {
+      setPriceError(parsedPrice.error);
+      return;
+    }
+    setPriceError(null);
+    const numPrice = parsedPrice.value;
     setIsSubmitting(true);
     setActionMessage(null);
 
@@ -819,22 +831,48 @@ export default function SubscriptionsClient({
               </div>
 
               {/* Price & Cycle */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                    {t.subscriptions.priceLabel} ({currencySymbol})
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="any"
-                    placeholder={currencySymbol === "Rp" ? "86900" : "9.99"}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {currency === "IDR" ? (
+                  <MoneyField
+                    label={t.subscriptions.priceLabel}
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                    onChange={(v) => {
+                      setPrice(v);
+                      setPriceError(null);
+                    }}
+                    prefix={currencySymbol}
+                    placeholder="86.900"
+                    error={priceError}
+                    allowZero
+                    required
                   />
-                </div>
+                ) : (
+                  <div>
+                    <label htmlFor="subscription-price" className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                      {t.subscriptions.priceLabel} ({currencySymbol})
+                    </label>
+                    <input
+                      id="subscription-price"
+                      type="text"
+                      inputMode="decimal"
+                      required
+                      placeholder="9.99"
+                      value={price}
+                      onChange={(e) => {
+                        setPrice(e.target.value);
+                        setPriceError(null);
+                      }}
+                      aria-invalid={priceError ? true : undefined}
+                      aria-describedby={priceError ? "subscription-price-error" : undefined}
+                      className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                    />
+                    {priceError && (
+                      <p id="subscription-price-error" role="alert" className="mt-1 text-xs font-medium text-danger">
+                        {priceError}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     {t.subscriptions.billingCycleLabel}

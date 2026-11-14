@@ -7,6 +7,8 @@ import { recordWalletIncome } from "./actions";
 import { WalletBalance } from "@/utils/wallets/server";
 import { getTodayString } from "@/utils/date";
 import ModalOverlay from "@/app/ui/ModalOverlay";
+import { MoneyField } from "@/app/ui/Field";
+import { parseRupiahInput } from "@/utils/money";
 
 interface IncomeModalProps {
   isOpen: boolean;
@@ -38,11 +40,12 @@ export default function IncomeModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const numAmount = Number(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setError("Nominal pemasukan harus lebih besar dari 0.");
+    const parsed = parseRupiahInput(amount);
+    if (!parsed.ok) {
+      setError(parsed.error);
       return;
     }
+    const numAmount = parsed.value;
 
     if (!walletId) {
       setError("Silakan pilih saku tujuan.");
@@ -113,21 +116,13 @@ export default function IncomeModal({
           </div>
 
           {/* Amount */}
-          <div>
-            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-              {t.saku.amount}
-            </label>
-            <input
-              type="number"
-              min="1"
-              step="any"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Contoh: 500000"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 text-xs font-medium text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-              required
-            />
-          </div>
+          <MoneyField
+            label={t.saku.amount}
+            value={amount}
+            onChange={setAmount}
+            placeholder="500.000"
+            required
+          />
 
           {/* Note with Quick Chips */}
           <div>

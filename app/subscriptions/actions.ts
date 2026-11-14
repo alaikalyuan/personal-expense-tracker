@@ -11,6 +11,16 @@ import {
   computeNextRenewalDate,
 } from "./types";
 import { createSplitBill } from "@/app/split/actions";
+import { MONEY_ERRORS, MONEY_INPUT_MAX } from "@/utils/money";
+
+/** A subscription price from the client: a finite number, 0 or more (decimals allowed for non-rupiah). */
+function readPrice(input: unknown): number {
+  const price = typeof input === "number" ? input : NaN;
+  if (!Number.isFinite(price)) throw new Error(MONEY_ERRORS.notNumber);
+  if (price < 0) throw new Error(MONEY_ERRORS.negative);
+  if (price > MONEY_INPUT_MAX) throw new Error(MONEY_ERRORS.tooLarge);
+  return price;
+}
 
 export async function createSubscription(payload: CreateSubscriptionPayload) {
   const cookieStore = await cookies();
@@ -33,12 +43,14 @@ export async function createSubscription(payload: CreateSubscriptionPayload) {
     throw new Error("Nama langganan harus diisi.");
   }
 
+  const price = readPrice(payload.price);
+
   const { data, error } = await supabase
     .from("subscriptions")
     .insert({
       user_id: user.id,
       name: payload.name.trim(),
-      price: Math.max(0, Number(payload.price) || 0),
+      price,
       billing_cycle: payload.billingCycle || "monthly",
       next_renewal_date: payload.nextRenewalDate || getTodayString(),
       payment_platform: payload.paymentPlatform || "Google Play",
@@ -91,7 +103,7 @@ export async function updateSubscription(
   };
 
   if (payload.name !== undefined) updateData.name = payload.name.trim();
-  if (payload.price !== undefined) updateData.price = Math.max(0, Number(payload.price) || 0);
+  if (payload.price !== undefined) updateData.price = readPrice(payload.price);
   if (payload.billingCycle !== undefined) updateData.billing_cycle = payload.billingCycle;
   if (payload.nextRenewalDate !== undefined) updateData.next_renewal_date = payload.nextRenewalDate;
   if (payload.paymentPlatform !== undefined) updateData.payment_platform = payload.paymentPlatform;

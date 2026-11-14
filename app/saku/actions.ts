@@ -4,7 +4,29 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getTodayString } from "@/utils/date";
-import { getUserSettings, getWallets, Wallet, FEATURE_MULTI_SAKU_ENABLED } from "@/utils/wallets/server";
+import {
+  getUserSettings,
+  getWallets,
+  getWalletBalanceForCheck,
+  Wallet,
+  FEATURE_MULTI_SAKU_ENABLED,
+} from "@/utils/wallets/server";
+import { formatRupiahInput, parseRupiahAmount } from "@/utils/money";
+import type { ParseMoneyOptions } from "@/utils/money";
+
+/** A rupiah amount sent by a client, validated with the same parser as the money fields. */
+function readRupiahAmount(input: unknown, opts?: ParseMoneyOptions): number {
+  const parsed = parseRupiahAmount(input, opts);
+  if (!parsed.ok) throw new Error(parsed.error);
+  return parsed.value;
+}
+
+/** An optional budget field: empty or 0 means "no budget". */
+function readOptionalBudget(input: FormDataEntryValue | null): number | null {
+  if (input === null || input === "") return null;
+  const value = readRupiahAmount(input, { allowZero: true });
+  return value > 0 ? value : null;
+}
 
 export async function getActiveWallets(): Promise<Wallet[]> {
   const cookieStore = await cookies();
@@ -96,17 +118,9 @@ export async function createWallet(formData: FormData) {
   const emoji = (formData.get("emoji") as string)?.trim() || (kind === "spending" ? "👛" : "🏦");
   const color = (formData.get("color") as string)?.trim() || (kind === "spending" ? "#10b981" : "#0d9488");
   const trackBalance = formData.get("track_balance") === "true" || kind === "stash";
-  const openingBalance = Number(formData.get("opening_balance") || 0);
-
-  const weeklyBudgetRaw = formData.get("weekly_budget");
-  const weeklyBudget = weeklyBudgetRaw && !isNaN(Number(weeklyBudgetRaw)) && Number(weeklyBudgetRaw) > 0
-    ? Number(weeklyBudgetRaw)
-    : null;
-
-  const monthlyBudgetRaw = formData.get("monthly_budget");
-  const monthlyBudget = monthlyBudgetRaw && !isNaN(Number(monthlyBudgetRaw)) && Number(monthlyBudgetRaw) > 0
-    ? Number(monthlyBudgetRaw)
-    : null;
+  const openingBalance = readRupiahAmount(formData.get("opening_balance") || "", { allowEmpty: true, allowZero: true });
+  const weeklyBudget = readOptionalBudget(formData.get("weekly_budget"));
+  const monthlyBudget = readOptionalBudget(formData.get("monthly_budget"));
 
   if (!name) {
     throw new Error("Wallet name is required");
@@ -179,15 +193,8 @@ export async function updateWallet(formData: FormData) {
   const color = (formData.get("color") as string)?.trim();
   const trackBalance = formData.get("track_balance") === "true";
 
-  const weeklyBudgetRaw = formData.get("weekly_budget");
-  const weeklyBudget = weeklyBudgetRaw !== null && weeklyBudgetRaw !== "" && !isNaN(Number(weeklyBudgetRaw))
-    ? Number(weeklyBudgetRaw)
-    : null;
-
-  const monthlyBudgetRaw = formData.get("monthly_budget");
-  const monthlyBudget = monthlyBudgetRaw !== null && monthlyBudgetRaw !== "" && !isNaN(Number(monthlyBudgetRaw))
-    ? Number(monthlyBudgetRaw)
-    : null;
+  const weeklyBudget = readOptionalBudget(formData.get("weekly_budget"));
+  const monthlyBudget = readOptionalBudget(formData.get("monthly_budget"));
 
   if (!id || !name) {
     throw new Error("Invalid wallet details");
@@ -355,7 +362,6 @@ export async function transferBetweenWallets(formData: FormData) {
 
   const fromWalletId = formData.get("from_wallet_id") as string;
   const toWalletId = formData.get("to_wallet_id") as string;
-  const amount = Number(formData.get("amount"));
   const note = (formData.get("note") as string)?.trim() || "Transfer antar saku";
   const date = (formData.get("date") as string)?.trim() || getTodayString();
 
@@ -363,8 +369,16 @@ export async function transferBetweenWallets(formData: FormData) {
     throw new Error("Source and destination sakus must be different");
   }
 
-  if (isNaN(amount) || amount <= 0) {
-    throw new Error("Invalid transfer amount");
+  const amount = readRupiahAmount(formData.get("amount"));
+
+  // A stash, or any saku that tracks its balance, can't send more than it holds.
+  const source = await getWalletBalanceForCheck(supabase, user.id, fromWalletId);
+  if (source.kind === "stash" || source.trackBalance) {
+    const available = Math.max(0, source.currentBalance);
+    readRupiahAmount(amount, {
+      max: available,
+      maxError: `Saldo saku asal tidak cukup. Saldo tersedia Rp ${formatRupiahInput(available)}.`,
+    });
   }
 
   const { error: txError } = await supabase.from("wallet_transactions").insert({
@@ -402,7 +416,6 @@ export async function recordWalletIncome(formData: FormData) {
   }
 
   const walletId = formData.get("wallet_id") as string;
-  const amount = Number(formData.get("amount"));
   const note = (formData.get("note") as string)?.trim() || "Pemasukan";
   const date = (formData.get("date") as string)?.trim() || getTodayString();
 
@@ -410,9 +423,7 @@ export async function recordWalletIncome(formData: FormData) {
     throw new Error("Target saku is required");
   }
 
-  if (isNaN(amount) || amount <= 0) {
-    throw new Error("Invalid income amount");
-  }
+  const amount = readRupiahAmount(formData.get("amount"));
 
   const settings = await getUserSettings(supabase, user.id);
 
