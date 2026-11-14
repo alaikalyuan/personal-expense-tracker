@@ -490,6 +490,15 @@ export default function SplitBillViewer({
                         <span>-{formatRupiah(p.discountShare)}</span>
                       </div>
                     )}
+                    {(p.roundingShare ?? 0) !== 0 && (
+                      <div className="flex justify-between">
+                        <span>{t.splitBill.roundingLine}</span>
+                        <span>
+                          {p.roundingShare > 0 ? "+" : "-"}
+                          {formatRupiah(Math.abs(p.roundingShare))}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Host Action: Toggle Paid / Unpaid */}

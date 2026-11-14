@@ -216,6 +216,15 @@ export default function FriendViewPreviewModal({
                       <span>-{formatRupiah(activeParticipant.discountShare)}</span>
                     </div>
                   )}
+                  {(activeParticipant.roundingShare ?? 0) !== 0 && (
+                    <div className="flex justify-between">
+                      <span>{t.splitBill.roundingLine}</span>
+                      <span>
+                        {activeParticipant.roundingShare > 0 ? "+" : "-"}
+                        {formatRupiah(Math.abs(activeParticipant.roundingShare))}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -54,6 +54,7 @@ interface FormItem {
 
 import type { Wallet } from "@/utils/wallets/server";
 import ModalOverlay from "@/app/ui/ModalOverlay";
+import { AmountInput } from "@/app/ui/Field";
 
 export interface SplitBillInitialData {
   bill: SplitBillRecord;
@@ -240,15 +241,15 @@ export default function SplitBillCreator({
       setCategory(doc.suggestedCategory);
     }
 
-    const creatorPartId =
-      participants.find((p) => p.isCreator)?.id || participants[0]?.id || "creator-0";
+    // Scanned items start shared by everyone, the same default as a manually added item.
+    const everyoneIds = participants.map((p) => p.id);
 
     const mappedItems: FormItem[] = doc.items.map((it, idx) => ({
       id: `item-scan-${Date.now()}-${idx}`,
       name: it.name,
       price: it.unitPrice,
       quantity: it.quantity || 1,
-      assignedParticipantIds: [creatorPartId],
+      assignedParticipantIds: everyoneIds,
     }));
 
     if (appendMode) {
@@ -264,7 +265,7 @@ export default function SplitBillCreator({
                 name: doc.merchant || "Tagihan Struk",
                 price: doc.total || 0,
                 quantity: 1,
-                assignedParticipantIds: [creatorPartId],
+                assignedParticipantIds: everyoneIds,
               },
             ]
       );
@@ -436,6 +437,17 @@ export default function SplitBillCreator({
     roundingStep,
   ]);
 
+  // Itemized items with nobody on them. Publishing waits until each has an owner.
+  const unassignedItemIds = useMemo(
+    () =>
+      new Set(
+        splitMode === "itemized"
+          ? calculation.unassignedItems.map((it) => it.itemId)
+          : []
+      ),
+    [calculation, splitMode]
+  );
+
   const creatorShare = useMemo(() => {
     const creator = calculation.participants.find((p) => p.isCreator);
     return creator?.totalOwed || 0;
@@ -471,13 +483,11 @@ export default function SplitBillCreator({
     const remaining = participants.filter((p) => p.id !== id);
     setParticipants(remaining);
 
-    // Remove from assigned items
+    // Take them off their items. An item that was theirs alone becomes "Belum dibagi"
+    // and blocks publishing until the host decides who pays for it; it is never
+    // quietly spread over everyone who is left.
     setItems((prev) =>
-      prev.map((it) => {
-        const kept = it.assignedParticipantIds.filter((pId) => pId !== id);
-        // Never leave an item with nobody on it: show it as shared by all who remain.
-        return { ...it, assignedParticipantIds: kept.length > 0 ? kept : remaining.map((p) => p.id) };
-      })
+      prev.map((it) => ({ ...it, assignedParticipantIds: it.assignedParticipantIds.filter((pId) => pId !== id) }))
     );
   };
 
@@ -540,6 +550,15 @@ export default function SplitBillCreator({
 
     if (items.length === 0 || (items.length === 1 && !items[0].price)) {
       setErrorMsg(t.splitBill.errItemsRequired);
+      return;
+    }
+
+    if (splitMode === "itemized" && unassignedItemIds.size > 0) {
+      const names = items
+        .filter((it) => unassignedItemIds.has(it.id))
+        .map((it, i) => it.name.trim() || t.splitBill.itemNameAria.replace("{index}", String(i + 1)))
+        .join(", ");
+      setErrorMsg(t.splitBill.errUnassignedItems.replace("{names}", names));
       return;
     }
 
@@ -997,61 +1016,30 @@ export default function SplitBillCreator({
 
         {/* Item Cards */}
         <div className="space-y-3">
-          {items.map((item, index) => (
+          {items.map((item, index) => {
+            const isUnassigned = unassignedItemIds.has(item.id);
+            return (
             <div
               key={item.id}
-              className="rounded-2xl border border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/60 p-3.5 space-y-3"
+              className={`rounded-2xl border p-3.5 space-y-3 ${
+                isUnassigned
+                  ? "border-danger bg-danger-soft"
+                  : "border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/60"
+              }`}
             >
               <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={item.name}
                   onChange={(e) => handleUpdateItem(item.id, { name: e.target.value })}
+                  aria-label={t.splitBill.itemNameAria.replace("{index}", String(index + 1))}
                   placeholder={
                     splitMode === "itemized"
                       ? t.splitBill.menuItemPlaceholder.replace("{index}", String(index + 1))
                       : t.splitBill.totalAmountPlaceholder
                   }
-                  className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
+                  className="min-w-0 flex-1 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
                 />
-
-                {/* Quantity input (for itemized mode) */}
-                {splitMode === "itemized" && (
-                  <div className="relative w-14 sm:w-16">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400">
-                      &times;
-                    </span>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      aria-label="Quantity"
-                      value={item.quantity || 1}
-                      onChange={(e) =>
-                        handleUpdateItem(item.id, {
-                          quantity: Math.max(1, Math.floor(Number(e.target.value) || 1)),
-                        })
-                      }
-                      className="w-full pl-5 pr-2 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
-                    />
-                  </div>
-                )}
-
-                {/* Price input */}
-                <div className="relative w-28 sm:w-36">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400">
-                    {currencySymbol}
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={item.price || ""}
-                    onChange={(e) => handleUpdateItem(item.id, { price: Number(e.target.value) })}
-                    placeholder="0"
-                    className="w-full pl-8 pr-2.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
-                  />
-                </div>
 
                 {items.length > 1 && (
                   <button
@@ -1064,6 +1052,50 @@ export default function SplitBillCreator({
                   </button>
                 )}
               </div>
+
+              {/* Quantity and price on their own line, so an 8-digit price stays readable at 320px */}
+              <div className="flex items-start gap-2">
+                {splitMode === "itemized" && (
+                  <div className="relative w-20 shrink-0">
+                    <span aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400">
+                      &times;
+                    </span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      step="1"
+                      aria-label={t.splitBill.itemQtyAria.replace("{index}", String(index + 1))}
+                      value={item.quantity || 1}
+                      onChange={(e) =>
+                        handleUpdateItem(item.id, {
+                          quantity: Math.max(1, Math.floor(Number(e.target.value) || 1)),
+                        })
+                      }
+                      className="w-full pl-6 pr-2 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
+                    />
+                  </div>
+                )}
+
+                <AmountInput
+                  value={item.price}
+                  onChange={(price) => handleUpdateItem(item.id, { price })}
+                  currency={currency}
+                  prefix={currencySymbol}
+                  ariaLabel={t.splitBill.itemPriceAria.replace("{index}", String(index + 1))}
+                  className="min-w-0 flex-1"
+                  inputClassName="w-full pl-9 pr-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
+                />
+              </div>
+
+              {splitMode === "itemized" && isUnassigned && (
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-ink">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-danger" aria-hidden="true" />
+                  <span>
+                    {t.splitBill.unassignedBadge}: {t.splitBill.unassignedHint}
+                  </span>
+                </p>
+              )}
 
               {/* Participant Assignment Chips (only for itemized mode) */}
               {splitMode === "itemized" && (
@@ -1104,7 +1136,8 @@ export default function SplitBillCreator({
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
 
           {splitMode === "itemized" && (
             <button
@@ -1214,20 +1247,14 @@ export default function SplitBillCreator({
             <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
               {t.splitBill.extraFeeInputLabel}
             </label>
-            <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400">
-                {currencySymbol}
-              </span>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={extraFee || ""}
-                onChange={(e) => setExtraFee(Number(e.target.value))}
-                placeholder="0"
-                className="w-full pl-8 pr-2.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-xs font-semibold text-zinc-900 dark:text-zinc-100 text-right focus:outline-hidden"
-              />
-            </div>
+            <AmountInput
+              value={extraFee}
+              onChange={setExtraFee}
+              currency={currency}
+              prefix={currencySymbol}
+              ariaLabel={t.splitBill.extraFeeInputLabel}
+              inputClassName="w-full pl-9 pr-2.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right focus:outline-hidden"
+            />
           </div>
 
           {/* Discount / Voucher */}
@@ -1235,20 +1262,14 @@ export default function SplitBillCreator({
             <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
               {t.splitBill.discountInputLabel}
             </label>
-            <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                -{currencySymbol}
-              </span>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={discountAmount || ""}
-                onChange={(e) => setDiscountAmount(Number(e.target.value))}
-                placeholder="0"
-                className="w-full pl-9 pr-2.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-xs font-semibold text-emerald-600 dark:text-emerald-400 text-right focus:outline-hidden"
-              />
-            </div>
+            <AmountInput
+              value={discountAmount}
+              onChange={setDiscountAmount}
+              currency={currency}
+              prefix={`-${currencySymbol}`}
+              ariaLabel={t.splitBill.discountInputLabel}
+              inputClassName="w-full pl-10 pr-2.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-sm font-semibold text-emerald-600 dark:text-emerald-400 text-right focus:outline-hidden"
+            />
           </div>
         </div>
 
@@ -1463,6 +1484,23 @@ export default function SplitBillCreator({
             <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
               <span>{t.splitBill.discountReduction}</span>
               <span className="font-semibold">-{formatRupiah(calculation.discountAmount)}</span>
+            </div>
+          )}
+          {calculation.roundingDiff !== 0 && (
+            <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
+              <span>{t.splitBill.roundingLine}</span>
+              <span className="font-semibold">
+                {calculation.roundingDiff > 0 ? "+" : "-"}
+                {formatRupiah(Math.abs(calculation.roundingDiff))}
+              </span>
+            </div>
+          )}
+          {unassignedItemIds.size > 0 && (
+            <div className="flex justify-between font-semibold text-danger">
+              <span>{t.splitBill.unassignedSummary.replace("{count}", String(unassignedItemIds.size))}</span>
+              <span>
+                {formatRupiah(calculation.unassignedItems.reduce((sum, it) => sum + it.total, 0))}
+              </span>
             </div>
           )}
 

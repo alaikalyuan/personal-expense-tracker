@@ -44,6 +44,22 @@ export interface CreateSplitBillPayload {
 
 export type UpdateSplitBillPayload = CreateSplitBillPayload;
 
+/**
+ * An itemized bill can't be saved while an item has nobody valid on it: the
+ * calculator would leave that item out of every share (A002-04).
+ */
+function assertEveryItemAssigned(payload: CreateSplitBillPayload) {
+  if ((payload.splitMode || "itemized") !== "itemized") return;
+  const count = payload.participants.length;
+  const unassigned = (payload.items || []).filter(
+    (item) => !(item.assignedParticipantIndices || []).some((idx) => Number.isInteger(idx) && idx >= 0 && idx < count)
+  );
+  if (unassigned.length > 0) {
+    const names = unassigned.map((item) => item.name || "Menu").join(", ");
+    throw new Error(`Masih ada menu yang belum dibagi: ${names}. Pilih siapa yang ikut bayar dulu.`);
+  }
+}
+
 export async function createSplitBill(payload: CreateSplitBillPayload) {
   const cookieStore = await cookies();
   const supabase = await createClient(cookieStore);
@@ -69,6 +85,8 @@ export async function createSplitBill(payload: CreateSplitBillPayload) {
   if (!payload.participants || payload.participants.length === 0) {
     throw new Error("Minimal harus ada 1 peserta.");
   }
+
+  assertEveryItemAssigned(payload);
 
   // 1. Insert Split Bill Header
   const { data: bill, error: billError } = await supabase
@@ -338,6 +356,8 @@ export async function updateSplitBill(billId: string, payload: UpdateSplitBillPa
   if (!payload.participants || payload.participants.length === 0) {
     throw new Error("Minimal harus ada 1 peserta.");
   }
+
+  assertEveryItemAssigned(payload);
 
   // 1. Verify ownership and fetch existing bill + participants
   const { data: existingBill, error: fetchError } = await supabase

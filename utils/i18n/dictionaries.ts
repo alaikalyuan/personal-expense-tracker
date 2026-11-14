@@ -813,6 +813,14 @@ export interface Dictionary {
     errTitleRequired: string;
     errItemsRequired: string;
     errTotalZero: string;
+    errUnassignedItems: string;
+    unassignedBadge: string;
+    unassignedHint: string;
+    unassignedSummary: string;
+    roundingLine: string;
+    itemNameAria: string;
+    itemQtyAria: string;
+    itemPriceAria: string;
     errGenericCreate: string;
     previewModalTitle: string;
     previewModalSubtitle: string;
@@ -1809,6 +1817,14 @@ export const dictionaries: Record<Locale, Dictionary> = {
       errTitleRequired: "Harap masukkan nama tagihan (contoh: Makan Bareng Warteg).",
       errItemsRequired: "Harap masukkan minimal 1 menu atau harga.",
       errTotalZero: "Total tagihan tidak boleh {amount}.",
+      errUnassignedItems: "Masih ada menu yang belum dibagi: {names}. Pilih siapa yang ikut bayar dulu.",
+      unassignedBadge: "Belum dibagi",
+      unassignedHint: "Belum ada yang dipilih untuk menu ini. Pilih siapa yang ikut bayar.",
+      unassignedSummary: "Belum dibagi ({count} menu)",
+      roundingLine: "Pembulatan",
+      itemNameAria: "Nama menu {index}",
+      itemQtyAria: "Jumlah porsi menu {index}",
+      itemPriceAria: "Harga satuan menu {index}",
       errGenericCreate: "Terjadi kesalahan saat membuat tagihan.",
       previewModalTitle: "Pratinjau Tampilan Teman",
       previewModalSubtitle: "Inilah yang akan dilihat teman di browser",
@@ -2803,6 +2819,14 @@ export const dictionaries: Record<Locale, Dictionary> = {
       errTitleRequired: "Please enter a bill title (e.g. Dinner with Friends).",
       errItemsRequired: "Please enter at least 1 menu item or price.",
       errTotalZero: "Total bill cannot be {amount}.",
+      errUnassignedItems: "Some items aren't assigned yet: {names}. Choose who pays for them first.",
+      unassignedBadge: "Not assigned",
+      unassignedHint: "Nobody is picked for this item yet. Choose who pays for it.",
+      unassignedSummary: "Not assigned ({count} items)",
+      roundingLine: "Rounding",
+      itemNameAria: "Item {index} name",
+      itemQtyAria: "Item {index} quantity",
+      itemPriceAria: "Item {index} unit price",
       errGenericCreate: "An error occurred while creating the bill.",
       previewModalTitle: "Friend's View Preview",
       previewModalSubtitle: "This is what friends will see in their browser",
