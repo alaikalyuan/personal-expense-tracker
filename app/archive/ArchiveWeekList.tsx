@@ -15,6 +15,9 @@ export interface ArchivedWeek {
   topCategory: string;
 }
 
+// Rows rendered per expanded week before "Tampilkan lagi" (A002-40).
+const ARCHIVE_PAGE_SIZE = 20;
+
 interface ArchiveWeekListProps {
   weeks: ArchivedWeek[];
   wallets?: Array<{ id: string; name: string; emoji?: string }>;
@@ -195,6 +198,7 @@ export default function ArchiveWeekList({ weeks, wallets = [] }: ArchiveWeekList
                     startDateStr={week.startDateStr}
                     endDateStr={week.endDateStr}
                     wallets={wallets}
+                    pageSize={ARCHIVE_PAGE_SIZE}
                   />
                 </div>
               )}

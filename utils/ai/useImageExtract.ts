@@ -15,6 +15,7 @@ export type ExtractStep = "idle" | "compressing" | "uploading" | "extracting" | 
 export function useImageExtract(options?: UseImageExtractOptions) {
   const { apiKey, refreshUsage } = useAiAssistant();
   const { locale } = useTranslation();
+  const defaultHint = options?.hint;
   const [isExtracting, setIsExtracting] = useState(false);
   const [step, setStep] = useState<ExtractStep>("idle");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -68,7 +69,7 @@ export function useImageExtract(options?: UseImageExtractOptions) {
           },
           body: JSON.stringify({
             image: dataUrl,
-            hint: overrideHint || options?.hint || "any",
+            hint: overrideHint || defaultHint || "any",
             apiKeyOverride: apiKey || undefined,
             language: locale,
           }),
@@ -110,7 +111,7 @@ export function useImageExtract(options?: UseImageExtractOptions) {
         setIsExtracting(false);
       }
     },
-    [apiKey, locale, options?.hint, refreshUsage]
+    [apiKey, locale, defaultHint, refreshUsage]
   );
 
   const clearError = useCallback(() => {

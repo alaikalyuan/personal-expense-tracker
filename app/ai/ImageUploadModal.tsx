@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
   X,
@@ -34,7 +34,9 @@ export interface ImageUploadModalProps {
   onApply: (doc: ExtractedDocument, imageDataUrl?: string) => void;
 }
 
-type ModalStep = "upload" | "edit" | "processing" | "detected";
+const subscribeNever = () => () => {};
+
+type ModalStep ="upload" | "edit" | "processing" | "detected";
 type EditTool = "crop" | "annotate" | "none";
 
 interface CropRect {
@@ -57,11 +59,12 @@ export function ImageUploadModal({
   onApply,
 }: ImageUploadModalProps) {
   const { locale, formatCurrency } = useTranslation();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // False during SSR and hydration, true after: the portal needs document.body.
+  const mounted = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false
+  );
 
   const { extract, isExtracting, step: extractStep, error: extractError, clearError, resetState } = useImageExtract({
     hint: context === "split" ? "split" : "receipt",
@@ -114,8 +117,11 @@ export function ImageUploadModal({
       ? "Upload Foto - Catat Pengeluaran"
       : "Upload Picture - Logging Expenses";
 
-  // Reset all modal internal states on open or close
-  useEffect(() => {
+  // Reset all modal internal states each time the modal opens
+  // (state adjusted during render instead of in an effect).
+  const [wasOpen, setWasOpen] = useState(false);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
     if (isOpen) {
       setModalStep("upload");
       setOriginalImageSrc(null);
@@ -130,31 +136,7 @@ export function ImageUploadModal({
       setStageSize({ width: 0, height: 0 });
       resetState();
     }
-  }, [isOpen, resetState]);
-
-  // Global paste handler to support Ctrl+V anywhere while modal is open in upload step
-  useEffect(() => {
-    if (!isOpen || modalStep !== "upload") return;
-
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.type.startsWith("image/")) {
-          const file = item.getAsFile();
-          if (file) {
-            loadFile(file);
-            break;
-          }
-        }
-      }
-    };
-
-    window.addEventListener("paste", handlePaste);
-    return () => window.removeEventListener("paste", handlePaste);
-  }, [isOpen, modalStep]);
+  }
 
   // Load a file into memory
   const loadFile = (file: File) => {
@@ -179,6 +161,30 @@ export function ImageUploadModal({
     };
     reader.readAsDataURL(file);
   };
+
+  // Global paste handler to support Ctrl+V anywhere while modal is open in upload step
+  useEffect(() => {
+    if (!isOpen || modalStep !== "upload") return;
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            loadFile(file);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [isOpen, modalStep]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

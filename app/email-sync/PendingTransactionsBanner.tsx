@@ -6,7 +6,7 @@ import {
   approveEmailTransaction,
   dismissEmailTransaction,
 } from "./actions";
-import { formatMoney } from "@/utils/money";
+import { formatMoney, type SupportedCurrency } from "@/utils/money";
 import {
   Check,
   X,
@@ -133,7 +133,7 @@ export default function PendingTransactionsBanner({
 
           <div className="text-right shrink-0">
             <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-              {formatMoney(currentTx.amount, (currentTx.currency as any) || "IDR")}
+              {formatMoney(currentTx.amount, (currentTx.currency as SupportedCurrency) || "IDR")}
             </span>
             <div className="text-xs text-zinc-500 dark:text-zinc-400">
               {currentTx.transaction_date}
@@ -237,7 +237,7 @@ export default function PendingTransactionsBanner({
                   {t.emailSync.amountLabel}
                 </label>
                 <div className="mt-1 font-extrabold text-xl text-emerald-600 dark:text-emerald-400">
-                  {formatMoney(selectedTx.amount, (selectedTx.currency as any) || "IDR")}
+                  {formatMoney(selectedTx.amount, (selectedTx.currency as SupportedCurrency) || "IDR")}
                 </div>
               </div>
 
