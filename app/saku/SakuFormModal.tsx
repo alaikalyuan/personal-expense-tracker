@@ -7,7 +7,7 @@ import { createWallet, updateWallet } from "./actions";
 import { WalletBalance } from "@/utils/wallets/server";
 import ModalOverlay from "@/app/ui/ModalOverlay";
 import { MoneyField } from "@/app/ui/Field";
-import { parseRupiahInput } from "@/utils/money";
+import { parseRupiahInput, toRupiahFieldValue } from "@/utils/money";
 
 interface SakuFormModalProps {
   isOpen: boolean;
@@ -64,8 +64,8 @@ function SakuFormModalContent({
   const [color, setColor] = useState(wallet?.color || (wallet?.kind === "stash" ? "#0d9488" : "#10b981"));
   const [trackBalance, setTrackBalance] = useState(Boolean(wallet?.track_balance));
   const [openingBalance, setOpeningBalance] = useState("");
-  const [weeklyBudget, setWeeklyBudget] = useState(wallet?.weekly_budget ? String(wallet.weekly_budget) : "");
-  const [monthlyBudget, setMonthlyBudget] = useState(wallet?.monthly_budget ? String(wallet.monthly_budget) : "");
+  const [weeklyBudget, setWeeklyBudget] = useState(wallet?.weekly_budget ? toRupiahFieldValue(wallet.weekly_budget) : "");
+  const [monthlyBudget, setMonthlyBudget] = useState(wallet?.monthly_budget ? toRupiahFieldValue(wallet.monthly_budget) : "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

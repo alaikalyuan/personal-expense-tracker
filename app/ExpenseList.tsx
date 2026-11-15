@@ -12,6 +12,7 @@ import { format, parseISO, subDays } from "date-fns";
 import Dialog from "@/app/ui/Dialog";
 import Button from "@/app/ui/Button";
 import { MoneyField, SelectField, TextField } from "@/app/ui/Field";
+import { toRupiahFieldValue } from "@/utils/money";
 
 // Loaded only when the share sheet is first opened.
 const ExportShareModal = dynamic(() => import("./ExportShareModal"), { ssr: false });
@@ -166,7 +167,7 @@ export default function ExpenseList({
     setError(null);
     setConfirmingDelete(false);
     setEditingExpense(item);
-    setEditAmount(String(item.amount));
+    setEditAmount(toRupiahFieldValue(item.amount));
     setEditIsExempt(isExpenseExempt(item));
   };
 

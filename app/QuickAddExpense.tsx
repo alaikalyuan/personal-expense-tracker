@@ -52,7 +52,7 @@ import { subDays, format, parseISO } from "date-fns";
 import { getActiveWallets } from "@/app/saku/actions";
 import { Wallet } from "@/utils/wallets/server";
 import ModalOverlay from "@/app/ui/ModalOverlay";
-import { formatRupiahInput, parseMoneyInput, parseMoneyTyping } from "@/utils/money";
+import { deleteAcrossSeparator, formatRupiahInput, parseMoneyInput, parseMoneyTyping } from "@/utils/money";
 import { useGroupedCaret } from "@/app/ui/useGroupedCaret";
 
 interface QuickAddModalProps {
@@ -605,17 +605,31 @@ function QuickAddModalContent({
   const amountDraftActive = amountDraft !== null && amountDraft.value === amount;
   const amountError = amountDraftActive ? amountDraft.error : null;
 
+  const amountDisplay = amountDraftActive
+    ? amountDraft.text
+    : amount > 0
+    ? currency === "IDR"
+      ? formatRupiahInput(amount)
+      : String(amount)
+    : "";
+
   const rememberAmountCaret = useGroupedCaret(amountInputRef);
 
-  const handleAmountChange = (input: HTMLInputElement) => {
-    const text = input.value;
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const typed = input.selectionStart ?? input.value.length;
+    // Only rupiah is regrouped, so only rupiah needs a deleted dot turned into a deleted digit.
+    const { text, caret } =
+      currency === "IDR"
+        ? deleteAcrossSeparator(amountDisplay, input.value, typed, (e.nativeEvent as InputEvent).inputType)
+        : { text: input.value, caret: typed };
     setShowAmountError(false);
     if (!text.trim()) {
       setAmount(0);
       setAmountDraft(null);
       return;
     }
-    rememberAmountCaret(input);
+    rememberAmountCaret(text, input.selectionStart === null ? null : caret);
     // Rupiah is regrouped as it is typed, so its own dots may be out of place mid-edit ("2.5000").
     const parsed = parseMoneyTyping(text, currency, { allowZero: true });
     if (parsed.ok) {
@@ -1179,16 +1193,8 @@ function QuickAddModalContent({
                   ref={amountInputRef}
                   type="text"
                   inputMode={currency === "IDR" ? "numeric" : "decimal"}
-                  value={
-                    amountDraftActive
-                      ? amountDraft.text
-                      : amount > 0
-                      ? currency === "IDR"
-                        ? formatRupiahInput(amount)
-                        : String(amount)
-                      : ""
-                  }
-                  onChange={(e) => handleAmountChange(e.target)}
+                  value={amountDisplay}
+                  onChange={handleAmountChange}
                   onBlur={() => setShowAmountError(true)}
                   aria-invalid={showAmountError && amountError ? true : undefined}
                   aria-describedby={showAmountError && amountError ? "quick-add-amount-error" : undefined}

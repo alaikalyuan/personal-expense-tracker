@@ -4,6 +4,8 @@ import {
   formatRupiahInput,
   parseMoneyInput,
   caretAfterDigits,
+  deleteAcrossSeparator,
+  toRupiahFieldValue,
   parseMoneyTyping,
   parseRupiahAmount,
   parseRupiahInput,
@@ -193,5 +195,54 @@ describe("caretAfterDigits", () => {
     ["1.250.000", 4, 5],
   ])("in %s after %i digits is %i", (text, digits, pos) => {
     expect(caretAfterDigits(text, digits)).toBe(pos);
+  });
+});
+
+describe("toRupiahFieldValue", () => {
+  it.each([
+    [15000, "15000"],
+    [15000.5, "15001"],
+    ["15000.40", "15000"],
+    [0, "0"],
+    [-5, "0"],
+    [null, ""],
+    [undefined, ""],
+    [Number.NaN, ""],
+  ])("%s → %s", (value, expected) => {
+    expect(toRupiahFieldValue(value as number | string | null | undefined)).toBe(expected);
+  });
+
+  it("never yields text the typing parser would read larger", () => {
+    const text = toRupiahFieldValue(15000.5);
+    expect(parseRupiahTyping(text + "0")).toEqual({ ok: true, value: 150010 });
+  });
+});
+
+describe("deleteAcrossSeparator", () => {
+  it("Backspace right after a dot removes the digit before it", () => {
+    // "25.000", caret after the dot (3); the browser removed the dot → "25000", caret 2.
+    expect(deleteAcrossSeparator("25.000", "25000", 2, "deleteContentBackward")).toEqual({ text: "2000", caret: 1 });
+  });
+
+  it("Delete right before a dot removes the digit after it", () => {
+    expect(deleteAcrossSeparator("25.000", "25000", 2, "deleteContentForward")).toEqual({ text: "2500", caret: 2 });
+  });
+
+  it("works in the middle of a longer amount", () => {
+    expect(deleteAcrossSeparator("1.250.000", "1.250000", 5, "deleteContentBackward")).toEqual({
+      text: "1.25000",
+      caret: 4,
+    });
+    expect(parseRupiahTyping("1.25000")).toEqual({ ok: true, value: 125000 });
+  });
+
+  it("leaves ordinary edits alone", () => {
+    expect(deleteAcrossSeparator("25.000", "25.00", 5, "deleteContentBackward")).toEqual({ text: "25.00", caret: 5 });
+    expect(deleteAcrossSeparator("25.000", "25.0001", 7, "insertText")).toEqual({ text: "25.0001", caret: 7 });
+    expect(deleteAcrossSeparator("2.500", "2500", 1, "insertFromPaste")).toEqual({ text: "2500", caret: 1 });
+  });
+
+  it("does nothing when no digit sits on that side", () => {
+    expect(deleteAcrossSeparator(".5", "5", 0, "deleteContentBackward")).toEqual({ text: "5", caret: 0 });
   });
 });

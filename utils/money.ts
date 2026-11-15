@@ -184,6 +184,47 @@ export function parseMoneyTyping(
   return currency === "IDR" ? parseRupiahTyping(raw, opts) : parseMoneyInput(raw, currency, opts);
 }
 
+/**
+ * A stored amount as `MoneyField` text: whole rupiah, no dot. Older rows
+ * could hold a decimal ("15000.5"), which the typing parser would otherwise
+ * read as 150005 after one keystroke.
+ */
+export function toRupiahFieldValue(value: number | string | null | undefined): string {
+  const n = typeof value === "string" ? Number(value) : value;
+  if (n === null || n === undefined || !Number.isFinite(n)) return "";
+  return String(Math.max(0, Math.round(n)));
+}
+
+/**
+ * A field that regroups thousands puts its dots back after every edit, so
+ * deleting a dot alone would look like nothing happened. When an edit removed
+ * exactly one grouping dot, remove the digit next to it instead (the one
+ * before it for Backspace, after it for Delete). `caret` is the caret in
+ * `next`. Returns the text to parse and the caret position in that text.
+ */
+export function deleteAcrossSeparator(
+  prev: string,
+  next: string,
+  caret: number,
+  inputType?: string
+): { text: string; caret: number } {
+  const unchanged = { text: next, caret };
+  const removedDot =
+    next.length === prev.length - 1 && prev[caret] === "." && next === prev.slice(0, caret) + prev.slice(caret + 1);
+  if (!removedDot) return unchanged;
+  if (inputType === "deleteContentForward") {
+    for (let j = caret; j < next.length; j++) {
+      if (/\d/.test(next[j])) return { text: next.slice(0, j) + next.slice(j + 1), caret };
+    }
+    return unchanged;
+  }
+  if (inputType !== undefined && inputType !== "deleteContentBackward") return unchanged;
+  for (let j = caret - 1; j >= 0; j--) {
+    if (/\d/.test(next[j])) return { text: next.slice(0, j) + next.slice(j + 1), caret: j };
+  }
+  return unchanged;
+}
+
 /** Position in `text` just after its `digits`-th digit (0 → start). */
 export function caretAfterDigits(text: string, digits: number): number {
   if (digits <= 0) return 0;
