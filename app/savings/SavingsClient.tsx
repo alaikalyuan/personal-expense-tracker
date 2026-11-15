@@ -26,7 +26,7 @@ import {
 import SavingsBalanceHistory from "./SavingsBalanceHistory";
 import ModalOverlay from "@/app/ui/ModalOverlay";
 import { MoneyField } from "@/app/ui/Field";
-import { parseRupiahInput } from "@/utils/money";
+import { parseRupiahInput, toRupiahFieldValue } from "@/utils/money";
 
 export interface CompletedWeekData {
   weekId: string;
@@ -159,7 +159,7 @@ export default function SavingsClient({
   const openEditGoal = (goal: SavingsGoalItem) => {
     setEditingGoal(goal);
     setGoalName(goal.name);
-    setGoalTarget(String(goal.targetAmount));
+    setGoalTarget(toRupiahFieldValue(goal.targetAmount));
     setGoalEmoji(goal.emoji || "🎯");
     setIsGoalModalOpen(true);
   };

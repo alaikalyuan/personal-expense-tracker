@@ -50,7 +50,7 @@ import type { Wallet } from "@/utils/wallets/server";
 import AiHeaderButton from "@/app/ai/AiHeaderButton";
 import ModalOverlay from "@/app/ui/ModalOverlay";
 import { MoneyField } from "@/app/ui/Field";
-import { parseMoneyInput } from "@/utils/money";
+import { parseMoneyInput, toRupiahFieldValue } from "@/utils/money";
 
 interface SubscriptionsClientProps {
   initialSubscriptions: SubscriptionRecord[];
@@ -175,7 +175,7 @@ export default function SubscriptionsClient({
   const openEditModal = (sub: SubscriptionRecord) => {
     setEditingSub(sub);
     setName(sub.name);
-    setPrice(String(sub.price));
+    setPrice(currency === "IDR" ? toRupiahFieldValue(sub.price) : String(sub.price));
     setPriceError(null);
     setBillingCycle(sub.billing_cycle);
     setNextRenewalDate(sub.next_renewal_date);

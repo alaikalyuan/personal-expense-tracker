@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { InputHTMLAttributes, SelectHTMLAttributes } from "react";
-import { formatRupiahInput, parseMoneyTyping, parseRupiahInput, parseRupiahTyping } from "@/utils/money";
+import { deleteAcrossSeparator, formatRupiahInput, parseMoneyTyping, parseRupiahInput, parseRupiahTyping } from "@/utils/money";
 import type { SupportedCurrency } from "@/utils/money";
 import { useGroupedCaret } from "./useGroupedCaret";
 
@@ -134,9 +134,11 @@ export function MoneyField({
 
   const parsed = value ? parseRupiahInput(value, { allowZero, max, maxError }) : null;
   const parseError = parsed && !parsed.ok ? parsed.error : null;
-  const display = parsed?.ok ? formatRupiahInput(parsed.value) : value;
+  // Grouped whenever it is a valid number, even one above `max`.
+  const plain = value ? parseRupiahInput(value, { allowZero: true }) : null;
+  const display = plain?.ok ? formatRupiahInput(plain.value) : value;
   // An amount above `max` is shown straight away; a typing error once the field is left.
-  const overMax = parsed && !parsed.ok && max !== undefined && parseRupiahInput(value, { allowZero }).ok;
+  const overMax = parsed && !parsed.ok && max !== undefined && plain?.ok === true;
   const shownError = error || (touched || overMax ? parseError : null);
 
   useEffect(() => {
@@ -145,9 +147,15 @@ export function MoneyField({
 
   const rememberCaret = useGroupedCaret(inputRef);
 
-  const handleChange = (input: HTMLInputElement) => {
-    const text = input.value;
-    rememberCaret(input);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const { text, caret } = deleteAcrossSeparator(
+      display,
+      input.value,
+      input.selectionStart ?? input.value.length,
+      (e.nativeEvent as InputEvent).inputType
+    );
+    rememberCaret(text, input.selectionStart === null ? null : caret);
     // The field regroups as it goes, so its own dots may be out of place mid-edit.
     const result = parseRupiahTyping(text, { allowZero: true });
     onChange(result.ok && text.trim() ? String(result.value) : text);
@@ -169,7 +177,7 @@ export function MoneyField({
             aria-describedby={describedBy}
             aria-invalid={shownError ? true : undefined}
             value={display}
-            onChange={(e) => handleChange(e.target)}
+            onChange={handleChange}
             onBlur={() => setTouched(true)}
             onInvalid={() => setTouched(true)}
             placeholder={placeholder}

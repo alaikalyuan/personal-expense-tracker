@@ -67,7 +67,7 @@ Risk: if the RPC ships before the friend view is switched over (or the reverse),
 
 - **Findings:** A002-02, A002-03, A002-13 (and the Audit 001 #33 carry-over)
 - **Depends on:** nothing
-- **Status:** DONE (2026-11-14). PR #12 merged as `9f58bd6`. Not checked in a signed-in browser. Known gaps: balance checks read then write (a race could pass two withdrawals; needs a DB constraint or RPC), the withdrawal cap is the total stash rather than the unallocated part, and the sweep action does not check the surplus on the server
+- **Status:** DONE (2026-11-14). PR #12 merged as `9f58bd6`. Regression fixed in `01e698f` (fields that regroup while typing rejected their own text). Checked in a signed-in browser on 2026-11-16 (Quick Add, budget, Saku edit/income/transfer, savings goal/allocate/withdraw, subscription price, split item price): typed values regroup and store the right amount; follow-up `fix/a002-money-followup` makes Backspace/Delete next to a dot remove a digit, keeps grouping above a limit, and rounds prefilled amounts. Known gaps: balance checks read then write (a race could pass two withdrawals; needs a DB constraint or RPC), the withdrawal cap is the total stash rather than the unallocated part, and the sweep action does not check the surplus on the server
 
 What changes:
 1. `MoneyField` in `app/ui/Field.tsx` already exists (used by `BudgetEditDialog`, `ExpenseList`). Pull its parsing into `utils/money.ts` (`parseRupiahInput`) with clear rules: `2.000.000` → 2000000; `15.000,50` → rejected with a message (rupiah has no decimals in practice); a negative or non-numeric value → rejected.
@@ -81,7 +81,7 @@ Checks: typing `2.000.000` stores 2000000 in every money field; a withdrawal abo
 
 - **Findings:** A002-04, A002-35, A002-18 (the item inputs are in the same component)
 - **Depends on:** WS0 (same feature, merge WS0 first)
-- **Status:** IN REVIEW (2026-11-14). Branch `fix/a002-ws2-split-allocation`. The creator page is untested in a browser (it needs a registered account)
+- **Status:** DONE (2026-11-16). PR #13 merged as `9dcffe6`. Checked in a signed-in browser on 2026-11-16: removing an item's only assignee leaves it "Belum dibagi" and publishing is refused with a message; a 380.000 bill split three ways shows "Pembulatan +Rp 100" in the summary and +Rp 33 per person, and every breakdown reconciles. The signed-out friend view was not re-checked
 
 What changes:
 1. `handleRemoveParticipant` (`SplitBillCreator.tsx:469-480`): when the removed person was an item's only assignee, the item becomes "Belum dibagi" and is highlighted, instead of spreading to everyone.
