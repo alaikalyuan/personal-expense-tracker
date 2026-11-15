@@ -3,8 +3,11 @@ import {
   MONEY_ERRORS,
   formatRupiahInput,
   parseMoneyInput,
+  caretAfterDigits,
+  parseMoneyTyping,
   parseRupiahAmount,
   parseRupiahInput,
+  parseRupiahTyping,
 } from "./money";
 
 describe("parseRupiahInput", () => {
@@ -119,5 +122,76 @@ describe("parseRupiahAmount (server)", () => {
       ok: false,
       error: "Saldo tidak cukup.",
     });
+  });
+});
+
+describe("parseRupiahTyping", () => {
+  // What a field that regroups on every keystroke hands back: the previous
+  // display plus one new key.
+  function typeDigits(keys: string, insertAt?: (shown: string) => number) {
+    let shown = "";
+    for (const key of keys) {
+      const at = insertAt ? insertAt(shown) : shown.length;
+      const result = parseRupiahTyping(shown.slice(0, at) + key + shown.slice(at), { allowZero: true });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return shown;
+      shown = formatRupiahInput(result.value);
+    }
+    return shown;
+  }
+
+  it.each([
+    ["25000", "25.000"],
+    ["1111111", "1.111.111"],
+    ["2000000", "2.000.000"],
+  ])("types %s digit by digit as %s", (keys, expected) => {
+    expect(typeDigits(keys)).toBe(expected);
+  });
+
+  it("accepts a digit inserted in the middle of grouped text", () => {
+    expect(parseRupiahTyping("2.5000")).toEqual({ ok: true, value: 25000 });
+    expect(parseRupiahTyping("12.5000")).toEqual({ ok: true, value: 125000 });
+    expect(parseRupiahTyping("1.11111")).toEqual({ ok: true, value: 111111 });
+  });
+
+  it("accepts a deletion that leaves dots out of place", () => {
+    expect(parseRupiahTyping("2.00.000")).toEqual({ ok: true, value: 200000 });
+    expect(parseRupiahTyping("Rp 1.2.3")).toEqual({ ok: true, value: 123 });
+  });
+
+  it.each([
+    ["15.000,50", MONEY_ERRORS.decimalComma],
+    ["-5", MONEY_ERRORS.negative],
+    ["1e5", MONEY_ERRORS.notNumber],
+    ["abc", MONEY_ERRORS.notNumber],
+    [".", MONEY_ERRORS.grouping],
+  ])("still rejects %s", (raw, error) => {
+    expect(parseRupiahTyping(raw)).toEqual({ ok: false, error });
+  });
+
+  it("keeps the bounds checks", () => {
+    expect(parseRupiahTyping("0")).toEqual({ ok: false, error: MONEY_ERRORS.zero });
+    expect(parseRupiahTyping("1.000.000.000.0000").ok).toBe(false);
+  });
+});
+
+describe("parseMoneyTyping", () => {
+  it("relaxes grouping for rupiah only", () => {
+    expect(parseMoneyTyping("2.5000", "IDR")).toEqual({ ok: true, value: 25000 });
+    expect(parseMoneyTyping("10.05", "USD")).toEqual({ ok: true, value: 10.05 });
+    expect(parseMoneyTyping("10.005", "USD").ok).toBe(false);
+  });
+});
+
+describe("caretAfterDigits", () => {
+  it.each([
+    ["25.000", 0, 0],
+    ["25.000", 2, 2],
+    ["25.000", 3, 4],
+    ["25.000", 5, 6],
+    ["25.000", 9, 6],
+    ["1.250.000", 4, 5],
+  ])("in %s after %i digits is %i", (text, digits, pos) => {
+    expect(caretAfterDigits(text, digits)).toBe(pos);
   });
 });

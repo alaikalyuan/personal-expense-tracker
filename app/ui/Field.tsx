@@ -2,8 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { InputHTMLAttributes, SelectHTMLAttributes } from "react";
-import { formatRupiahInput, parseMoneyInput, parseRupiahInput } from "@/utils/money";
+import { formatRupiahInput, parseMoneyTyping, parseRupiahInput, parseRupiahTyping } from "@/utils/money";
 import type { SupportedCurrency } from "@/utils/money";
+import { useGroupedCaret } from "./useGroupedCaret";
 
 export const CONTROL_CLASS =
   "min-h-11 w-full rounded-xl border border-line bg-paper px-3 text-base text-ink placeholder:text-ink-soft/70 hover:border-ink-soft disabled:opacity-50";
@@ -142,8 +143,13 @@ export function MoneyField({
     inputRef.current?.setCustomValidity(parseError ?? "");
   }, [parseError]);
 
-  const handleChange = (text: string) => {
-    const result = parseRupiahInput(text, { allowZero: true });
+  const rememberCaret = useGroupedCaret(inputRef);
+
+  const handleChange = (input: HTMLInputElement) => {
+    const text = input.value;
+    rememberCaret(input);
+    // The field regroups as it goes, so its own dots may be out of place mid-edit.
+    const result = parseRupiahTyping(text, { allowZero: true });
     onChange(result.ok && text.trim() ? String(result.value) : text);
   };
 
@@ -163,7 +169,7 @@ export function MoneyField({
             aria-describedby={describedBy}
             aria-invalid={shownError ? true : undefined}
             value={display}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={(e) => handleChange(e.target)}
             onBlur={() => setTouched(true)}
             onInvalid={() => setTouched(true)}
             placeholder={placeholder}
@@ -208,7 +214,7 @@ export function AmountInput({
   const errorId = useId();
   const [text, setText] = useState<string | null>(null);
   const shown = text ?? (value ? (currency === "IDR" ? formatRupiahInput(value) : String(value)) : "");
-  const parsed = text !== null && text.trim() ? parseMoneyInput(text, currency, { allowZero: true }) : null;
+  const parsed = text !== null && text.trim() ? parseMoneyTyping(text, currency, { allowZero: true }) : null;
   const error = parsed && !parsed.ok ? parsed.error : null;
 
   return (
@@ -234,12 +240,12 @@ export function AmountInput({
               onChange(0);
               return;
             }
-            const result = parseMoneyInput(next, currency, { allowZero: true });
+            const result = parseMoneyTyping(next, currency, { allowZero: true });
             if (result.ok) onChange(result.value);
           }}
           onBlur={() => {
             // Once the text parses, show it in the standard format again.
-            if (text === null || !text.trim() || parseMoneyInput(text, currency, { allowZero: true }).ok) setText(null);
+            if (text === null || !text.trim() || parseMoneyTyping(text, currency, { allowZero: true }).ok) setText(null);
           }}
           placeholder="0"
           className={`${inputClassName} ${error ? "border-danger" : ""}`}

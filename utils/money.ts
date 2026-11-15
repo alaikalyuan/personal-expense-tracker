@@ -163,6 +163,38 @@ export function parseRupiahInput(raw: string, opts: ParseMoneyOptions = {}): Mon
 }
 
 /**
+ * Parses rupiah text from a field that regroups thousands while the person
+ * types. Its dots were put there by the field, so after one more digit
+ * ("2.500" → "2.5000") they no longer sit in thousands positions. Text made
+ * only of digits and dots is read as plain digits; anything else (a comma,
+ * a minus sign, letters) goes through the strict `parseRupiahInput`.
+ */
+export function parseRupiahTyping(raw: string, opts: ParseMoneyOptions = {}): MoneyParseResult {
+  const body = raw.trim().replace(/^rp\.?\s*/i, "");
+  if (/^[\d.]*\d[\d.]*$/.test(body)) return parseRupiahInput(body.replace(/\./g, ""), opts);
+  return parseRupiahInput(raw, opts);
+}
+
+/** `parseMoneyInput` for a field that regroups while typing; see `parseRupiahTyping`. */
+export function parseMoneyTyping(
+  raw: string,
+  currency: SupportedCurrency = DEFAULT_CURRENCY,
+  opts: ParseMoneyOptions = {}
+): MoneyParseResult {
+  return currency === "IDR" ? parseRupiahTyping(raw, opts) : parseMoneyInput(raw, currency, opts);
+}
+
+/** Position in `text` just after its `digits`-th digit (0 → start). */
+export function caretAfterDigits(text: string, digits: number): number {
+  if (digits <= 0) return 0;
+  let seen = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (/\d/.test(text[i]) && ++seen === digits) return i + 1;
+  }
+  return text.length;
+}
+
+/**
  * Parses an amount in the given currency. Rupiah goes through
  * `parseRupiahInput`; other currencies accept "1,234.56"-style input
  * with at most the currency's number of decimals.

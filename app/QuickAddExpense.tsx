@@ -52,7 +52,8 @@ import { subDays, format, parseISO } from "date-fns";
 import { getActiveWallets } from "@/app/saku/actions";
 import { Wallet } from "@/utils/wallets/server";
 import ModalOverlay from "@/app/ui/ModalOverlay";
-import { formatRupiahInput, parseMoneyInput } from "@/utils/money";
+import { formatRupiahInput, parseMoneyInput, parseMoneyTyping } from "@/utils/money";
+import { useGroupedCaret } from "@/app/ui/useGroupedCaret";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -604,14 +605,19 @@ function QuickAddModalContent({
   const amountDraftActive = amountDraft !== null && amountDraft.value === amount;
   const amountError = amountDraftActive ? amountDraft.error : null;
 
-  const handleAmountChange = (text: string) => {
+  const rememberAmountCaret = useGroupedCaret(amountInputRef);
+
+  const handleAmountChange = (input: HTMLInputElement) => {
+    const text = input.value;
     setShowAmountError(false);
     if (!text.trim()) {
       setAmount(0);
       setAmountDraft(null);
       return;
     }
-    const parsed = parseMoneyInput(text, currency, { allowZero: true });
+    rememberAmountCaret(input);
+    // Rupiah is regrouped as it is typed, so its own dots may be out of place mid-edit ("2.5000").
+    const parsed = parseMoneyTyping(text, currency, { allowZero: true });
     if (parsed.ok) {
       setAmount(parsed.value);
       // Rupiah is shown regrouped; other currencies keep the typed text so "10.0" can become "10.05".
@@ -1182,7 +1188,7 @@ function QuickAddModalContent({
                         : String(amount)
                       : ""
                   }
-                  onChange={(e) => handleAmountChange(e.target.value)}
+                  onChange={(e) => handleAmountChange(e.target)}
                   onBlur={() => setShowAmountError(true)}
                   aria-invalid={showAmountError && amountError ? true : undefined}
                   aria-describedby={showAmountError && amountError ? "quick-add-amount-error" : undefined}
