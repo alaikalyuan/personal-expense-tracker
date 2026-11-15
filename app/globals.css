@@ -13,6 +13,10 @@
   --ink: #2b2118;
   --ink-soft: #6b5a48;
   --line: #ead9bd;
+  /* Field and control borders: at least 3:1 against both paper and card (WCAG 1.4.11). */
+  --field-line: #978b7f;
+  /* Height the fixed bottom bar covers, including the Add button that rises above it. */
+  --bottom-bar-h: 5rem;
   --accent: #e8590c;
   --accent-strong: #c2470a;
   --on-accent: #17110b;
@@ -34,6 +38,7 @@
   --ink: #f6ebdd;
   --ink-soft: #c4b29b;
   --line: #3d3024;
+  --field-line: #776959;
   --accent: #f98229;
   --accent-strong: #ffa65c;
   --on-accent: #17110b;
@@ -58,6 +63,7 @@
   --ink: #2e1720;
   --ink-soft: #6e4a58;
   --line: #f2d5de;
+  --field-line: #9e868f;
   --accent: #d6336c;
   --accent-strong: #a61e4d;
   --on-accent: #ffffff;
@@ -90,6 +96,7 @@
   --ink: #fbe9ef;
   --ink-soft: #d1aebb;
   --line: #45293a;
+  --field-line: #7d636d;
   --accent: #f06595;
   --accent-strong: #ff8fb3;
   --on-accent: #1b0a11;
@@ -104,6 +111,7 @@
   --ink: #14213a;
   --ink-soft: #4a5b78;
   --line: #d5e0ee;
+  --field-line: #808ca0;
   --accent: #1f6feb;
   --accent-strong: #1553b8;
   --on-accent: #ffffff;
@@ -136,6 +144,7 @@
   --ink: #e6eefa;
   --ink-soft: #a8b8d0;
   --line: #263449;
+  --field-line: #606e81;
   --accent: #5b9bff;
   --accent-strong: #8cb8ff;
   --on-accent: #07111f;
@@ -150,6 +159,7 @@
   --ink: #1c1c1c;
   --ink-soft: #5c5c5c;
   --line: #e0e0dc;
+  --field-line: #8b8b8b;
   --accent: #1c1c1c;
   --accent-strong: #000000;
   --on-accent: #ffffff;
@@ -187,6 +197,7 @@
   --ink: #f0f0f0;
   --ink-soft: #b0b0b0;
   --line: #333333;
+  --field-line: #6b6b6b;
   --accent: #f0f0f0;
   --accent-strong: #ffffff;
   --on-accent: #121212;
@@ -202,6 +213,7 @@
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-line: var(--line);
+  --color-field-line: var(--field-line);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-on-accent: var(--on-accent);
@@ -409,6 +421,11 @@ body {
   color: var(--ink);
   font-family: var(--font-jakarta), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
+}
+
+/* Scrolling a focused element into view stops above the fixed bottom bar (WCAG 2.4.11). */
+html {
+  scroll-padding-bottom: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom) + 0.5rem);
 }
 
 /*
