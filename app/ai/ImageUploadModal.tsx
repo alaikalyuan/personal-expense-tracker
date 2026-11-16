@@ -26,6 +26,7 @@ import { useTranslation } from "@/utils/i18n/context";
 import { useImageExtract, ExtractStep } from "@/utils/ai/useImageExtract";
 import { ExtractedDocument } from "@/utils/ai/vision";
 import ModalOverlay from "@/app/ui/ModalOverlay";
+import { SegmentedControl, ToggleChip } from "@/app/ui/Toggle";
 
 export interface ImageUploadModalProps {
   isOpen: boolean;
@@ -58,7 +59,7 @@ export function ImageUploadModal({
   context,
   onApply,
 }: ImageUploadModalProps) {
-  const { locale, formatCurrency } = useTranslation();
+  const { t, locale, formatCurrency } = useTranslation();
   // False during SSR and hydration, true after: the portal needs document.body.
   const mounted = useSyncExternalStore(
     subscribeNever,
@@ -494,7 +495,12 @@ export function ImageUploadModal({
   if (!isOpen || !mounted) return null;
 
   return createPortal(
-    <ModalOverlay className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-2 sm:p-4 animate-fade-in">
+    <ModalOverlay
+      onClose={() => {
+        if (!isExtracting) onClose();
+      }}
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-2 sm:p-4 animate-fade-in"
+    >
       <div
         className={`relative flex flex-col w-full max-w-xl rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xl overflow-hidden transition-all ${
           modalStep === "edit"
@@ -505,7 +511,7 @@ export function ImageUploadModal({
         {/* Pinned Header */}
         <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 px-4 py-3 sm:px-5 shrink-0 bg-zinc-50/80 dark:bg-zinc-900/90">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
+            <div aria-hidden="true" className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
               <Camera className="w-4 h-4" />
             </div>
             <div>
@@ -518,10 +524,10 @@ export function ImageUploadModal({
             type="button"
             onClick={onClose}
             disabled={isExtracting}
-            className="rounded-lg p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-40 cursor-pointer"
-            aria-label="Close"
+            className="-mr-2 flex h-11 w-11 items-center justify-center rounded-xl text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100 hover:bg-zinc-200/50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-40 cursor-pointer"
+            aria-label={t.common.close}
           >
-            <X className="w-4 h-4" />
+            <X aria-hidden="true" className="w-5 h-5" />
           </button>
         </div>
 
@@ -532,41 +538,40 @@ export function ImageUploadModal({
             <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 bg-zinc-100/90 dark:bg-zinc-900 border-b border-zinc-200/80 dark:border-zinc-800 px-3.5 sm:px-4 py-2 text-xs">
               <div className="flex items-center gap-2">
                 {/* Segmented Tool Switcher */}
-                <div className="flex items-center rounded-xl bg-zinc-200/70 dark:bg-zinc-800/90 p-1 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTool("crop")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer text-xs ${
-                      activeTool === "crop"
-                        ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-xs"
-                        : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/40 dark:hover:bg-zinc-700/40"
-                    }`}
-                  >
-                    <CropIcon className="w-3.5 h-3.5" />
-                    <span>{locale === "id" ? "Pangkas" : "Crop"}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTool("annotate")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer text-xs ${
-                      activeTool === "annotate"
-                        ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-xs"
-                        : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/40 dark:hover:bg-zinc-700/40"
-                    }`}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                    <span>{locale === "id" ? "Tandai / Spidol" : "Annotate"}</span>
-                  </button>
-                </div>
+                <SegmentedControl
+                  ariaLabel={locale === "id" ? "Alat edit" : "Edit tool"}
+                  value={activeTool}
+                  onChange={setActiveTool}
+                  className="bg-zinc-200/70 dark:bg-zinc-800/90"
+                  options={[
+                    {
+                      value: "crop",
+                      label: (
+                        <>
+                          <CropIcon aria-hidden="true" className="w-4 h-4" />
+                          <span>{locale === "id" ? "Pangkas" : "Crop"}</span>
+                        </>
+                      ),
+                    },
+                    {
+                      value: "annotate",
+                      label: (
+                        <>
+                          <Pencil aria-hidden="true" className="w-4 h-4" />
+                          <span>{locale === "id" ? "Tandai" : "Annotate"}</span>
+                        </>
+                      ),
+                    },
+                  ]}
+                />
 
                 {/* Fit/Full image button (when Crop is active) */}
                 {activeTool === "crop" && (
                   <button
                     type="button"
                     onClick={handleSelectAllCrop}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-500/15 hover:bg-teal-500/25 active:scale-95 transition-all cursor-pointer border border-teal-500/20"
-                    title={locale === "id" ? "Pilih Seluruh Gambar" : "Select Entire Image"}
+                    className="flex min-h-11 items-center gap-1 px-3 rounded-xl text-xs font-semibold text-teal-800 dark:text-teal-300 bg-teal-500/15 hover:bg-teal-500/25 active:scale-95 transition-all cursor-pointer border border-teal-500/20"
+                    aria-label={locale === "id" ? "Pilih seluruh gambar" : "Select entire image"}
                   >
                     <span>{locale === "id" ? "Penuh" : "Fit/Full"}</span>
                   </button>
@@ -578,26 +583,26 @@ export function ImageUploadModal({
                 <button
                   type="button"
                   onClick={handleRotateCcw}
-                  className="p-1.5 rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-                  title={locale === "id" ? "Putar Kiri 90°" : "Rotate 90° CCW"}
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                  aria-label={locale === "id" ? "Putar Kiri 90°" : "Rotate 90° CCW"}
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
+                  <RotateCcw aria-hidden="true" className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
                   onClick={handleRotateCw}
-                  className="p-1.5 rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-                  title={locale === "id" ? "Putar Kanan 90°" : "Rotate 90° CW"}
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                  aria-label={locale === "id" ? "Putar Kanan 90°" : "Rotate 90° CW"}
                 >
-                  <RotateCw className="w-3.5 h-3.5" />
+                  <RotateCw aria-hidden="true" className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
                   onClick={handleResetEdit}
-                  className="p-1.5 rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-                  title={locale === "id" ? "Reset Edit" : "Reset Edits"}
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                  aria-label={locale === "id" ? "Reset Edit" : "Reset Edits"}
                 >
-                  <ResetIcon className="w-3.5 h-3.5" />
+                  <ResetIcon aria-hidden="true" className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -605,36 +610,37 @@ export function ImageUploadModal({
             {/* Annotation Color & Undo Sub-bar */}
             {activeTool === "annotate" && (
               <div className="shrink-0 flex items-center justify-between bg-zinc-100/90 dark:bg-zinc-900/95 border-b border-zinc-200/80 dark:border-zinc-800 px-3.5 sm:px-4 py-1.5 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-600 dark:text-zinc-300 font-medium">
+                <div className="flex items-center gap-1">
+                  <span id="annotate-color-label" className="mr-1 text-xs text-zinc-700 dark:text-zinc-300 font-medium">
                     {locale === "id" ? "Warna:" : "Color:"}
                   </span>
-                  {[
-                    { color: "#ef4444", label: "Red" },
-                    { color: "#f59e0b", label: "Amber" },
-                    { color: "#10b981", label: "Emerald" },
-                    { color: "#06b6d4", label: "Cyan" },
-                  ].map((c) => (
-                    <button
-                      key={c.color}
-                      type="button"
-                      onClick={() => setStrokeColor(c.color)}
-                      className={`w-5 h-5 rounded-full border-2 transition-transform cursor-pointer ${
-                        strokeColor === c.color ? "border-zinc-900 dark:border-white scale-110" : "border-transparent"
-                      }`}
-                      style={{ backgroundColor: c.color }}
-                      title={c.label}
-                    />
-                  ))}
+                  <div role="group" aria-labelledby="annotate-color-label" className="flex items-center">
+                    {[
+                      { color: "#ef4444", id: "Merah", en: "Red" },
+                      { color: "#f59e0b", id: "Kuning", en: "Amber" },
+                      { color: "#10b981", id: "Hijau", en: "Green" },
+                      { color: "#06b6d4", id: "Biru muda", en: "Cyan" },
+                    ].map((c) => (
+                      <ToggleChip
+                        key={c.color}
+                        variant="swatch"
+                        pressed={strokeColor === c.color}
+                        onClick={() => setStrokeColor(c.color)}
+                        aria-label={locale === "id" ? c.id : c.en}
+                      >
+                        <span aria-hidden="true" className="h-6 w-6 rounded-full" style={{ backgroundColor: c.color }} />
+                      </ToggleChip>
+                    ))}
+                  </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setStrokes((prev) => prev.slice(0, -1))}
                   disabled={strokes.length === 0}
-                  className="flex items-center gap-1 text-xs text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white disabled:opacity-40 cursor-pointer"
+                  className="flex min-h-11 items-center gap-1 rounded-xl px-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white disabled:opacity-40 cursor-pointer"
                 >
-                  <Undo2 className="w-3.5 h-3.5" />
+                  <Undo2 aria-hidden="true" className="w-4 h-4" />
                   <span>{locale === "id" ? "Urungkan" : "Undo"}</span>
                 </button>
               </div>
@@ -748,7 +754,7 @@ export function ImageUploadModal({
               <button
                 type="button"
                 onClick={() => setModalStep("upload")}
-                className="px-3 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                className="min-h-11 px-3 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
                 {locale === "id" ? "Ganti Gambar" : "Change Image"}
               </button>
@@ -756,9 +762,9 @@ export function ImageUploadModal({
               <button
                 type="button"
                 onClick={handleProceedToExtract}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
+                className="flex min-h-11 items-center gap-1.5 px-4 rounded-xl bg-teal-700 hover:bg-teal-800 active:scale-95 text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
               >
-                <Sparkles className="w-4 h-4" />
+                <Sparkles aria-hidden="true" className="w-4 h-4" />
                 <span>{locale === "id" ? "Proses dengan AI" : "Process with AI"}</span>
                 <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
               </button>
@@ -788,6 +794,7 @@ export function ImageUploadModal({
 
                 {/* Drag & Drop Box */}
                 <div
+                  aria-hidden="true"
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
@@ -818,7 +825,7 @@ export function ImageUploadModal({
                     onClick={() => cameraInputRef.current?.click()}
                     className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 transition-all cursor-pointer shadow-xs active:scale-98"
                   >
-                    <Camera className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <Camera aria-hidden="true" className="w-4 h-4 text-teal-700 dark:text-teal-400" />
                     <span>{locale === "id" ? "Ambil Foto (Kamera)" : "Take Photo (Camera)"}</span>
                   </button>
                   <button
@@ -900,14 +907,14 @@ export function ImageUploadModal({
                       <button
                         type="button"
                         onClick={() => setModalStep("edit")}
-                        className="px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 text-xs font-semibold cursor-pointer"
+                        className="min-h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 text-xs font-semibold cursor-pointer"
                       >
                         {locale === "id" ? "Edit Gambar Lagi" : "Re-edit Image"}
                       </button>
                       <button
                         type="button"
                         onClick={handleRetryExtract}
-                        className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer"
+                        className="min-h-11 px-3 rounded-xl bg-rose-700 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer"
                       >
                         {locale === "id" ? "Coba Lagi" : "Try Again"}
                       </button>
@@ -1050,7 +1057,7 @@ export function ImageUploadModal({
                   <button
                     type="button"
                     onClick={() => setModalStep("edit")}
-                    className="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    className="min-h-11 px-3.5 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                   >
                     {locale === "id" ? "Edit Ulang Foto" : "Re-edit Photo"}
                   </button>
@@ -1058,9 +1065,9 @@ export function ImageUploadModal({
                   <button
                     type="button"
                     onClick={handleApply}
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
+                    className="flex min-h-11 items-center gap-1.5 px-4 rounded-xl bg-teal-700 hover:bg-teal-800 active:scale-95 text-white text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
                   >
-                    <Check className="w-4 h-4" />
+                    <Check aria-hidden="true" className="w-4 h-4" />
                     <span>
                       {context === "split"
                         ? locale === "id"
