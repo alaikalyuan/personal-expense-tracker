@@ -433,7 +433,7 @@ export default function SubscriptionsClient({
         <div className="flex items-center gap-2.5">
           <Link
             href="/"
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 active:scale-95 transition-all shadow-2xs"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 active:scale-95 transition-all shadow-2xs"
             aria-label={t.subscriptions.backToHome}
           >
             <ArrowLeft aria-hidden="true" className="w-4 h-4" />

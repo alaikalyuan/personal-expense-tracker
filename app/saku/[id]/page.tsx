@@ -15,12 +15,15 @@ import ExpenseList, { ExpenseItem } from "@/app/ExpenseList";
 import SavingsClient from "@/app/savings/SavingsClient";
 import UserMenu from "@/app/UserMenu";
 import AiHeaderButton from "@/app/ai/AiHeaderButton";
+import { pageMetadata } from "@/utils/i18n/pageMetadata";
 
 interface SakuDetailPageProps {
   params: Promise<{
     id: string;
   }>;
 }
+
+export const generateMetadata = pageMetadata("sakuDetail");
 
 export default async function SakuDetailPage(props: SakuDetailPageProps) {
   if (!FEATURE_MULTI_SAKU_ENABLED) {
@@ -109,7 +112,7 @@ export default async function SakuDetailPage(props: SakuDetailPageProps) {
   const monthlyBudget = Number(wallet.monthly_budget || 0);
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-32">
+    <main className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-32">
       <div className="max-w-md mx-auto px-4 pt-6 space-y-6">
         {/* Top Header */}
         <header className="flex items-center justify-between">
@@ -210,6 +213,6 @@ export default async function SakuDetailPage(props: SakuDetailPageProps) {
           />
         </section>
       </div>
-    </div>
+    </main>
   );
 }

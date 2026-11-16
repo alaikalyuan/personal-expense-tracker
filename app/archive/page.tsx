@@ -24,6 +24,9 @@ import {
   getSelectedSakuServer,
   getWallets,
 } from "@/utils/wallets/server";
+import { pageMetadata } from "@/utils/i18n/pageMetadata";
+
+export const generateMetadata = pageMetadata("archive");
 
 export default async function ArchivePage() {
   const cookieStore = await cookies();
@@ -152,9 +155,9 @@ export default async function ArchivePage() {
           <Link
             href="/"
             aria-label={t.archive.backToTracker}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft aria-hidden="true" className="w-4 h-4" />
           </Link>
           <div>
             <h1 className="font-bold tracking-tight text-lg flex items-center gap-1.5 text-zinc-900 dark:text-white">

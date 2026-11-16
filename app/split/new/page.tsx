@@ -3,6 +3,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import SplitBillCreator from "./SplitBillCreator";
 import { getWallets, getUserSettings } from "@/utils/wallets/server";
+import { pageMetadata } from "@/utils/i18n/pageMetadata";
+
+export const generateMetadata = pageMetadata("splitNew");
 
 export default async function NewSplitBillPage() {
   const cookieStore = await cookies();

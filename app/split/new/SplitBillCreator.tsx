@@ -1463,7 +1463,7 @@ export default function SplitBillCreator({
                 key={p.participantId}
                 className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/70 dark:border-zinc-700/60"
               >
-                <p className="text-xs font-medium text-zinc-600 dark:text-zinc-300 truncate">
+                <p className="text-xs font-medium text-zinc-600 dark:text-zinc-300 [overflow-wrap:anywhere]">
                   {p.name} {p.isCreator && `(${t.splitBill.hostBadge})`}
                 </p>
                 <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">

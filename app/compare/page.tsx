@@ -35,6 +35,7 @@ import {
   getSelectedSakuServer,
   getWallets,
 } from "@/utils/wallets/server";
+import { pageMetadata } from "@/utils/i18n/pageMetadata";
 
 const categoryColors: Record<string, string> = {
   "Food & Dining": "bg-green-500",
@@ -44,6 +45,8 @@ const categoryColors: Record<string, string> = {
   Entertainment: "bg-pink-500",
   Others: "bg-zinc-500",
 };
+
+export const generateMetadata = pageMetadata("compare");
 
 export default async function ComparePage() {
   const cookieStore = await cookies();
@@ -330,9 +333,9 @@ export default async function ComparePage() {
 
       {/* Burn Rate Pacing Card */}
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">
-        <h3 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-3">
+        <h2 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-3">
           {t.compare.burnRateTitle}
-        </h3>
+        </h2>
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-zinc-800/60 dark:bg-zinc-950/60">
             <p className="text-xs text-zinc-500 dark:text-zinc-400">{t.compare.currentDailyAvg}</p>
@@ -406,9 +409,9 @@ export default async function ComparePage() {
 
       {/* Category Delta Comparison */}
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-sm">
-        <h3 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-3">
+        <h2 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-3">
           {t.compare.categoryChangesTitle}
-        </h3>
+        </h2>
 
         {categoryComparison.length === 0 ? (
           <p className="py-6 text-center text-xs text-zinc-500">

@@ -3,6 +3,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import SplitBillHistoryClient, { HistoryBillRecord } from "./SplitBillHistoryClient";
 import { SubscriptionRecord } from "@/app/subscriptions/types";
+import { pageMetadata } from "@/utils/i18n/pageMetadata";
+
+export const generateMetadata = pageMetadata("split");
 
 export default async function SplitHistoryPage() {
   const cookieStore = await cookies();

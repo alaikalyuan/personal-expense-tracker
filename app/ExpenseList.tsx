@@ -223,7 +223,7 @@ export default function ExpenseList({
         >
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-sm font-semibold text-ink">{item.name}</span>
+              <span className="min-w-0 text-sm font-semibold text-ink [overflow-wrap:anywhere]">{item.name}</span>
               {isExempt && (
                 <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-accent-strong">
                   <Tag className="h-3 w-3" aria-hidden="true" />

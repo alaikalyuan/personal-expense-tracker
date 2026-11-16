@@ -84,7 +84,7 @@ export default function BottomNav({ initialMultiSaku = false, signedIn = true }:
                   }`}
                 >
                   <item.Icon className="h-5 w-5" strokeWidth={item.active ? 2.5 : 2} aria-hidden="true" />
-                  <span className="max-w-full truncate">{item.label}</span>
+                  <span className="max-w-full text-center leading-tight [overflow-wrap:anywhere]">{item.label}</span>
                 </Link>
               </li>
             )

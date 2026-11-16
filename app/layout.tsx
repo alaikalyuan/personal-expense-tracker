@@ -17,7 +17,10 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "SakuTrack : Student Budget Tracker",
+  title: {
+    template: "%s · SakuTrack",
+    default: "SakuTrack : Student Budget Tracker",
+  },
   description: "Track weekly college and personal expenses",
   manifest: "/manifest.webmanifest",
   icons: {

@@ -81,9 +81,9 @@ export default function DailyTrendComparison({
       {/* Header with Title and Segmented View Switcher */}
       <div className="flex items-center justify-between pb-3 border-b border-zinc-200/80 dark:border-zinc-800/80">
         <div>
-          <h3 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+          <h2 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
             {dict.trendTitle}
-          </h3>
+          </h2>
         </div>
 
         {/* Segmented Toggle Buttons */}
@@ -348,7 +348,7 @@ export default function DailyTrendComparison({
           /* ========================================================================= */
           <div className="space-y-4">
             {/* Paired Bar Chart */}
-            <div className="flex items-end justify-between gap-1.5 h-32 px-1 pt-2">
+            <div className="flex items-end justify-between h-32 pt-2">
               {dayComparison.map((day, idx) => {
                 const thisHeight =
                   maxDayAmount > 0
@@ -369,10 +369,10 @@ export default function DailyTrendComparison({
                       isSelected
                         ? "bg-zinc-100 dark:bg-zinc-800/80 ring-1 ring-zinc-300 dark:ring-zinc-700"
                         : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
-                    } ${day.isFuture ? "opacity-40" : "opacity-100"}`}
+                    }`}
                   >
-                    {/* Paired vertical bars */}
-                    <div className="w-full flex items-end justify-center gap-1 h-20">
+                    {/* Paired vertical bars; days still to come are faded, their labels stay readable */}
+                    <div className={`w-full flex items-end justify-center gap-1 h-20 ${day.isFuture ? "opacity-40" : ""}`}>
                       {/* Last Week Bar (Zinc) */}
                       <div
                         style={{ height: `${day.lastAmt > 0 ? lastHeight : 4}%` }}
@@ -393,10 +393,10 @@ export default function DailyTrendComparison({
                     <span
                       className={`text-xs ${
                         day.isToday
-                          ? "font-bold text-emerald-600 dark:text-emerald-400"
+                          ? "font-bold text-emerald-700 dark:text-emerald-400"
                           : isSelected
                           ? "font-semibold text-zinc-800 dark:text-zinc-200"
-                          : "text-zinc-500 font-medium"
+                          : "text-zinc-600 dark:text-zinc-400 font-medium"
                       }`}
                     >
                       {day.isToday ? dict.today : day.dayName}

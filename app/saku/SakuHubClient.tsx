@@ -66,7 +66,7 @@ export default function SakuHubClient({
   };
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-32">
+    <main className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-32">
       {/* Container */}
       <div className="max-w-md mx-auto px-4 pt-6 space-y-6">
         {/* Top Header */}
@@ -225,6 +225,6 @@ export default function SakuHubClient({
         wallets={wallets}
         defaultWalletId={incomeTargetId}
       />
-    </div>
+    </main>
   );
 }
