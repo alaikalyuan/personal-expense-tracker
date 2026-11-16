@@ -441,6 +441,14 @@ export interface Dictionary {
     dismiss: string;
   };
   savings: {
+    fundingSourceLabel: string;
+    fundingCore: string;
+    fundingSurplus: string;
+    sweepAmountLabel: string;
+    sweepCoreHint: string;
+    sweepGoalSelectLabel: string;
+    adjustmentTypeLabel: string;
+    historyFilterLabel: string;
     title: string;
     subtitle: string;
     // Core Vault
@@ -1453,6 +1461,14 @@ export const dictionaries: Record<Locale, Dictionary> = {
       dismiss: "Tutup info pemasangan",
     },
     savings: {
+      fundingSourceLabel: "Sumber dana",
+      fundingCore: "Tabungan Pokok",
+      fundingSurplus: "Sisa Anggaran",
+      sweepAmountLabel: "Nominal yang dialirkan",
+      sweepCoreHint: "Disatukan ke saldo tabungan pokok yang bebas dialokasikan kapan saja",
+      sweepGoalSelectLabel: "Target tujuan",
+      adjustmentTypeLabel: "Jenis penyesuaian",
+      historyFilterLabel: "Saring riwayat",
       title: "Tabungan",
       subtitle: "Tabungan pokok & sisa anggaran untuk target finansial",
       // Core Vault
@@ -2470,6 +2486,14 @@ export const dictionaries: Record<Locale, Dictionary> = {
       dismiss: "Dismiss install banner",
     },
     savings: {
+      fundingSourceLabel: "Funding source",
+      fundingCore: "Core savings",
+      fundingSurplus: "Budget surplus",
+      sweepAmountLabel: "Amount to move",
+      sweepCoreHint: "Added to core savings, free to allocate any time",
+      sweepGoalSelectLabel: "Goal",
+      adjustmentTypeLabel: "Adjustment type",
+      historyFilterLabel: "Filter history",
       title: "Savings",
       subtitle: "Core savings & budget surplus for meaningful milestones",
       // Core Vault

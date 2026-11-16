@@ -18,6 +18,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
+import { SegmentedControl } from "@/app/ui/Toggle";
 import { SavingsHistoryItem, deleteSavingsHistoryEntry } from "@/app/actions";
 
 interface SavingsBalanceHistoryProps {
@@ -369,42 +370,30 @@ export default function SavingsBalanceHistory({
 
         {/* Filter Tabs & Search Bar */}
         <div className="flex flex-col gap-2.5">
-          <div className="flex items-center gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-2xl">
-            {(
-              [
-                { id: "all", label: t.savings.filterAll },
-                { id: "inflow", label: t.savings.filterInflow },
-                { id: "outflow", label: t.savings.filterOutflow },
-                { id: "goals", label: t.savings.filterGoals },
-              ] as const
-            ).map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveFilter(tab.id)}
-                aria-pressed={activeFilter === tab.id}
-                className={`flex-1 min-h-11 px-2 text-sm font-semibold rounded-xl ${
-                  activeFilter === tab.id
-                    ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
-                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            ariaLabel={t.savings.historyFilterLabel}
+            value={activeFilter}
+            onChange={setActiveFilter}
+            options={[
+              { value: "all", label: t.savings.filterAll },
+              { value: "inflow", label: t.savings.filterInflow },
+              { value: "outflow", label: t.savings.filterOutflow },
+              { value: "goals", label: t.savings.filterGoals },
+            ]}
+            className="[&>button]:px-1"
+          />
 
           {/* Search Filter */}
           {history.length > 3 && (
             <div className="relative flex items-center">
-              <Search className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 absolute left-3 pointer-events-none" />
+              <Search aria-hidden="true" className="w-4 h-4 text-ink-soft absolute left-3 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t.savings.searchHistoryPlaceholder}
                 aria-label={t.savings.searchHistoryPlaceholder}
-                className="w-full min-h-11 rounded-xl border border-zinc-200 bg-zinc-50/70 pl-8 pr-11 text-base text-zinc-800 placeholder:text-zinc-400 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 transition-colors"
+                className="w-full min-h-11 rounded-xl border border-field-line bg-paper pl-9 pr-11 text-base text-ink placeholder:text-ink-soft/70 hover:border-ink-soft transition-colors"
               />
               {searchQuery && (
                 <button
@@ -441,7 +430,7 @@ export default function SavingsBalanceHistory({
                   setSearchQuery("");
                   setActiveFilter("all");
                 }}
-                className="mt-3 text-xs font-medium text-teal-600 hover:text-teal-700 underline cursor-pointer"
+                className="mt-2 min-h-11 px-2 text-sm font-medium text-ink underline cursor-pointer"
               >
                 {t.expenses.clearSearch}
               </button>
