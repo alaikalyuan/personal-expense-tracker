@@ -11,7 +11,7 @@ interface ModalOverlayProps extends HTMLAttributes<HTMLDivElement> {
    * Called on Escape. Pass the same handler as the modal's own close or
    * cancel button, including any "busy" guard.
    */
-  onClose?: () => void;
+  onClose: () => void;
 }
 
 /**
@@ -54,32 +54,13 @@ export default function ModalOverlay({ children, onClose, onMouseDown, onKeyDown
     };
   }, [fallbackTitleId]);
 
-  const close = () => {
-    if (onClose) {
-      onClose();
-      return;
-    }
-    const el = ref.current;
-    if (!el) return;
-    // Fallback while older modals move to `onClose`: their own close button keeps its "busy" guards.
-    const closeButton = Array.from(el.querySelectorAll<HTMLButtonElement>("button")).find(
-      (button) => button.querySelector("svg.lucide-x") && !button.closest("li, label")
-    );
-    if (closeButton) {
-      if (!closeButton.disabled) closeButton.click();
-      return;
-    }
-    // Otherwise behave like a tap on the backdrop.
-    onMouseDown?.({ target: el, currentTarget: el } as unknown as React.MouseEvent<HTMLDivElement>);
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     onKeyDown?.(e);
     if (e.defaultPrevented) return;
 
     if (e.key === "Escape") {
       e.stopPropagation();
-      close();
+      onClose();
       return;
     }
     if (e.key !== "Tab") return;
