@@ -74,7 +74,7 @@ export default function SakuSwitcher({
         <span className="text-sm shrink-0">
           {isAll ? "🌐" : currentWallet?.emoji || "👛"}
         </span>
-        <span className="max-w-[110px] sm:max-w-[130px] truncate">
+        <span className="max-w-[110px] sm:max-w-[130px] text-left leading-tight [overflow-wrap:anywhere]">
           {isAll ? t.saku.allSakus : currentWallet?.name || t.saku.title}
         </span>
         <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />

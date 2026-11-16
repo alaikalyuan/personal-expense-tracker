@@ -29,6 +29,18 @@ export interface Dictionary {
     vs: string;
     error: string;
   };
+  pageTitles: {
+    archive: string;
+    compare: string;
+    saku: string;
+    sakuDetail: string;
+    savings: string;
+    split: string;
+    splitNew: string;
+    splitView: string;
+    splitEdit: string;
+    subscriptions: string;
+  };
   nav: {
     tracker: string;
     archive: string;
@@ -1076,6 +1088,18 @@ export const dictionaries: Record<Locale, Dictionary> = {
       none: "Tidak ada",
       vs: "dibanding",
       error: "Terjadi kesalahan",
+    },
+    pageTitles: {
+      archive: "Arsip",
+      compare: "Bandingkan",
+      saku: "Saku",
+      sakuDetail: "Detail Saku",
+      savings: "Tabungan",
+      split: "Riwayat Split Bill",
+      splitNew: "Split Bill Baru",
+      splitView: "Split Bill",
+      splitEdit: "Ubah Split Bill",
+      subscriptions: "Langganan Digital",
     },
     nav: {
       tracker: "Pelacak",
@@ -2141,6 +2165,18 @@ export const dictionaries: Record<Locale, Dictionary> = {
       none: "None",
       vs: "vs",
       error: "An error occurred",
+    },
+    pageTitles: {
+      archive: "Archive",
+      compare: "Compare",
+      saku: "Saku",
+      sakuDetail: "Saku details",
+      savings: "Savings",
+      split: "Split bill history",
+      splitNew: "New split bill",
+      splitView: "Split bill",
+      splitEdit: "Edit split bill",
+      subscriptions: "Digital subscriptions",
     },
     nav: {
       tracker: "Tracker",

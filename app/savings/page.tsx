@@ -23,6 +23,9 @@ import {
   getSavingsGoals,
   getSavingsHistory,
 } from "@/utils/wallets/server";
+import { pageMetadata } from "@/utils/i18n/pageMetadata";
+
+export const generateMetadata = pageMetadata("savings");
 
 export default async function SavingsPage() {
   const cookieStore = await cookies();

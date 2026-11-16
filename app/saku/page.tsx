@@ -12,6 +12,9 @@ import SakuHubClient from "./SakuHubClient";
 import Link from "next/link";
 import { Layers, Sparkles } from "lucide-react";
 import { setMultiSakuEnabled } from "./actions";
+import { pageMetadata } from "@/utils/i18n/pageMetadata";
+
+export const generateMetadata = pageMetadata("saku");
 
 export default async function SakuPage() {
   if (!FEATURE_MULTI_SAKU_ENABLED) {
@@ -35,7 +38,7 @@ export default async function SakuPage() {
   // If user has not enabled multi-saku yet, show enablement gate
   if (!isMultiSakuEnabled) {
     return (
-      <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center p-4 pb-28">
+      <main className="min-h-screen bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center p-4 pb-28">
         <div className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl text-center space-y-5">
           <div className="w-16 h-16 rounded-3xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-2xl shadow-inner">
             <Layers className="w-8 h-8" />
@@ -82,7 +85,7 @@ export default async function SakuPage() {
             Kembali ke Halaman Tabungan
           </Link>
         </div>
-      </div>
+      </main>
     );
   }
 

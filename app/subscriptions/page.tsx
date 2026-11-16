@@ -6,11 +6,9 @@ import { SubscriptionRecord } from "./types";
 import { withNormalizedSplitConfig } from "./splitConfig";
 import { processSubscriptionRenewals } from "./actions";
 import { getWallets, getUserSettings } from "@/utils/wallets/server";
+import { pageMetadata } from "@/utils/i18n/pageMetadata";
 
-export const metadata = {
-  title: "Langganan Digital : SakuTrack",
-  description: "Kelola langganan aplikasi digital, pengingat jatuh tempo, dan tagihan patungan",
-};
+export const generateMetadata = pageMetadata("subscriptions");
 
 export default async function SubscriptionsPage() {
   const cookieStore = await cookies();

@@ -459,7 +459,7 @@ export default function DashboardClient({
       {/* Header: today's date is the page title */}
       <header className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold text-ink">{formatDate(now, "EEEE, d MMM")}</h1>
+          <h1 className="text-xl font-bold text-ink">{formatDate(now, "EEEE, d MMM")}</h1>
           <p className="truncate text-xs text-ink-soft">
             {isMonth
               ? `${formatDate(startOfMonthDate, "d MMM")} - ${formatDate(endOfMonthDate, "d MMM")} · ${currentDay}/${totalDaysInMonth} ${t.dashboard.dayOfMonth}`
@@ -614,13 +614,13 @@ export default function DashboardClient({
         </div>
         <div className="flex items-baseline justify-between gap-3 border-b border-dashed border-line py-3">
           <dt className="shrink-0 text-sm text-ink-soft">{t.dashboard.topCategory}</dt>
-          <dd className="min-w-0 truncate text-sm font-bold text-ink">
+          <dd className="min-w-0 text-right [overflow-wrap:anywhere] text-sm font-bold text-ink">
             {topCategoryName} · {formatCurrency(Number(topCategory[1]))}
           </dd>
         </div>
         <div className="flex items-baseline justify-between gap-3 py-3">
           <dt className="shrink-0 text-sm text-ink-soft">{t.dashboard.largest}</dt>
-          <dd className="min-w-0 truncate text-sm font-bold text-ink">
+          <dd className="min-w-0 text-right [overflow-wrap:anywhere] text-sm font-bold text-ink">
             {largestExpense ? `${largestExpense.name} · ${formatCurrency(largestSpend)}` : t.common.none}
           </dd>
         </div>

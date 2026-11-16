@@ -7,6 +7,7 @@ import {
   SplitParticipantRecord,
   SplitItemRecord,
 } from "@/utils/splitCalculator";
+import { pageMetadata } from "@/utils/i18n/pageMetadata";
 
 type SharedSplitBill = {
   is_host: boolean;
@@ -16,6 +17,8 @@ type SharedSplitBill = {
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export const generateMetadata = pageMetadata("splitView");
 
 export default async function SplitBillPage(props: {
   params: Promise<{ id: string }>;

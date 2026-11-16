@@ -8,6 +8,9 @@ import {
   SplitParticipantRecord,
   SplitItemRecord,
 } from "@/utils/splitCalculator";
+import { pageMetadata } from "@/utils/i18n/pageMetadata";
+
+export const generateMetadata = pageMetadata("splitEdit");
 
 export default async function EditSplitBillPage(props: {
   params: Promise<{ id: string }>;

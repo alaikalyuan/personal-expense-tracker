@@ -256,7 +256,7 @@ export default function SplitBillViewer({
           </div>
 
           <div className="text-right">
-            <span className="text-xs text-zinc-400 font-semibold block">
+            <span className="text-xs text-zinc-600 dark:text-zinc-400 font-semibold block">
               {t.splitBill.totalBill}
             </span>
             <span className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-50">
@@ -350,7 +350,7 @@ export default function SplitBillViewer({
                 {bill.payment_info.account_number}
               </p>
               {bill.payment_info.account_name && (
-                <p className="text-xs text-zinc-400 mt-0.5">
+                <p className="text-xs text-zinc-300 mt-0.5">
                   {t.splitBill.accountHolder.replace("{name}", bill.payment_info.account_name)}
                 </p>
               )}
@@ -370,7 +370,7 @@ export default function SplitBillViewer({
 
       {/* Participants Breakdown Accordion */}
       <div className="space-y-3">
-        <h2 className="text-xs font-bold text-zinc-400 px-1">
+        <h2 className="text-xs font-bold text-zinc-600 dark:text-zinc-400 px-1">
           {t.splitBill.participantBreakdown.replace("{count}", String(participants.length))}
         </h2>
 
@@ -448,7 +448,7 @@ export default function SplitBillViewer({
               {isExpanded && (
                 <div className="px-4 pb-4 pt-1 border-t border-zinc-100 dark:border-zinc-800/80 space-y-3 text-xs">
                   <div className="space-y-1.5 pt-2">
-                    <p className="font-semibold text-zinc-500 text-xs">
+                    <p className="font-semibold text-zinc-600 dark:text-zinc-400 text-xs">
                       {t.splitBill.menuOrdered}
                     </p>
                     {p.items.map((item, idx) => (
@@ -459,7 +459,7 @@ export default function SplitBillViewer({
                         <span className="truncate pr-2">
                           {item.name}
                           {item.splitBetweenCount > 1 && (
-                            <span className="text-xs text-zinc-400 ml-1">
+                            <span className="text-xs text-zinc-600 dark:text-zinc-400 ml-1">
                               ({t.splitBill.splitBetweenCount.replace("{count}", String(item.splitBetweenCount))})
                             </span>
                           )}
