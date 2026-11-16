@@ -563,6 +563,28 @@ export interface Dictionary {
     closeHistory: string;
   };
   saku: {
+    kindLabel: string;
+    kindSpendingTitle: string;
+    kindSpendingDesc: string;
+    kindStashTitle: string;
+    kindStashDesc: string;
+    kindReadOnly: string;
+    emojiPickerLabel: string;
+    colorPickerLabel: string;
+    transferSubtitle: string;
+    incomeSubtitle: string;
+    quickNotesLabel: string;
+    colorNames: {
+      emerald: string;
+      teal: string;
+      blue: string;
+      indigo: string;
+      violet: string;
+      pink: string;
+      amber: string;
+      rose: string;
+      zinc: string;
+    };
     title: string;
     subtitle: string;
     netWorth: string;
@@ -1590,6 +1612,28 @@ export const dictionaries: Record<Locale, Dictionary> = {
       closeHistory: "Tutup Riwayat",
     },
     saku: {
+      kindLabel: "Jenis Saku",
+      kindSpendingTitle: "Saku Belanja",
+      kindSpendingDesc: "Untuk jajan & anggaran rutin",
+      kindStashTitle: "Saku Tabungan",
+      kindStashDesc: "Untuk simpanan & target",
+      kindReadOnly: "Tipe",
+      emojiPickerLabel: "Pilih Emoji",
+      colorPickerLabel: "Pilih Warna Tema",
+      transferSubtitle: "Pindahkan dana antar pos saku Anda",
+      incomeSubtitle: "Tambah saldo atau catat uang masuk ke saku Anda",
+      quickNotesLabel: "Catatan cepat",
+      colorNames: {
+        emerald: "Hijau zamrud",
+        teal: "Hijau toska",
+        blue: "Biru",
+        indigo: "Nila",
+        violet: "Ungu",
+        pink: "Merah muda",
+        amber: "Kuning",
+        rose: "Merah mawar",
+        zinc: "Abu-abu",
+      },
       title: "Saku Saya",
       subtitle: "Kelola dompet belanja harian & pos tabungan fleksibel",
       netWorth: "Total Saldo & Simpanan",
@@ -2615,6 +2659,28 @@ export const dictionaries: Record<Locale, Dictionary> = {
       closeHistory: "Close History",
     },
     saku: {
+      kindLabel: "Saku type",
+      kindSpendingTitle: "Spending Saku",
+      kindSpendingDesc: "For daily spending and budgets",
+      kindStashTitle: "Savings Saku",
+      kindStashDesc: "For savings and goals",
+      kindReadOnly: "Type",
+      emojiPickerLabel: "Emoji",
+      colorPickerLabel: "Theme colour",
+      transferSubtitle: "Move money between your Saku",
+      incomeSubtitle: "Add balance or record money coming into a Saku",
+      quickNotesLabel: "Quick notes",
+      colorNames: {
+        emerald: "Emerald",
+        teal: "Teal",
+        blue: "Blue",
+        indigo: "Indigo",
+        violet: "Violet",
+        pink: "Pink",
+        amber: "Amber",
+        rose: "Rose",
+        zinc: "Grey",
+      },
       title: "My Sakus",
       subtitle: "Manage daily spending wallets & flexible stash vaults",
       netWorth: "Total Balance & Savings",
