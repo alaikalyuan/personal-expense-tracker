@@ -97,7 +97,7 @@ Checks: the Journey E steps from the audit (assign "Ayam bakar" to Rina, remove 
 
 - **Findings:** A002-05 (P1), A002-06, -07, -08, -09, -22, -24 (P2), A002-26, -27, -43, -46, -48 (P3)
 - **Depends on:** WS1 and WS2 merged, because they touch the same forms
-- **Status:** TODO
+- **Status:** IN PROGRESS. Primitives: PR #15. Add expense (Quick Add modal, both modes, shortcut manager): `fix/a002-ws3-add-expense`, axe `label`, `select-name`, `button-name`, `color-contrast`, `target-size` at 0 in light and dark at 320 and 375 px. The expense edit dialog already passed. Savings (five dialogs moved onto `Dialog`, history filters on `SegmentedControl`): `fix/a002-ws3-savings`, same rules at 0 in light and dark at 320 px; the sweep dialog was not opened because the test account has no surplus yet. Next: Saku, subscriptions, notifications, split, AI sheet
 
 The biggest workstream. It goes **screen by screen**, with axe `label`, `select-name` and `button-name` at 0 as the gate for each screen.
 

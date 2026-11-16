@@ -277,6 +277,21 @@ export interface Dictionary {
     oneOffRemoveButton: string;
     moreOptions: string;
     lessOptions: string;
+    inputModeLabel: string;
+    quickBarLabel: string;
+    clearQuickInput: string;
+    dismissSuggestion: string;
+    hideNoteAria: string;
+    closeChipManager: string;
+    editChipAria: string;
+    deleteChipAria: string;
+    chipEmojiLabel: string;
+    chipNameLabel: string;
+    defaultAmountLabel: string;
+    sakuPickerLabel: string;
+    scanDismiss: string;
+    receiptModeLabel: string;
+    scanSakuLabel: string;
   };
   exportShare: {
     modalTitle: string;
@@ -426,6 +441,14 @@ export interface Dictionary {
     dismiss: string;
   };
   savings: {
+    fundingSourceLabel: string;
+    fundingCore: string;
+    fundingSurplus: string;
+    sweepAmountLabel: string;
+    sweepCoreHint: string;
+    sweepGoalSelectLabel: string;
+    adjustmentTypeLabel: string;
+    historyFilterLabel: string;
     title: string;
     subtitle: string;
     // Core Vault
@@ -1269,6 +1292,21 @@ export const dictionaries: Record<Locale, Dictionary> = {
       oneOffRemoveButton: "Batal Tandai",
       moreOptions: "Opsi lainnya",
       lessOptions: "Sembunyikan opsi",
+      inputModeLabel: "Cara mencatat",
+      quickBarLabel: "Ketik pengeluaran",
+      clearQuickInput: "Hapus teks",
+      dismissSuggestion: "Tutup saran",
+      hideNoteAria: "Sembunyikan catatan",
+      closeChipManager: "Tutup kelola pintasan",
+      editChipAria: "Ubah pintasan {name}",
+      deleteChipAria: "Hapus pintasan {name}",
+      chipEmojiLabel: "Emoji (opsional)",
+      chipNameLabel: "Nama pintasan",
+      defaultAmountLabel: "Nominal bawaan (opsional)",
+      sakuPickerLabel: "Saku",
+      scanDismiss: "Tutup hasil pindai",
+      receiptModeLabel: "Mode pencatatan",
+      scanSakuLabel: "Catat ke Saku",
     },
     exportShare: {
       modalTitle: "Bagikan & Ekspor",
@@ -1423,6 +1461,14 @@ export const dictionaries: Record<Locale, Dictionary> = {
       dismiss: "Tutup info pemasangan",
     },
     savings: {
+      fundingSourceLabel: "Sumber dana",
+      fundingCore: "Tabungan Pokok",
+      fundingSurplus: "Sisa Anggaran",
+      sweepAmountLabel: "Nominal yang dialirkan",
+      sweepCoreHint: "Disatukan ke saldo tabungan pokok yang bebas dialokasikan kapan saja",
+      sweepGoalSelectLabel: "Target tujuan",
+      adjustmentTypeLabel: "Jenis penyesuaian",
+      historyFilterLabel: "Saring riwayat",
       title: "Tabungan",
       subtitle: "Tabungan pokok & sisa anggaran untuk target finansial",
       // Core Vault
@@ -2271,6 +2317,21 @@ export const dictionaries: Record<Locale, Dictionary> = {
       oneOffRemoveButton: "Remove Tag",
       moreOptions: "More options",
       lessOptions: "Hide options",
+      inputModeLabel: "Entry mode",
+      quickBarLabel: "Type an expense",
+      clearQuickInput: "Clear text",
+      dismissSuggestion: "Dismiss suggestion",
+      hideNoteAria: "Hide note",
+      closeChipManager: "Close shortcut manager",
+      editChipAria: "Edit shortcut {name}",
+      deleteChipAria: "Delete shortcut {name}",
+      chipEmojiLabel: "Emoji (optional)",
+      chipNameLabel: "Shortcut name",
+      defaultAmountLabel: "Default amount (optional)",
+      sakuPickerLabel: "Saku",
+      scanDismiss: "Close scan result",
+      receiptModeLabel: "Recording mode",
+      scanSakuLabel: "Record to Saku",
     },
     exportShare: {
       modalTitle: "Share & Export",
@@ -2425,6 +2486,14 @@ export const dictionaries: Record<Locale, Dictionary> = {
       dismiss: "Dismiss install banner",
     },
     savings: {
+      fundingSourceLabel: "Funding source",
+      fundingCore: "Core savings",
+      fundingSurplus: "Budget surplus",
+      sweepAmountLabel: "Amount to move",
+      sweepCoreHint: "Added to core savings, free to allocate any time",
+      sweepGoalSelectLabel: "Goal",
+      adjustmentTypeLabel: "Adjustment type",
+      historyFilterLabel: "Filter history",
       title: "Savings",
       subtitle: "Core savings & budget surplus for meaningful milestones",
       // Core Vault

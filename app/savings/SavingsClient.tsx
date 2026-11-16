@@ -7,7 +7,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  X,
   ChevronDown,
 } from "lucide-react";
 import UserMenu from "@/app/UserMenu";
@@ -24,8 +23,10 @@ import {
   SavingsHistoryItem,
 } from "@/app/actions";
 import SavingsBalanceHistory from "./SavingsBalanceHistory";
-import ModalOverlay from "@/app/ui/ModalOverlay";
-import { MoneyField } from "@/app/ui/Field";
+import Dialog from "@/app/ui/Dialog";
+import Button from "@/app/ui/Button";
+import { MoneyField, SelectField, TextField } from "@/app/ui/Field";
+import { SegmentedControl, ToggleChip } from "@/app/ui/Toggle";
 import { parseRupiahInput, toRupiahFieldValue } from "@/utils/money";
 
 export interface CompletedWeekData {
@@ -553,6 +554,7 @@ export default function SavingsClient({
         <button
           type="button"
           onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+          aria-expanded={isHistoryExpanded}
           className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer select-none"
         >
           <div>
@@ -569,6 +571,7 @@ export default function SavingsClient({
               +{formatCurrency(unspentSurplusTotal)}
             </span>
             <ChevronDown
+              aria-hidden="true"
               className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${
                 isHistoryExpanded ? "rotate-180" : ""
               }`}
@@ -616,489 +619,339 @@ export default function SavingsClient({
         </p>
       )}
 
-      {isGoalModalOpen && (
-        <ModalOverlay className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fade-in">
-          <div className="w-full max-w-sm rounded-3xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-scale-in">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-                {editingGoal ? t.savings.editGoalTitle : t.savings.createGoalTitle}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsGoalModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <Dialog
+        isOpen={isGoalModalOpen}
+        onClose={() => setIsGoalModalOpen(false)}
+        busy={isSubmitting}
+        title={editingGoal ? t.savings.editGoalTitle : t.savings.createGoalTitle}
+        closeLabel={t.common.close}
+        footer={
+          <>
+            <Button block onClick={() => setIsGoalModalOpen(false)} disabled={isSubmitting}>
+              {t.common.cancel}
+            </Button>
+            <Button block variant="primary" type="submit" form="savings-goal-form" disabled={isSubmitting}>
+              {isSubmitting ? t.common.saving : t.common.save}
+            </Button>
+          </>
+        }
+      >
+        <form id="savings-goal-form" onSubmit={handleSaveGoal} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <span id="goal-emoji-label" className="text-sm font-semibold text-ink">
+              {t.savings.goalEmojiLabel}
+            </span>
+            <div role="group" aria-labelledby="goal-emoji-label" className="flex flex-wrap items-center gap-1.5">
+              {EMOJI_PRESETS.map((emoji) => (
+                <ToggleChip
+                  key={emoji}
+                  variant="swatch"
+                  pressed={goalEmoji === emoji}
+                  onClick={() => setGoalEmoji(emoji)}
+                  aria-label={`${t.savings.goalEmojiLabel} ${emoji}`}
+                  className="bg-paper"
+                >
+                  <span aria-hidden="true">{emoji}</span>
+                </ToggleChip>
+              ))}
             </div>
-
-            <form onSubmit={handleSaveGoal} className="mt-4 flex flex-col gap-3.5">
-              <div>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1 block">
-                  {t.savings.goalEmojiLabel}
-                </label>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {EMOJI_PRESETS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => setGoalEmoji(emoji)}
-                      className={`h-8 w-8 rounded-xl text-base flex items-center justify-center transition-all cursor-pointer ${
-                        goalEmoji === emoji
-                          ? "bg-teal-100 border-2 border-teal-500 dark:bg-teal-950/60 dark:border-teal-400"
-                          : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-                      }`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1 block">
-                  {t.savings.goalNameLabel}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={goalName}
-                  onChange={(e) => setGoalName(e.target.value)}
-                  placeholder={t.savings.goalNamePlaceholder}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
-                />
-              </div>
-
-              <MoneyField
-                label={t.savings.goalTargetLabel}
-                value={goalTarget}
-                onChange={setGoalTarget}
-                prefix={currencySymbol}
-                placeholder={t.savings.targetAmountPlaceholder}
-                required
-              />
-
-              <div className="mt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsGoalModalOpen(false)}
-                  className="px-3 py-1.5 rounded-xl border border-zinc-200 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                >
-                  {t.common.cancel}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-1.5 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 text-xs font-semibold hover:opacity-90 transition-all cursor-pointer shadow-xs active:scale-95"
-                >
-                  {isSubmitting ? t.common.saving : t.common.save}
-                </button>
-              </div>
-            </form>
           </div>
-        </ModalOverlay>
-      )}
 
-      {/* Modal: Allocate to Goal */}
-      {allocatingGoal && (
-        <ModalOverlay className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fade-in">
-          <div className="w-full max-w-sm rounded-3xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-scale-in">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                <span>{allocatingGoal.emoji}</span>
-                <span>{t.savings.allocateModalTitle}</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setAllocatingGoal(null)}
-                className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+          <TextField
+            label={t.savings.goalNameLabel}
+            type="text"
+            required
+            value={goalName}
+            onChange={(e) => setGoalName(e.target.value)}
+            placeholder={t.savings.goalNamePlaceholder}
+          />
 
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              {t.savings.allocateModalSubtitle} ({allocatingGoal.name})
-            </p>
+          <MoneyField
+            label={t.savings.goalTargetLabel}
+            value={goalTarget}
+            onChange={setGoalTarget}
+            prefix={currencySymbol}
+            placeholder={t.savings.targetAmountPlaceholder}
+            required
+          />
+        </form>
+      </Dialog>
 
-            <form onSubmit={handleAllocate} className="mt-4 flex flex-col gap-3.5">
-              {/* Funding Source Selector (if surplus is available) */}
-              {availableSurplus > 0 && availableCoreSavings > 0 && (
-                <div>
-                  <label className="text-xs font-semibold text-zinc-500 block mb-1">
-                    Sumber Dana
-                  </label>
-                  <div className="grid grid-cols-2 gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-800/70 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAllocationSource("core");
-                        const maxNeeded = Math.max(0, allocatingGoal.targetAmount - allocatingGoal.allocatedAmount);
-                        setAllocationAmount(toAmountInput(Math.min(maxNeeded, availableCoreSavings)));
-                      }}
-                      className={`py-1.5 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                        allocationSource === "core"
-                          ? "bg-white dark:bg-zinc-900 text-teal-700 dark:text-teal-300 shadow-2xs"
-                          : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400"
-                      }`}
-                    >
-                      Tabungan Pokok
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAllocationSource("surplus");
-                        const maxNeeded = Math.max(0, allocatingGoal.targetAmount - allocatingGoal.allocatedAmount);
-                        setAllocationAmount(toAmountInput(Math.min(maxNeeded, availableSurplus)));
-                      }}
-                      className={`py-1.5 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                        allocationSource === "surplus"
-                          ? "bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-300 shadow-2xs"
-                          : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400"
-                      }`}
-                    >
-                      Sisa Anggaran
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <MoneyField
-                label={t.savings.allocationAmountLabel}
-                hint={`${t.savings.maxAvailable}: ${formatCurrency(allocationMax)}`}
-                value={allocationAmount}
-                onChange={setAllocationAmount}
-                prefix={currencySymbol}
-                max={allocationMax}
-                required
-              />
-
-              {/* Quick Preset Buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const maxPool = allocationSource === "core" ? availableCoreSavings : availableSurplus;
-                    setAllocationAmount(toAmountInput(maxPool * 0.5));
-                  }}
-                  className="flex-1 py-1 text-xs font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
-                >
-                  {t.savings.quickHalf}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const maxPool = allocationSource === "core" ? availableCoreSavings : availableSurplus;
+      <Dialog
+        isOpen={allocatingGoal !== null}
+        onClose={() => setAllocatingGoal(null)}
+        busy={isSubmitting}
+        title={allocatingGoal ? `${allocatingGoal.emoji || "🎯"} ${t.savings.allocateModalTitle}` : t.savings.allocateModalTitle}
+        description={allocatingGoal ? `${t.savings.allocateModalSubtitle} (${allocatingGoal.name})` : undefined}
+        closeLabel={t.common.close}
+        footer={
+          <>
+            <Button block onClick={() => setAllocatingGoal(null)} disabled={isSubmitting}>
+              {t.common.cancel}
+            </Button>
+            <Button
+              block
+              variant="primary"
+              type="submit"
+              form="savings-allocate-form"
+              disabled={isSubmitting || !parseRupiahInput(allocationAmount, { max: allocationMax }).ok}
+            >
+              {isSubmitting ? t.common.saving : t.savings.confirmAllocate}
+            </Button>
+          </>
+        }
+      >
+        {allocatingGoal && (
+          <form id="savings-allocate-form" onSubmit={handleAllocate} className="flex flex-col gap-4">
+            {availableSurplus > 0 && availableCoreSavings > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-semibold text-ink" aria-hidden="true">
+                  {t.savings.fundingSourceLabel}
+                </span>
+                <SegmentedControl
+                  ariaLabel={t.savings.fundingSourceLabel}
+                  value={allocationSource}
+                  onChange={(source) => {
+                    setAllocationSource(source);
+                    const pool = source === "core" ? availableCoreSavings : availableSurplus;
                     const maxNeeded = Math.max(0, allocatingGoal.targetAmount - allocatingGoal.allocatedAmount);
-                    setAllocationAmount(toAmountInput(Math.min(maxNeeded, maxPool)));
+                    setAllocationAmount(toAmountInput(Math.min(maxNeeded, pool)));
                   }}
-                  className="flex-1 py-1 text-xs font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
-                >
-                  {t.savings.quickAll}
-                </button>
-              </div>
-
-              <div className="mt-3 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAllocatingGoal(null)}
-                  className="px-3 py-1.5 rounded-xl border border-zinc-200 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                >
-                  {t.common.cancel}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !parseRupiahInput(allocationAmount, { max: allocationMax }).ok}
-                  className="px-4 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-semibold hover:bg-teal-700 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
-                >
-                  {isSubmitting ? t.common.saving : t.savings.confirmAllocate}
-                </button>
-              </div>
-            </form>
-          </div>
-        </ModalOverlay>
-      )}
-
-      {/* Modal: Withdraw from Goal */}
-      {withdrawingGoal && (
-        <ModalOverlay className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fade-in">
-          <div className="w-full max-w-sm rounded-3xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-scale-in">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                <span>{withdrawingGoal.emoji}</span>
-                <span>{t.savings.withdrawModalTitle}</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setWithdrawingGoal(null)}
-                className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              {t.savings.withdrawModalSubtitle}
-            </p>
-
-            <form onSubmit={handleWithdraw} className="mt-4 flex flex-col gap-3">
-              <MoneyField
-                label={t.savings.allocationAmountLabel}
-                hint={`${t.savings.maxAllocated}: ${formatCurrency(withdrawingGoal.allocatedAmount)}`}
-                value={withdrawingAmount}
-                onChange={setWithdrawingAmount}
-                prefix={currencySymbol}
-                max={withdrawingGoal.allocatedAmount}
-                required
-              />
-
-              <div className="mt-3 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setWithdrawingGoal(null)}
-                  className="px-3 py-1.5 rounded-xl border border-zinc-200 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                >
-                  {t.common.cancel}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !parseRupiahInput(withdrawingAmount, { max: withdrawingGoal.allocatedAmount }).ok}
-                  className="px-4 py-1.5 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 text-xs font-semibold hover:opacity-90 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
-                >
-                  {isSubmitting ? t.common.saving : t.savings.confirmWithdraw}
-                </button>
-              </div>
-            </form>
-          </div>
-        </ModalOverlay>
-      )}
-
-      {/* Modal: Alirkan Sisa Anggaran (Sweep Surplus) */}
-      {isSweepModalOpen && (
-        <ModalOverlay className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fade-in">
-          <div className="w-full max-w-sm rounded-3xl border border-amber-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-scale-in">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                <span>{t.savings.sweepModalTitle}</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsSweepModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              {t.savings.sweepModalSubtitle}
-            </p>
-
-            <form onSubmit={handleSweep} className="mt-4 flex flex-col gap-3.5">
-              <MoneyField
-                label="Nominal yang Dialirkan"
-                hint={`${t.savings.maxAvailable}: ${formatCurrency(availableSurplus)}`}
-                value={sweepAmount}
-                onChange={setSweepAmount}
-                prefix={currencySymbol}
-                max={availableSurplus}
-                required
-              />
-
-              {/* Presets */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSweepAmount(toAmountInput(availableSurplus * 0.5))}
-                  className="flex-1 py-1 text-xs font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
-                >
-                  50% ({formatCurrency(Math.round(availableSurplus * 0.5))})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSweepAmount(toAmountInput(availableSurplus))}
-                  className="flex-1 py-1 text-xs font-medium rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 cursor-pointer text-zinc-700 dark:text-zinc-300"
-                >
-                  Semua ({formatCurrency(availableSurplus)})
-                </button>
-              </div>
-
-              {/* Destination Selection */}
-              <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 block">
-                  {t.savings.sweepDestinationLabel}
-                </label>
-                <div className="flex flex-col gap-2">
-                  <label className="flex items-center gap-2 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors">
-                    <input
-                      type="radio"
-                      name="sweepDestination"
-                      checked={sweepTargetGoalId === ""}
-                      onChange={() => setSweepTargetGoalId("")}
-                      className="text-amber-500 focus:ring-amber-500"
-                    />
-                    <div className="text-xs">
-                      <span className="font-bold text-zinc-800 dark:text-zinc-200 block">
-                        🏦 {t.savings.sweepToCoreSavings}
-                      </span>
-                      <span className="text-xs text-zinc-500">
-                        Disatukan ke saldo tabungan pokok yang bebas dialokasikan kapan saja
-                      </span>
-                    </div>
-                  </label>
-
-                  {goals.length > 0 && (
-                    <label className="flex items-start gap-2 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors">
-                      <input
-                        type="radio"
-                        name="sweepDestination"
-                        checked={sweepTargetGoalId !== ""}
-                        onChange={() => setSweepTargetGoalId(goals[0]?.id || "")}
-                        className="mt-0.5 text-amber-500 focus:ring-amber-500"
-                      />
-                      <div className="flex-1 text-xs">
-                        <span className="font-bold text-zinc-800 dark:text-zinc-200 block mb-1">
-                          🎯 {t.savings.sweepToGoal}
-                        </span>
-                        {sweepTargetGoalId !== "" && (
-                          <select
-                            value={sweepTargetGoalId}
-                            onChange={(e) => setSweepTargetGoalId(e.target.value)}
-                            className="w-full mt-1 rounded-lg border border-zinc-200 bg-white p-1.5 text-xs text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                          >
-                            {goals.map((g) => (
-                              <option key={g.id} value={g.id}>
-                                {g.emoji} {g.name} (Terkumpul {formatCurrency(g.allocatedAmount)} / {formatCurrency(g.targetAmount)})
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsSweepModalOpen(false)}
-                  className="px-3 py-1.5 rounded-xl border border-zinc-200 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                >
-                  {t.common.cancel}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !parseRupiahInput(sweepAmount, { max: availableSurplus }).ok}
-                  className="px-4 py-1.5 rounded-xl bg-accent text-on-accent text-xs font-semibold hover:brightness-95 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
-                >
-                  {isSubmitting ? t.common.saving : t.savings.confirmSweep}
-                </button>
-              </div>
-            </form>
-          </div>
-        </ModalOverlay>
-      )}
-
-      {/* Modal: Manual Core Savings Adjustment */}
-      {isAdjustmentModalOpen && (
-        <ModalOverlay className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fade-in">
-          <div className="w-full max-w-sm rounded-3xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-scale-in">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-                {t.savings.manualAdjustmentTitle}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsAdjustmentModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              {t.savings.manualAdjustmentSubtitle}
-            </p>
-
-            <form onSubmit={handleManualAdjustment} className="mt-4 flex flex-col gap-3.5">
-              <div className="flex rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setAdjustmentType("deposit")}
-                  className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                    adjustmentType === "deposit"
-                      ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-900 dark:text-white"
-                      : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-                  }`}
-                >
-                  {t.savings.adjustmentTypeDeposit}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAdjustmentType("withdraw")}
-                  className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                    adjustmentType === "withdraw"
-                      ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-900 dark:text-white"
-                      : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-                  }`}
-                >
-                  {t.savings.adjustmentTypeWithdraw}
-                </button>
-              </div>
-
-              <MoneyField
-                label={t.savings.adjustmentAmountLabel}
-                hint={
-                  adjustmentType === "withdraw"
-                    ? `Saldo tersedia: ${formatCurrency(withdrawableSavings)}`
-                    : undefined
-                }
-                value={adjustmentAmount}
-                onChange={setAdjustmentAmount}
-                prefix={currencySymbol}
-                placeholder="250.000"
-                {...adjustmentLimit}
-                required
-              />
-
-              <div>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1 block">
-                  {t.savings.adjustmentNoteLabel}
-                </label>
-                <input
-                  type="text"
-                  value={adjustmentNote}
-                  onChange={(e) => setAdjustmentNote(e.target.value)}
-                  placeholder={
-                    adjustmentType === "deposit"
-                      ? "cth. Gaji bulanan, Setoran awal, Bonus"
-                      : "cth. Keperluan mendadak, Beli obat, Tarik tunai"
-                  }
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 outline-none focus:border-teal-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+                  options={[
+                    { value: "core", label: t.savings.fundingCore },
+                    { value: "surplus", label: t.savings.fundingSurplus },
+                  ]}
                 />
               </div>
+            )}
 
-              <div className="mt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAdjustmentModalOpen(false)}
-                  className="px-3 py-1.5 rounded-xl border border-zinc-200 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                >
-                  {t.common.cancel}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !parseRupiahInput(adjustmentAmount, adjustmentLimit).ok}
-                  className="px-4 py-1.5 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 text-xs font-semibold hover:opacity-90 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
-                >
-                  {isSubmitting ? t.common.saving : t.common.save}
-                </button>
-              </div>
-            </form>
+            <MoneyField
+              label={t.savings.allocationAmountLabel}
+              hint={`${t.savings.maxAvailable}: ${formatCurrency(allocationMax)}`}
+              value={allocationAmount}
+              onChange={setAllocationAmount}
+              prefix={currencySymbol}
+              max={allocationMax}
+              required
+            />
+
+            <div className="flex items-center gap-2">
+              <Button
+                block
+                onClick={() => {
+                  const maxPool = allocationSource === "core" ? availableCoreSavings : availableSurplus;
+                  setAllocationAmount(toAmountInput(maxPool * 0.5));
+                }}
+              >
+                {t.savings.quickHalf}
+              </Button>
+              <Button
+                block
+                onClick={() => {
+                  const maxPool = allocationSource === "core" ? availableCoreSavings : availableSurplus;
+                  const maxNeeded = Math.max(0, allocatingGoal.targetAmount - allocatingGoal.allocatedAmount);
+                  setAllocationAmount(toAmountInput(Math.min(maxNeeded, maxPool)));
+                }}
+              >
+                {t.savings.quickAll}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Dialog>
+
+      <Dialog
+        isOpen={withdrawingGoal !== null}
+        onClose={() => setWithdrawingGoal(null)}
+        busy={isSubmitting}
+        title={withdrawingGoal ? `${withdrawingGoal.emoji || "🎯"} ${t.savings.withdrawModalTitle}` : t.savings.withdrawModalTitle}
+        description={t.savings.withdrawModalSubtitle}
+        closeLabel={t.common.close}
+        footer={
+          <>
+            <Button block onClick={() => setWithdrawingGoal(null)} disabled={isSubmitting}>
+              {t.common.cancel}
+            </Button>
+            <Button
+              block
+              variant="primary"
+              type="submit"
+              form="savings-withdraw-form"
+              disabled={
+                isSubmitting ||
+                !withdrawingGoal ||
+                !parseRupiahInput(withdrawingAmount, { max: withdrawingGoal.allocatedAmount }).ok
+              }
+            >
+              {isSubmitting ? t.common.saving : t.savings.confirmWithdraw}
+            </Button>
+          </>
+        }
+      >
+        {withdrawingGoal && (
+          <form id="savings-withdraw-form" onSubmit={handleWithdraw} className="flex flex-col gap-4">
+            <MoneyField
+              label={t.savings.allocationAmountLabel}
+              hint={`${t.savings.maxAllocated}: ${formatCurrency(withdrawingGoal.allocatedAmount)}`}
+              value={withdrawingAmount}
+              onChange={setWithdrawingAmount}
+              prefix={currencySymbol}
+              max={withdrawingGoal.allocatedAmount}
+              required
+            />
+          </form>
+        )}
+      </Dialog>
+
+      <Dialog
+        isOpen={isSweepModalOpen}
+        onClose={() => setIsSweepModalOpen(false)}
+        busy={isSubmitting}
+        title={t.savings.sweepModalTitle}
+        description={t.savings.sweepModalSubtitle}
+        closeLabel={t.common.close}
+        footer={
+          <>
+            <Button block onClick={() => setIsSweepModalOpen(false)} disabled={isSubmitting}>
+              {t.common.cancel}
+            </Button>
+            <Button
+              block
+              variant="primary"
+              type="submit"
+              form="savings-sweep-form"
+              disabled={isSubmitting || !parseRupiahInput(sweepAmount, { max: availableSurplus }).ok}
+            >
+              {isSubmitting ? t.common.saving : t.savings.confirmSweep}
+            </Button>
+          </>
+        }
+      >
+        <form id="savings-sweep-form" onSubmit={handleSweep} className="flex flex-col gap-4">
+          <MoneyField
+            label={t.savings.sweepAmountLabel}
+            hint={`${t.savings.maxAvailable}: ${formatCurrency(availableSurplus)}`}
+            value={sweepAmount}
+            onChange={setSweepAmount}
+            prefix={currencySymbol}
+            max={availableSurplus}
+            required
+          />
+
+          <div className="flex items-center gap-2">
+            <Button block onClick={() => setSweepAmount(toAmountInput(availableSurplus * 0.5))}>
+              50% ({formatCurrency(Math.round(availableSurplus * 0.5))})
+            </Button>
+            <Button block onClick={() => setSweepAmount(toAmountInput(availableSurplus))}>
+              Semua ({formatCurrency(availableSurplus)})
+            </Button>
           </div>
-        </ModalOverlay>
-      )}
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1.5 text-sm font-semibold text-ink">{t.savings.sweepDestinationLabel}</legend>
+            <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-field-line p-3 hover:bg-paper">
+              <input
+                type="radio"
+                name="sweepDestination"
+                checked={sweepTargetGoalId === ""}
+                onChange={() => setSweepTargetGoalId("")}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--accent)]"
+              />
+              <span className="text-sm">
+                <span className="block font-bold text-ink">🏦 {t.savings.sweepToCoreSavings}</span>
+                <span className="block text-xs text-ink-soft">{t.savings.sweepCoreHint}</span>
+              </span>
+            </label>
+
+            {goals.length > 0 && (
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-field-line p-3 hover:bg-paper">
+                <input
+                  type="radio"
+                  name="sweepDestination"
+                  checked={sweepTargetGoalId !== ""}
+                  onChange={() => setSweepTargetGoalId(goals[0]?.id || "")}
+                  className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--accent)]"
+                />
+                <span className="text-sm font-bold text-ink">🎯 {t.savings.sweepToGoal}</span>
+              </label>
+            )}
+          </fieldset>
+
+          {sweepTargetGoalId !== "" && (
+            <SelectField
+              label={t.savings.sweepGoalSelectLabel}
+              value={sweepTargetGoalId}
+              onChange={(e) => setSweepTargetGoalId(e.target.value)}
+            >
+              {goals.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.emoji} {g.name} (Terkumpul {formatCurrency(g.allocatedAmount)} / {formatCurrency(g.targetAmount)})
+                </option>
+              ))}
+            </SelectField>
+          )}
+        </form>
+      </Dialog>
+
+      <Dialog
+        isOpen={isAdjustmentModalOpen}
+        onClose={() => setIsAdjustmentModalOpen(false)}
+        busy={isSubmitting}
+        title={t.savings.manualAdjustmentTitle}
+        description={t.savings.manualAdjustmentSubtitle}
+        closeLabel={t.common.close}
+        footer={
+          <>
+            <Button block onClick={() => setIsAdjustmentModalOpen(false)} disabled={isSubmitting}>
+              {t.common.cancel}
+            </Button>
+            <Button
+              block
+              variant="primary"
+              type="submit"
+              form="savings-adjust-form"
+              disabled={isSubmitting || !parseRupiahInput(adjustmentAmount, adjustmentLimit).ok}
+            >
+              {isSubmitting ? t.common.saving : t.common.save}
+            </Button>
+          </>
+        }
+      >
+        <form id="savings-adjust-form" onSubmit={handleManualAdjustment} className="flex flex-col gap-4">
+          <SegmentedControl
+            ariaLabel={t.savings.adjustmentTypeLabel}
+            value={adjustmentType}
+            onChange={setAdjustmentType}
+            options={[
+              { value: "deposit", label: t.savings.adjustmentTypeDeposit },
+              { value: "withdraw", label: t.savings.adjustmentTypeWithdraw },
+            ]}
+          />
+
+          <MoneyField
+            label={t.savings.adjustmentAmountLabel}
+            hint={adjustmentType === "withdraw" ? `Saldo tersedia: ${formatCurrency(withdrawableSavings)}` : undefined}
+            value={adjustmentAmount}
+            onChange={setAdjustmentAmount}
+            prefix={currencySymbol}
+            placeholder="250.000"
+            {...adjustmentLimit}
+            required
+          />
+
+          <TextField
+            label={t.savings.adjustmentNoteLabel}
+            type="text"
+            value={adjustmentNote}
+            onChange={(e) => setAdjustmentNote(e.target.value)}
+            placeholder={
+              adjustmentType === "deposit"
+                ? "cth. Gaji bulanan, Setoran awal, Bonus"
+                : "cth. Keperluan mendadak, Beli obat, Tarik tunai"
+            }
+          />
+        </form>
+      </Dialog>
 
       {/* Bottom spacer for clearance above floating navbar and gradient */}
       <div className="h-8 shrink-0" aria-hidden="true" />
