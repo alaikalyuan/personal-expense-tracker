@@ -11,6 +11,7 @@ import {
   computeNextRenewalDate,
 } from "./types";
 import { createSplitBill } from "@/app/split/actions";
+import { normalizeSplitConfig, toDbSplitConfig } from "./splitConfig";
 import { MONEY_ERRORS, MONEY_INPUT_MAX } from "@/utils/money";
 
 /** A subscription price from the client: a finite number, 0 or more (decimals allowed for non-rupiah). */
@@ -60,12 +61,7 @@ export async function createSubscription(payload: CreateSubscriptionPayload) {
       reminder_days_before: Number(payload.reminderDaysBefore) || 2,
       is_split: Boolean(payload.isSplit),
       pay_from_wallet_id: payload.payFromWalletId || null,
-      split_config: payload.splitConfig || {
-        split_mode: "equal",
-        friends: [],
-        auto_create_split_bill: true,
-        auto_log_to_expenses: true,
-      },
+      split_config: toDbSplitConfig(payload.splitConfig),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -115,7 +111,7 @@ export async function updateSubscription(
   if (payload.isSplit !== undefined) updateData.is_split = Boolean(payload.isSplit);
   if (payload.payFromWalletId !== undefined)
     updateData.pay_from_wallet_id = payload.payFromWalletId || null;
-  if (payload.splitConfig !== undefined) updateData.split_config = payload.splitConfig;
+  if (payload.splitConfig !== undefined) updateData.split_config = toDbSplitConfig(payload.splitConfig);
 
   const { error } = await supabase
     .from("subscriptions")
@@ -190,8 +186,8 @@ export async function createSplitBillFromSubscription(subscriptionId: string) {
     throw new Error("Langganan tidak ditemukan");
   }
 
-  const splitConfig = sub.split_config || {};
-  const friends: Array<{ name: string; share?: number }> = splitConfig.friends || [];
+  const splitConfig = normalizeSplitConfig(sub.split_config);
+  const friends = splitConfig.friends;
 
   if (friends.length === 0) {
     throw new Error("Langganan ini belum memiliki daftar teman patungan.");
@@ -296,13 +292,14 @@ export async function processSubscriptionRenewals(targetUserId?: string) {
 
   let processedCount = 0;
 
-  for (const sub of dueSubs) {
+  for (const row of dueSubs) {
+    const sub = { ...row, split_config: normalizeSplitConfig(row.split_config) };
     // Avoid double processing the same date
     if (sub.last_processed_date === sub.next_renewal_date) {
       continue;
     }
 
-    if (sub.is_split && sub.split_config?.auto_create_split_bill) {
+    if (sub.is_split && sub.split_config.auto_create_split_bill) {
       try {
         await createSplitBillFromSubscription(sub.id);
         processedCount++;
@@ -311,7 +308,7 @@ export async function processSubscriptionRenewals(targetUserId?: string) {
       }
     } else {
       // Auto-log expense for non-split subscriptions if auto_log_to_expenses is true (default true)
-      if (Number(sub.price) > 0 && sub.split_config?.auto_log_to_expenses !== false) {
+      if (Number(sub.price) > 0 && sub.split_config.auto_log_to_expenses) {
         try {
           await supabase.from("expenses").insert({
             user_id: sub.user_id,
@@ -404,29 +401,30 @@ export async function paySubscription(
     throw new Error("Unauthorized");
   }
 
-  const { data: sub, error } = await supabase
+  const { data: row, error } = await supabase
     .from("subscriptions")
     .select("*")
     .eq("id", subscriptionId)
     .eq("user_id", user.id)
     .single();
 
-  if (error || !sub) {
+  if (error || !row) {
     throw new Error("Langganan tidak ditemukan");
   }
 
+  const sub = { ...row, split_config: normalizeSplitConfig(row.split_config) };
   const paidDate = options?.paidDate || getTodayString();
   const walletId = options?.walletId !== undefined ? options.walletId : (sub.pay_from_wallet_id || null);
 
   // If split with auto_create_split_bill, route through split bill creation
-  if (sub.is_split && sub.split_config?.auto_create_split_bill) {
+  if (sub.is_split && sub.split_config.auto_create_split_bill) {
     const res = await createSplitBillFromSubscription(sub.id);
     return { success: true, mode: "split" as const, billId: res.billId, nextRenewalDate: res.nextRenewalDate };
   }
 
   // Calculate personal portion to log
   let amountToLog = Number(sub.price) || 0;
-  if (sub.is_split && sub.split_config?.friends?.length > 0) {
+  if (sub.is_split && sub.split_config.friends.length > 0) {
     if (sub.split_config.split_mode === "custom") {
       const friendTotal = sub.split_config.friends.reduce(
         (sum: number, f: { share?: number }) => sum + (Number(f.share) || 0),
@@ -440,7 +438,7 @@ export async function paySubscription(
   }
 
   // Insert into expenses log if enabled
-  if (amountToLog > 0 && sub.split_config?.auto_log_to_expenses !== false) {
+  if (amountToLog > 0 && sub.split_config.auto_log_to_expenses) {
     const { error: expError } = await supabase.from("expenses").insert({
       user_id: user.id,
       category: sub.category || "Entertainment",
