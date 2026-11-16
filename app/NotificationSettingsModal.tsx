@@ -3,9 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   BellRing,
-  Clock,
   Sparkles,
-  X,
   Send,
   AlertCircle,
 } from "lucide-react";
@@ -18,7 +16,9 @@ import {
 } from "@/utils/pwa/pushManager";
 import { updateNotificationSettings } from "@/app/subscriptions/actions";
 import { useTranslation } from "@/utils/i18n/context";
-import ModalOverlay from "@/app/ui/ModalOverlay";
+import Dialog from "@/app/ui/Dialog";
+import Button from "@/app/ui/Button";
+import { CheckboxField, TextField } from "@/app/ui/Field";
 
 interface NotificationSettingsModalProps {
   isOpen: boolean;
@@ -153,51 +153,39 @@ export default function NotificationSettingsModal({
   };
 
   return (
-    <ModalOverlay className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-zinc-950/60 animate-fade-in">
-      <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-2xl animate-modal-in max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3.5 border-b border-zinc-200 dark:border-zinc-800">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
-              <BellRing className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                {t.notifications.title}
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {t.notifications.subtitle}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t.notifications.closeBtn}
-            className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <Dialog
+      isOpen
+      onClose={onClose}
+      busy={isTogglingPush}
+      title={t.notifications.title}
+      description={t.notifications.subtitle}
+      closeLabel={t.notifications.closeBtn}
+      footer={
+        <>
+          <Button block onClick={onClose}>
+            {t.notifications.closeBtn}
+          </Button>
+          <Button block variant="primary" onClick={handleSavePreferences}>
+            {t.notifications.saveBtn}
+          </Button>
+        </>
+      }
+    >
+      {isGuest && (
+        <p className="mb-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200">
+          <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+          <span>{t.notifications.guestWarning}</span>
+        </p>
+      )}
 
-        {/* Guest Warning */}
-        {isGuest && (
-          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
-            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-            <span>
-              {t.notifications.guestWarning}
-            </span>
-          </div>
-        )}
-
-        {/* Master Push Toggle Card */}
-        <div className="mt-4 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/40">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                {t.notifications.pushCardTitle}
-              </p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+      {/* Master push switch */}
+      <div className="rounded-2xl border border-line bg-paper p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <BellRing aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-purple-600 dark:text-purple-400" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-ink">{t.notifications.pushCardTitle}</p>
+              <p id="push-status" className="mt-0.5 text-xs text-ink-soft">
                 {isSubscribed
                   ? t.notifications.pushActive
                   : permission === "denied"
@@ -205,157 +193,81 @@ export default function NotificationSettingsModal({
                   : t.notifications.pushInactive}
               </p>
             </div>
-            <button
-              type="button"
-              disabled={isTogglingPush || isGuest}
-              onClick={handleTogglePush}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs disabled:opacity-50 ${
-                isSubscribed
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200"
-              }`}
-            >
-              {isTogglingPush ? t.notifications.btnProcessing : isSubscribed ? t.notifications.btnActive : t.notifications.btnEnable}
-            </button>
           </div>
-
-          {/* Test Notification Button */}
-          {isSubscribed && (
-            <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-700 flex justify-end">
-              <button
-                type="button"
-                onClick={handleSendTest}
-                className="flex items-center gap-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 cursor-pointer"
-              >
-                <Send className="w-3 h-3" />
-                <span>{t.notifications.sendTestBtn}</span>
-              </button>
-            </div>
-          )}
+          <Button
+            variant={isSubscribed ? "secondary" : "primary"}
+            disabled={isTogglingPush || isGuest}
+            onClick={handleTogglePush}
+            aria-describedby="push-status"
+          >
+            {isTogglingPush ? t.notifications.btnProcessing : isSubscribed ? t.notifications.btnActive : t.notifications.btnEnable}
+          </Button>
         </div>
 
-        {/* Test Result Status */}
-        {testStatus && (
-          <div
-            className={`mt-3 p-3 rounded-xl text-xs font-medium ${
-              testStatus.type === "success"
-                ? "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800"
-                : testStatus.type === "error"
-                ? "bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800"
-                : "bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800"
-            }`}
-          >
-            {testStatus.msg}
+        {isSubscribed && (
+          <div className="mt-3 flex justify-end border-t border-line pt-2">
+            <Button variant="ghost" onClick={handleSendTest} className="-mr-2">
+              <Send aria-hidden="true" className="h-4 w-4" />
+              {t.notifications.sendTestBtn}
+            </Button>
           </div>
         )}
-
-        {/* Detailed Preferences */}
-        <div className="mt-5 space-y-4">
-          {/* Daily Reminder Time */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-indigo-500" />
-              <div>
-                <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                  {t.notifications.dailyReminderTime}
-                </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {t.notifications.dailyReminderTimeDesc}
-                </p>
-              </div>
-            </div>
-            <input
-              type="time"
-              value={reminderTime}
-              onChange={(e) => setReminderTime(e.target.value)}
-              className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-2.5 py-1 text-xs text-zinc-900 dark:text-zinc-100 font-semibold"
-            />
-          </div>
-
-          {/* Daily Reminder Toggle */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                {t.notifications.reminderToggleTitle}
-              </p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {t.notifications.reminderToggleDesc}
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={dailyReminder}
-              onChange={(e) => setDailyReminder(e.target.checked)}
-              className="w-4 h-4 rounded text-zinc-900 focus:ring-zinc-900 cursor-pointer"
-            />
-          </div>
-
-          {/* Motivational Quotes */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <div>
-                <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                  {t.notifications.quotesToggleTitle}
-                </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {t.notifications.quotesToggleDesc}
-                </p>
-              </div>
-            </div>
-            <input
-              type="checkbox"
-              checked={motivationalQuotes}
-              onChange={(e) => setMotivationalQuotes(e.target.checked)}
-              className="w-4 h-4 rounded text-zinc-900 focus:ring-zinc-900 cursor-pointer"
-            />
-          </div>
-
-          {/* Subscription Renewals */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                {t.notifications.subsToggleTitle}
-              </p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {t.notifications.subsToggleDesc}
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={subscriptionReminders}
-              onChange={(e) => setSubscriptionReminders(e.target.checked)}
-              className="w-4 h-4 rounded text-zinc-900 focus:ring-zinc-900 cursor-pointer"
-            />
-          </div>
-        </div>
-
-        {/* PWA Tips */}
-        <div className="mt-5 p-3 rounded-xl bg-zinc-100/60 dark:bg-zinc-800/60 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-          <p className="font-semibold text-zinc-700 dark:text-zinc-300 mb-0.5">
-            {t.notifications.tipsTitle}
-          </p>
-          {t.notifications.tipsDesc}
-        </div>
-
-        {/* Footer Buttons */}
-        <div className="mt-5 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            {t.notifications.closeBtn}
-          </button>
-          <button
-            type="button"
-            onClick={handleSavePreferences}
-            className="flex-1 py-2 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors cursor-pointer shadow-xs"
-          >
-            {t.notifications.saveBtn}
-          </button>
-        </div>
       </div>
-    </ModalOverlay>
+
+      {testStatus && (
+        <p
+          role={testStatus.type === "error" ? "alert" : "status"}
+          className={`mt-3 rounded-xl border p-3 text-xs font-medium ${
+            testStatus.type === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
+              : testStatus.type === "error"
+              ? "border-danger bg-danger-soft text-danger"
+              : "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
+          }`}
+        >
+          {testStatus.msg}
+        </p>
+      )}
+
+      {/* Preferences */}
+      <div className="mt-5 flex flex-col gap-3">
+        <TextField
+          label={t.notifications.dailyReminderTime}
+          hint={t.notifications.dailyReminderTimeDesc}
+          type="time"
+          value={reminderTime}
+          onChange={(e) => setReminderTime(e.target.value)}
+          className="scheme-light dark:scheme-dark"
+        />
+        <CheckboxField
+          checked={dailyReminder}
+          onChange={(e) => setDailyReminder(e.target.checked)}
+          label={<span className="font-semibold">{t.notifications.reminderToggleTitle}</span>}
+          hint={t.notifications.reminderToggleDesc}
+        />
+        <CheckboxField
+          checked={motivationalQuotes}
+          onChange={(e) => setMotivationalQuotes(e.target.checked)}
+          label={
+            <span className="flex items-center gap-1.5 font-semibold">
+              <Sparkles aria-hidden="true" className="h-4 w-4 text-amber-600" />
+              {t.notifications.quotesToggleTitle}
+            </span>
+          }
+          hint={t.notifications.quotesToggleDesc}
+        />
+        <CheckboxField
+          checked={subscriptionReminders}
+          onChange={(e) => setSubscriptionReminders(e.target.checked)}
+          label={<span className="font-semibold">{t.notifications.subsToggleTitle}</span>}
+          hint={t.notifications.subsToggleDesc}
+        />
+      </div>
+
+      <div className="mt-5 rounded-xl bg-paper p-3 text-xs leading-relaxed text-ink-soft">
+        <p className="mb-0.5 font-semibold text-ink">{t.notifications.tipsTitle}</p>
+        {t.notifications.tipsDesc}
+      </div>
+    </Dialog>
   );
 }

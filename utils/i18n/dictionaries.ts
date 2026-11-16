@@ -36,6 +36,7 @@ export interface Dictionary {
     signOut: string;
     addExpense: string;
     openMenu: string;
+    menuTitle: string;
     language: string;
     indonesian: string;
     english: string;
@@ -206,6 +207,9 @@ export interface Dictionary {
     momHigherBadge: string;
   };
   streak: {
+    dayLogged: string;
+    dayUpcoming: string;
+    dayNotLogged: string;
     title: string;
     dayStreak: string;
     daysStreak: string;
@@ -1069,6 +1073,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       signOut: "Keluar",
       addExpense: "Tambah pengeluaran",
       openMenu: "Buka menu",
+      menuTitle: "Menu",
       language: "Bahasa",
       indonesian: "Bahasa Indonesia",
       english: "English",
@@ -1246,6 +1251,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       momHigherBadge: "{percent}% lebih tinggi ({amount})",
     },
     streak: {
+      dayLogged: "Tercatat",
+      dayUpcoming: "Mendatang",
+      dayNotLogged: "Belum dicatat",
       title: "Logging Streak",
       dayStreak: "Hari",
       daysStreak: "Hari",
@@ -2119,6 +2127,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       signOut: "Sign out",
       addExpense: "Add expense",
       openMenu: "Open menu",
+      menuTitle: "Menu",
       language: "Language",
       indonesian: "Bahasa Indonesia",
       english: "English",
@@ -2296,6 +2305,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       momHigherBadge: "{percent}% higher ({amount})",
     },
     streak: {
+      dayLogged: "Logged",
+      dayUpcoming: "Upcoming",
+      dayNotLogged: "Not logged",
       title: "Logging Streak",
       dayStreak: "Day",
       daysStreak: "Days",

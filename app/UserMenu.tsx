@@ -236,7 +236,7 @@ export default function UserMenu({ isGuest = false, onOpenUpgrade, multiSakuEnab
         <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
 
-      <Dialog isOpen={isOpen} onClose={() => setIsOpen(false)} title={t.nav.openMenu} closeLabel={t.common.close}>
+      <Dialog isOpen={isOpen} onClose={() => setIsOpen(false)} title={t.nav.menuTitle} closeLabel={t.common.close}>
         <div className="-mx-2 flex flex-col gap-4">
           <section aria-labelledby="menu-pages">
             <h3 id="menu-pages" className="px-3 pb-1 text-xs font-semibold text-ink-soft">
