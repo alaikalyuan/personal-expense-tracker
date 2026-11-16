@@ -308,6 +308,7 @@ export default function ExportShareModal({
 
   return (
     <ModalOverlay
+      onClose={onClose}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) {
@@ -331,9 +332,9 @@ export default function ExportShareModal({
             type="button"
             onClick={onClose}
             aria-label={t.common.close}
-            className="p-1 text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200 rounded-md transition-colors cursor-pointer"
+            className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X aria-hidden="true" className="w-5 h-5" />
           </button>
         </div>
 

@@ -199,6 +199,7 @@ export default function PendingTransactionsBanner({
       {/* Review & Edit Modal */}
       {selectedTx && (
         <ModalOverlay
+          onClose={() => setSelectedTx(null)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           onClick={() => setSelectedTx(null)}
         >
@@ -208,7 +209,7 @@ export default function PendingTransactionsBanner({
           >
             <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-500" />
+                <Sparkles aria-hidden="true" className="h-4 w-4 text-amber-500" />
                 <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                   {t.emailSync.reviewModalTitle}
                 </h3>
@@ -216,9 +217,10 @@ export default function PendingTransactionsBanner({
               <button
                 type="button"
                 onClick={() => setSelectedTx(null)}
-                className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+                aria-label={t.common.close}
+                className="-mr-2 flex h-11 w-11 items-center justify-center rounded-xl text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
               >
-                <X className="h-4 w-4" />
+                <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
 
