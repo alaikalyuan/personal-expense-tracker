@@ -107,7 +107,7 @@ export default function TransferModal({
       )}
 
       <form id="saku-transfer-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4">
           <SelectField label={t.saku.fromSaku} value={fromWalletId} onChange={(e) => setFromWalletId(e.target.value)}>
             {wallets.map((w) => (
               <option key={w.id} value={w.id} disabled={w.id === toWalletId}>

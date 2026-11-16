@@ -14,6 +14,7 @@ import {
 } from "@/utils/splitCalculator";
 import { useTranslation } from "@/utils/i18n/context";
 import ModalOverlay from "@/app/ui/ModalOverlay";
+import { ToggleChip } from "@/app/ui/Toggle";
 
 interface FriendViewPreviewModalProps {
   isOpen: boolean;
@@ -69,19 +70,19 @@ export default function FriendViewPreviewModal({
 
   return (
     <ModalOverlay
-      role="dialog"
-      aria-modal="true"
+      onClose={onClose}
+      aria-labelledby="friend-preview-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-zinc-950/70 animate-fade-in"
     >
       <div className="relative w-full max-w-lg max-h-[92vh] flex flex-col bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         {/* Modal Header */}
         <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+            <div aria-hidden="true" className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold">
               <Eye className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100">
+              <h2 id="friend-preview-title" className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100">
                 {t.splitBill.previewModalTitle}
               </h2>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -93,9 +94,9 @@ export default function FriendViewPreviewModal({
             type="button"
             onClick={onClose}
             aria-label={t.splitBill.closeModal}
-            className="p-1.5 rounded-full text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X aria-hidden="true" className="w-5 h-5" />
           </button>
         </div>
 
@@ -103,30 +104,21 @@ export default function FriendViewPreviewModal({
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           {/* Participant switcher tabs */}
           <div>
-            <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2 block">
+            <span id="friend-preview-pick" className="text-sm font-semibold text-ink mb-2 block">
               {t.splitBill.selectParticipantLabel}
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {calculation.participants.map((p) => {
-                const isSelected = p.participantId === selectedParticipantId;
-                return (
-                  <button
-                    key={p.participantId}
-                    type="button"
-                    onClick={() => setSelectedParticipantId(p.participantId)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-                      isSelected
-                        ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs"
-                        : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                    }`}
-                  >
-                    <span>{p.name}</span>
-                    {p.isCreator && (
-                      <span className="text-xs opacity-75 font-normal">({t.splitBill.hostBadge})</span>
-                    )}
-                  </button>
-                );
-              })}
+            </span>
+            <div role="group" aria-labelledby="friend-preview-pick" className="flex flex-wrap gap-1.5">
+              {calculation.participants.map((p) => (
+                <ToggleChip
+                  key={p.participantId}
+                  pressed={p.participantId === (activeParticipant?.participantId ?? selectedParticipantId)}
+                  onClick={() => setSelectedParticipantId(p.participantId)}
+                  className="text-xs"
+                >
+                  <span>{p.name}</span>
+                  {p.isCreator && <span className="font-normal opacity-80">({t.splitBill.hostBadge})</span>}
+                </ToggleChip>
+              ))}
             </div>
           </div>
 
@@ -267,7 +259,7 @@ export default function FriendViewPreviewModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="w-full sm:w-auto min-h-11 px-4 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             {t.splitBill.continueEditingBtn}
           </button>
@@ -275,7 +267,7 @@ export default function FriendViewPreviewModal({
             type="button"
             onClick={onConfirmPublish}
             disabled={isPublishing}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-600 text-white font-semibold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full sm:w-auto flex min-h-11 items-center justify-center gap-2 px-5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
           >
             {isPublishing ? (
               <span>{isEditMode ? t.splitBill.savingChangesBtn : t.splitBill.publishingBtn}</span>

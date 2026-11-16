@@ -24,7 +24,9 @@ import { createSplitBillFromSubscription } from "@/app/subscriptions/actions";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/utils/i18n/context";
 import AiHeaderButton from "@/app/ai/AiHeaderButton";
-import ModalOverlay from "@/app/ui/ModalOverlay";
+import Dialog from "@/app/ui/Dialog";
+import Button from "@/app/ui/Button";
+import { SegmentedControl } from "@/app/ui/Toggle";
 
 export interface HistoryBillRecord {
   id: string;
@@ -201,9 +203,9 @@ export default function SplitBillHistoryClient({
       <div className="flex items-center justify-between">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft aria-hidden="true" className="w-4 h-4" />
           <span>{t.splitBill.backToHome}</span>
         </Link>
 
@@ -211,9 +213,9 @@ export default function SplitBillHistoryClient({
           <AiHeaderButton />
           <Link
             href="/split/new"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer"
+            className="inline-flex min-h-11 items-center gap-1.5 px-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <Plus aria-hidden="true" className="w-4 h-4 stroke-[2.5]" />
             <span>{t.splitBill.newSplit}</span>
           </Link>
         </div>
@@ -264,14 +266,14 @@ export default function SplitBillHistoryClient({
         <div className="p-4 rounded-3xl border border-purple-200/80 dark:border-purple-900/50 bg-purple-50/40 dark:bg-purple-950/20 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+              <CreditCard aria-hidden="true" className="w-4 h-4 text-purple-700 dark:text-purple-400" />
+              <h2 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
                 {t.splitBill.recurringTitle} ({splitSubscriptions.length})
-              </h3>
+              </h2>
             </div>
             <Link
               href="/subscriptions"
-              className="text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
+              className="-mr-2 inline-flex min-h-11 items-center px-2 text-xs font-semibold text-purple-700 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
             >
               {t.splitBill.manageLink} &rarr;
             </Link>
@@ -298,9 +300,9 @@ export default function SplitBillHistoryClient({
                     type="button"
                     onClick={() => handleGenerateSplitFromSub(sub)}
                     disabled={triggeringSubId === sub.id}
-                    className="shrink-0 flex items-center gap-1 rounded-xl bg-purple-600 text-white hover:bg-purple-500 dark:bg-purple-500 dark:hover:bg-purple-400 dark:text-zinc-950 px-2.5 py-1.5 text-xs font-semibold transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                    className="shrink-0 flex min-h-11 items-center gap-1 rounded-xl bg-purple-700 text-white hover:bg-purple-800 dark:bg-purple-400 dark:hover:bg-purple-300 dark:text-zinc-950 px-3 text-xs font-semibold transition-all cursor-pointer shadow-xs disabled:opacity-50"
                   >
-                    <Sparkles className="w-3 h-3" />
+                    <Sparkles aria-hidden="true" className="w-3.5 h-3.5" />
                     <span>{triggeringSubId === sub.id ? t.splitBill.creatingBillBtn : t.splitBill.createBillBtn}</span>
                   </button>
                 </div>
@@ -314,44 +316,36 @@ export default function SplitBillHistoryClient({
       <div className="space-y-3">
         {/* Search Input */}
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <Search aria-hidden="true" className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft pointer-events-none" />
           <input
-            type="text"
+            type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t.splitBill.searchPlaceholder}
-            className="w-full pl-9 pr-3.5 py-2.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
+            aria-label={t.splitBill.historySearchLabel}
+            className="w-full min-h-11 pl-9 pr-3.5 rounded-2xl border border-field-line bg-paper text-base text-ink placeholder:text-ink-soft/70 hover:border-ink-soft"
           />
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-2xl">
-          {[
-            { id: "all", label: `${t.splitBill.tabAll} (${totalBillsCount})` },
-            { id: "active", label: `${t.splitBill.tabUnpaid} (${activeCount})` },
-            { id: "settled", label: `${t.splitBill.tabPaid} (${settledCount})` },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setFilterTab(tab.id as typeof filterTab)}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer text-center ${
-                filterTab === tab.id
-                  ? "bg-white text-zinc-900 dark:bg-zinc-700 dark:text-white shadow-xs"
-                  : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          ariaLabel={t.splitBill.historyFilterLabel}
+          value={filterTab}
+          onChange={setFilterTab}
+          className="[&>button]:px-1"
+          options={[
+            { value: "all", label: `${t.splitBill.tabAll} (${totalBillsCount})` },
+            { value: "active", label: `${t.splitBill.tabUnpaid} (${activeCount})` },
+            { value: "settled", label: `${t.splitBill.tabPaid} (${settledCount})` },
+          ]}
+        />
       </div>
 
       {/* Bills List */}
       <div className="space-y-3">
         {filteredBills.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center space-y-3 bg-white/50 dark:bg-zinc-900/50">
-            <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto text-zinc-400">
+            <div aria-hidden="true" className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto text-zinc-500">
               <Receipt className="w-6 h-6" />
             </div>
             <div>
@@ -367,9 +361,9 @@ export default function SplitBillHistoryClient({
             {!searchQuery && (
               <Link
                 href="/split/new"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-semibold cursor-pointer"
+                className="inline-flex min-h-11 items-center gap-1.5 px-4 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-sm font-semibold cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus aria-hidden="true" className="w-4 h-4" />
                 <span>{t.splitBill.createSplitBillBtn}</span>
               </Link>
             )}
@@ -384,9 +378,9 @@ export default function SplitBillHistoryClient({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                    <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
                       {b.title}
-                    </h3>
+                    </h2>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
                       {b.category}
                     </span>
@@ -431,7 +425,14 @@ export default function SplitBillHistoryClient({
 
               {/* Progress Bar & Unpaid Friend List */}
               <div className="space-y-1.5">
-                <div className="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                <div
+                  role="progressbar"
+                  aria-label={`${t.splitBill.paymentStatus}: ${b.title}`}
+                  aria-valuemin={0}
+                  aria-valuemax={b.totalCount}
+                  aria-valuenow={b.paidCount}
+                  className="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"
+                >
                   <div
                     className="h-full bg-emerald-500 rounded-full transition-all"
                     style={{
@@ -457,8 +458,8 @@ export default function SplitBillHistoryClient({
                   <button
                     type="button"
                     onClick={() => setDeletingBillId(b.id)}
-                    aria-label={t.splitBill.deleteBillAria}
-                    className="p-2 rounded-xl text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                    aria-label={t.splitBill.deleteBillNamed.replace("{title}", b.title)}
+                    className="flex h-11 w-11 items-center justify-center rounded-xl text-zinc-600 dark:text-zinc-300 hover:text-danger hover:bg-danger-soft transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" aria-hidden="true" />
                   </button>
@@ -466,8 +467,8 @@ export default function SplitBillHistoryClient({
                   {/* Edit button */}
                   <Link
                     href={`/split/${b.id}/edit`}
-                    aria-label={t.splitBill.editBillAria}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold transition-colors cursor-pointer"
+                    aria-label={t.splitBill.editBillNamed.replace("{title}", b.title)}
+                    className="inline-flex min-h-11 items-center gap-1 px-3 rounded-xl text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold transition-colors cursor-pointer"
                   >
                     <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>{t.splitBill.editBillBtn}</span>
@@ -477,7 +478,8 @@ export default function SplitBillHistoryClient({
                 {/* View Breakdown & Share */}
                 <Link
                   href={`/split/${b.id}`}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold transition-all cursor-pointer"
+                  aria-label={t.splitBill.openBillNamed.replace("{title}", b.title)}
+                  className="flex min-h-11 items-center gap-1.5 px-3.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold transition-all cursor-pointer"
                 >
                   <span>{t.splitBill.openAndShare}</span>
                   <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
@@ -488,54 +490,38 @@ export default function SplitBillHistoryClient({
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {deletingBillId && billToDelete && (
-        <ModalOverlay
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 animate-fade-in"
-        >
-          <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                  {t.splitBill.deleteModalTitle}
-                </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  {t.splitBill.deleteModalDesc.replace("{title}", billToDelete.title)}
-                  {billToDelete.logged_expense_id && (
-                    <span className="block mt-1 text-rose-600 dark:text-rose-400 font-medium">
-                      {t.splitBill.deleteExpenseWarning}
-                    </span>
-                  )}
-                </p>
-              </div>
+      {/* Delete confirmation */}
+      <Dialog
+        isOpen={Boolean(deletingBillId && billToDelete)}
+        onClose={() => setDeletingBillId(null)}
+        busy={isDeleting}
+        title={t.splitBill.deleteModalTitle}
+        closeLabel={t.splitBill.cancelBtn}
+        footer={
+          <>
+            <Button block onClick={() => setDeletingBillId(null)} disabled={isDeleting}>
+              {t.splitBill.cancelBtn}
+            </Button>
+            <Button block variant="danger" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? t.splitBill.deletingBtn : t.splitBill.deleteConfirmBtn}
+            </Button>
+          </>
+        }
+      >
+        {billToDelete && (
+          <div className="flex items-start gap-3">
+            <div aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-danger-soft text-danger">
+              <AlertTriangle className="h-5 w-5" />
             </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingBillId(null)}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {t.splitBill.cancelBtn}
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer shadow-xs disabled:opacity-50"
-              >
-                {isDeleting ? t.splitBill.deletingBtn : t.splitBill.deleteConfirmBtn}
-              </button>
-            </div>
+            <p className="text-sm text-ink-soft">
+              {t.splitBill.deleteModalDesc.replace("{title}", billToDelete.title)}
+              {billToDelete.logged_expense_id && (
+                <span className="mt-1 block font-medium text-danger">{t.splitBill.deleteExpenseWarning}</span>
+              )}
+            </p>
           </div>
-        </ModalOverlay>
-      )}
+        )}
+      </Dialog>
     </div>
   );
 }

@@ -466,13 +466,13 @@ export default function SavingsBalanceHistory({
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                        <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 [overflow-wrap:anywhere]">
                           {item.note || cfg.defaultLabel}
                         </span>
                         {item.goalName && (
-                          <span className="text-xs px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 font-medium shrink-0 flex items-center gap-1">
+                          <span className="text-xs px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 font-medium flex min-w-0 items-center gap-1">
                             <span>{item.goalEmoji || "🎯"}</span>
-                            <span className="truncate max-w-[120px]">{item.goalName}</span>
+                            <span className="[overflow-wrap:anywhere]">{item.goalName}</span>
                           </span>
                         )}
                       </div>

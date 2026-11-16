@@ -707,6 +707,17 @@ export interface Dictionary {
     paySuccess: string;
   };
   splitBill: {
+    friendNameLabel: string;
+    titleIdeasLabel: string;
+    dismissNotice: string;
+    historySearchLabel: string;
+    historyFilterLabel: string;
+    deleteBillNamed: string;
+    editBillNamed: string;
+    openBillNamed: string;
+    assignToLabel: string;
+    autoLogCategoryLabel: string;
+    scanReplaceTitle: string;
     backToHome: string;
     newSplit: string;
     historyTitle: string;
@@ -1763,6 +1774,17 @@ export const dictionaries: Record<Locale, Dictionary> = {
       paySuccess: "Pembayaran berhasil dicatat ke pengeluaran.",
     },
     splitBill: {
+      friendNameLabel: "Nama teman",
+      titleIdeasLabel: "Contoh judul",
+      dismissNotice: "Tutup pesan",
+      historySearchLabel: "Cari split bill",
+      historyFilterLabel: "Saring split bill",
+      deleteBillNamed: "Hapus {title}",
+      editBillNamed: "Ubah {title}",
+      openBillNamed: "Buka & bagikan {title}",
+      assignToLabel: "Yang ikut: {item}",
+      autoLogCategoryLabel: "Kategori",
+      scanReplaceTitle: "Hasil Pindai Struk",
       backToHome: "Kembali ke Beranda",
       newSplit: "Split Baru",
       historyTitle: "Riwayat Split Bill",
@@ -1851,7 +1873,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       step1Title: "Informasi Tagihan",
       step1Subtitle: "Nama pengeluaran dan cara pembagian",
       billTitleLabel: "Nama / Judul Tagihan",
-      billTitlePlaceholder: "Contoh: Makan Bareng Resto Padang, WiFi Kosan, dsb.",
+      billTitlePlaceholder: "cth: Makan bareng, WiFi kos",
       presetLunch: "Makan Siang",
       presetCoffee: "Nongkrong Kopi",
       presetElectricity: "Listrik PLN Kos",
@@ -1866,7 +1888,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       modeEqualDesc: "Cukup masukkan total biaya, langsung dibagi rata secara adil ke semua peserta.",
       step2Title: "Daftar Peserta Patungan",
       step2Subtitle: "{count} orang ikut patungan",
-      friendNamePlaceholder: "Ketik nama teman (cth: Budi, Siti)...",
+      friendNamePlaceholder: "cth: Budi, Siti",
       addFriendBtn: "Tambah",
       friendExistsError: 'Nama "{name}" sudah ada di daftar.',
       removeParticipantAria: "Hapus {name}",
@@ -2817,6 +2839,17 @@ export const dictionaries: Record<Locale, Dictionary> = {
       paySuccess: "Payment recorded to expenses.",
     },
     splitBill: {
+      friendNameLabel: "Friend's name",
+      titleIdeasLabel: "Title ideas",
+      dismissNotice: "Dismiss message",
+      historySearchLabel: "Search split bills",
+      historyFilterLabel: "Filter split bills",
+      deleteBillNamed: "Delete {title}",
+      editBillNamed: "Edit {title}",
+      openBillNamed: "Open & share {title}",
+      assignToLabel: "Shared by: {item}",
+      autoLogCategoryLabel: "Category",
+      scanReplaceTitle: "Scanned receipt",
       backToHome: "Back to Home",
       newSplit: "New Split",
       historyTitle: "Split Bill History",
@@ -2905,7 +2938,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       step1Title: "Bill Information",
       step1Subtitle: "Expense title and split method",
       billTitleLabel: "Bill Name / Title",
-      billTitlePlaceholder: "e.g. Dinner with Friends, Apartment WiFi, etc.",
+      billTitlePlaceholder: "e.g. Team dinner, flat WiFi",
       presetLunch: "Lunch",
       presetCoffee: "Coffee Hangout",
       presetElectricity: "Apartment Electricity",
@@ -2920,7 +2953,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       modeEqualDesc: "Just enter the total cost, and it will be split equally among all participants.",
       step2Title: "Participants List",
       step2Subtitle: "{count} people participating",
-      friendNamePlaceholder: "Type friend's name (e.g. Alex, Sam)...",
+      friendNamePlaceholder: "e.g. Alex, Sam",
       addFriendBtn: "Add",
       friendExistsError: 'Name "{name}" is already in the list.',
       removeParticipantAria: "Remove {name}",

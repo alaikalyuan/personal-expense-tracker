@@ -26,7 +26,8 @@ import {
 } from "@/utils/splitCalculator";
 import { toggleParticipantPaid, deleteSplitBill } from "@/app/split/actions";
 import { useTranslation } from "@/utils/i18n/context";
-import ModalOverlay from "@/app/ui/ModalOverlay";
+import Dialog from "@/app/ui/Dialog";
+import Button from "@/app/ui/Button";
 
 interface SplitBillViewerProps {
   bill: SplitBillRecord;
@@ -207,9 +208,9 @@ export default function SplitBillViewer({
       <div className="flex items-center justify-between">
         <Link
           href={isHost ? "/split" : "/"}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft aria-hidden="true" className="w-4 h-4" />
           <span>{isHost ? t.splitBill.historyBack : t.splitBill.back}</span>
         </Link>
 
@@ -220,8 +221,8 @@ export default function SplitBillViewer({
             </span>
             <Link
               href={`/split/${bill.id}/edit`}
-              aria-label={t.splitBill.editBillAria}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
+              aria-label={t.splitBill.editBillNamed.replace("{title}", bill.title)}
+              className="flex min-h-11 items-center gap-1 px-3 rounded-xl text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
             >
               <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
               <span>{t.splitBill.editBillBtn}</span>
@@ -229,7 +230,8 @@ export default function SplitBillViewer({
             <button
               type="button"
               onClick={() => setShowDeleteModal(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer"
+              aria-label={t.splitBill.deleteBillNamed.replace("{title}", bill.title)}
+              className="flex min-h-11 items-center gap-1 px-3 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
               <span>{t.splitBill.deleteBillBtn}</span>
@@ -276,7 +278,14 @@ export default function SplitBillViewer({
                 .replace("{percent}", String(Math.round((paidCount / Math.max(1, participants.length)) * 100)))}
             </span>
           </div>
-          <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+          <div
+            role="progressbar"
+            aria-label={t.splitBill.paymentStatus}
+            aria-valuemin={0}
+            aria-valuemax={participants.length}
+            aria-valuenow={paidCount}
+            className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"
+          >
             <div
               className="h-full bg-emerald-500 rounded-full transition-all duration-500"
               style={{
@@ -292,19 +301,19 @@ export default function SplitBillViewer({
           <button
             type="button"
             onClick={handleCopyLink}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 text-xs font-semibold active:scale-95 transition-all cursor-pointer"
+            className="flex min-h-11 items-center justify-center gap-1.5 px-2 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 text-xs font-semibold active:scale-95 transition-all cursor-pointer"
           >
-            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedLink ? t.splitBill.copied : t.splitBill.copyLink}</span>
+            {copiedLink ? <Check aria-hidden="true" className="w-4 h-4 text-emerald-700" /> : <Copy aria-hidden="true" className="w-4 h-4" />}
+            <span aria-live="polite">{copiedLink ? t.splitBill.copied : t.splitBill.copyLink}</span>
           </button>
 
           {/* Show QR Code */}
           <button
             type="button"
             onClick={() => setShowQrModal(true)}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 text-xs font-semibold active:scale-95 transition-all cursor-pointer"
+            className="flex min-h-11 items-center justify-center gap-1.5 px-2 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 text-xs font-semibold active:scale-95 transition-all cursor-pointer"
           >
-            <QrCode className="w-3.5 h-3.5 text-blue-500" />
+            <QrCode aria-hidden="true" className="w-4 h-4 text-blue-600" />
             <span>{t.splitBill.qrCode}</span>
           </button>
 
@@ -312,9 +321,9 @@ export default function SplitBillViewer({
           <button
             type="button"
             onClick={handleShareWhatsApp}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-600 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer shadow-xs"
+            className="flex min-h-11 items-center justify-center gap-1.5 px-2 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer shadow-xs"
           >
-            <Share2 className="w-3.5 h-3.5" />
+            <Share2 aria-hidden="true" className="w-4 h-4" />
             <span>{t.splitBill.whatsapp}</span>
           </button>
         </div>
@@ -350,10 +359,10 @@ export default function SplitBillViewer({
             <button
               type="button"
               onClick={() => handleCopyAccount(bill.payment_info.account_number || "")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer"
+              className="flex min-h-11 shrink-0 items-center gap-1.5 px-3 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer"
             >
-              {copiedAccount ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedAccount ? t.splitBill.copied : t.splitBill.copyAccountNo}</span>
+              {copiedAccount ? <Check aria-hidden="true" className="w-4 h-4 text-emerald-400" /> : <Copy aria-hidden="true" className="w-4 h-4" />}
+              <span aria-live="polite">{copiedAccount ? t.splitBill.copied : t.splitBill.copyAccountNo}</span>
             </button>
           </div>
         </div>
@@ -378,7 +387,8 @@ export default function SplitBillViewer({
                   : "border-amber-200/80 dark:border-amber-900/40 bg-amber-50/20 dark:bg-amber-950/10"
               }`}
             >
-              {/* Header row */}
+              {/* Header row: the heading holds the disclosure button */}
+              <h3>
               <button
                 type="button"
                 aria-expanded={isExpanded}
@@ -398,14 +408,14 @@ export default function SplitBillViewer({
                     {p.name.substring(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                    <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                       <span>{p.name}</span>
                       {p.isCreator && (
-                        <span className="text-xs text-zinc-400 font-normal">
+                        <span className="text-xs text-zinc-600 dark:text-zinc-400 font-normal">
                           ({t.splitBill.hostBadge})
                         </span>
                       )}
-                    </h3>
+                    </span>
                     <p className="text-xs font-black text-zinc-900 dark:text-zinc-50 mt-0.5">
                       {formatRupiah(p.totalOwed)}
                     </p>
@@ -432,6 +442,7 @@ export default function SplitBillViewer({
                   </span>
                 </div>
               </button>
+              </h3>
 
               {/* Expanded Item Breakdown */}
               {isExpanded && (
@@ -511,10 +522,10 @@ export default function SplitBillViewer({
                           handleTogglePaid(p.participantId, p.isPaid);
                         }}
                         disabled={isUpdating}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 ${
+                        className={`min-h-11 px-4 rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 ${
                           p.isPaid
-                            ? "bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                            : "bg-emerald-600 hover:bg-emerald-600 text-white shadow-xs"
+                            ? "bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+                            : "bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs"
                         }`}
                       >
                         {isUpdating
@@ -532,100 +543,67 @@ export default function SplitBillViewer({
         })}
       </div>
 
-      {/* QR Code Modal for In-Person Scanning */}
-      {showQrModal && (
-        <ModalOverlay
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 animate-fade-in"
-        >
-          <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 text-center space-y-4">
-            <div>
-              <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                {t.splitBill.scanQrTitle}
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                {t.splitBill.scanQrDesc}
-              </p>
+      {/* QR code for paying in person */}
+      <Dialog
+        isOpen={showQrModal}
+        onClose={() => setShowQrModal(false)}
+        title={t.splitBill.scanQrTitle}
+        description={t.splitBill.scanQrDesc}
+        closeLabel={t.splitBill.closeModal}
+        footer={
+          <Button block onClick={() => setShowQrModal(false)}>
+            {t.splitBill.closeModal}
+          </Button>
+        }
+      >
+        <div className="flex justify-center rounded-2xl border border-zinc-200 bg-white p-3 shadow-inner">
+          {qrDataUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={qrDataUrl}
+              alt={`QR Code untuk split bill ${bill.title}`}
+              width={224}
+              height={224}
+              className="h-56 w-56 object-contain"
+            />
+          ) : (
+            <div role="status" className="flex h-56 w-56 items-center justify-center text-xs text-zinc-600">
+              {t.splitBill.generatingQr}
             </div>
+          )}
+        </div>
+      </Dialog>
 
-            {/* QR Code Canvas / Image */}
-            <div className="flex justify-center p-3 bg-white rounded-2xl border border-zinc-200 shadow-inner">
-              {qrDataUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={qrDataUrl}
-                  alt={`QR Code untuk split bill ${bill.title}`}
-                  width={224}
-                  height={224}
-                  className="w-56 h-56 object-contain"
-                />
-              ) : (
-                <div className="w-56 h-56 flex items-center justify-center text-xs text-zinc-400">
-                  {t.splitBill.generatingQr}
-                </div>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowQrModal(false)}
-              className="w-full py-2.5 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold text-xs active:scale-95 transition-all cursor-pointer"
-            >
-              {t.splitBill.closeModal}
-            </button>
+      {/* Delete confirmation for the host */}
+      <Dialog
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        busy={isDeleting}
+        title={t.splitBill.deleteBillModalTitle}
+        closeLabel={t.splitBill.cancelBtn}
+        footer={
+          <>
+            <Button block onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>
+              {t.splitBill.cancelBtn}
+            </Button>
+            <Button block variant="danger" onClick={handleDeleteBill} disabled={isDeleting}>
+              {isDeleting ? t.splitBill.deletingBtn : t.splitBill.deleteConfirmBtn}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex items-start gap-3">
+          <div aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-danger-soft text-danger">
+            <AlertTriangle className="h-5 w-5" />
           </div>
-        </ModalOverlay>
-      )}
-
-      {/* Delete Confirmation Modal for Host */}
-      {showDeleteModal && (
-        <ModalOverlay
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 animate-fade-in"
-        >
-          <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                  {t.splitBill.deleteBillModalTitle}
-                </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  {t.splitBill.deleteBillModalDesc.replace("{title}", bill.title)}
-                  {bill.logged_expense_id && (
-                    <span className="block mt-1 text-rose-600 dark:text-rose-400 font-medium">
-                      {t.splitBill.deleteBillExpenseWarning}
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {t.splitBill.cancelBtn}
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteBill}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold active:scale-95 transition-all cursor-pointer shadow-xs disabled:opacity-50"
-              >
-                {isDeleting ? t.splitBill.deletingBtn : t.splitBill.deleteConfirmBtn}
-              </button>
-            </div>
-          </div>
-        </ModalOverlay>
-      )}
+          <p className="text-sm text-ink-soft">
+            {t.splitBill.deleteBillModalDesc.replace("{title}", bill.title)}
+            {bill.logged_expense_id && (
+              <span className="mt-1 block font-medium text-danger">{t.splitBill.deleteBillExpenseWarning}</span>
+            )}
+          </p>
+        </div>
+      </Dialog>
     </div>
   );
 }
