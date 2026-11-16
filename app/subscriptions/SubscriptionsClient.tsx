@@ -48,8 +48,10 @@ import { useTranslation } from "@/utils/i18n/context";
 import { getTodayString } from "@/utils/date";
 import type { Wallet } from "@/utils/wallets/server";
 import AiHeaderButton from "@/app/ai/AiHeaderButton";
-import ModalOverlay from "@/app/ui/ModalOverlay";
-import { MoneyField } from "@/app/ui/Field";
+import Dialog from "@/app/ui/Dialog";
+import Button from "@/app/ui/Button";
+import { CheckboxField, MoneyField, SelectField, TextField } from "@/app/ui/Field";
+import { SegmentedControl, ToggleChip } from "@/app/ui/Toggle";
 import { parseMoneyInput, toRupiahFieldValue } from "@/utils/money";
 
 interface SubscriptionsClientProps {
@@ -425,16 +427,16 @@ export default function SubscriptionsClient({
   };
 
   return (
-    <div className="min-h-screen pb-32 pt-4 px-4 max-w-md mx-auto">
+    <main className="min-h-screen pb-32 pt-4 px-4 max-w-md mx-auto">
       {/* Top Header */}
       <header className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2.5">
           <Link
             href="/"
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 active:scale-95 transition-all shadow-2xs"
+            className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 active:scale-95 transition-all shadow-2xs"
             aria-label={t.subscriptions.backToHome}
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft aria-hidden="true" className="w-4 h-4" />
           </Link>
           <div>
             <h1 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
@@ -451,9 +453,9 @@ export default function SubscriptionsClient({
           <button
             type="button"
             onClick={openCreateModal}
-            className="flex items-center gap-1.5 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 font-semibold px-3 py-2 text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+            className="flex min-h-11 items-center gap-1.5 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 font-semibold px-3 text-sm shadow-sm active:scale-95 transition-all cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <Plus aria-hidden="true" className="w-4 h-4 stroke-[2.5]" />
             <span>{t.subscriptions.add}</span>
           </button>
         </div>
@@ -471,7 +473,7 @@ export default function SubscriptionsClient({
           </div>
           <Link
             href="/login?next=/subscriptions"
-            className="rounded-lg bg-accent text-on-accent px-2.5 py-1 text-xs font-semibold hover:brightness-95 transition-colors"
+            className="inline-flex min-h-11 items-center rounded-xl bg-accent text-on-accent px-3 text-xs font-semibold hover:brightness-95 transition-colors"
           >
             {t.subscriptions.loginBtn}
           </Link>
@@ -481,15 +483,21 @@ export default function SubscriptionsClient({
       {/* Action Notification Message */}
       {actionMessage && (
         <div
-          className={`mb-4 rounded-xl p-3 text-xs font-medium flex items-center justify-between ${
+          role={actionMessage.type === "error" ? "alert" : "status"}
+          className={`mb-4 rounded-xl py-1 pl-3 pr-1 text-xs font-medium flex items-center justify-between gap-2 ${
             actionMessage.type === "success"
               ? "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800/40"
               : "bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800/40"
           }`}
         >
           <span>{actionMessage.text}</span>
-          <button type="button" onClick={() => setActionMessage(null)}>
-            <X className="w-3.5 h-3.5" />
+          <button
+            type="button"
+            onClick={() => setActionMessage(null)}
+            aria-label={t.subscriptions.dismissMessage}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl hover:bg-black/5 dark:hover:bg-white/10"
+          >
+            <X aria-hidden="true" className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -537,41 +545,17 @@ export default function SubscriptionsClient({
       )}
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-200/60 dark:bg-zinc-800/60 mb-4 text-xs font-medium">
-        <button
-          type="button"
-          onClick={() => setActiveTab("all")}
-          className={`flex-1 py-1.5 rounded-lg transition-all ${
-            activeTab === "all"
-              ? "bg-white text-zinc-900 shadow-2xs dark:bg-zinc-900 dark:text-white"
-              : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-          }`}
-        >
-          {t.subscriptions.tabAll} ({subscriptions.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("split")}
-          className={`flex-1 py-1.5 rounded-lg transition-all ${
-            activeTab === "split"
-              ? "bg-white text-zinc-900 shadow-2xs dark:bg-zinc-900 dark:text-white"
-              : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-          }`}
-        >
-          {t.subscriptions.tabSplit} ({subscriptions.filter((s) => s.is_split).length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("personal")}
-          className={`flex-1 py-1.5 rounded-lg transition-all ${
-            activeTab === "personal"
-              ? "bg-white text-zinc-900 shadow-2xs dark:bg-zinc-900 dark:text-white"
-              : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-          }`}
-        >
-          {t.subscriptions.tabPersonal} ({subscriptions.filter((s) => !s.is_split).length})
-        </button>
-      </div>
+      <SegmentedControl
+        ariaLabel={t.subscriptions.filterLabel}
+        value={activeTab}
+        onChange={setActiveTab}
+        className="mb-4"
+        options={[
+          { value: "all", label: `${t.subscriptions.tabAll} (${subscriptions.length})` },
+          { value: "split", label: `${t.subscriptions.tabSplit} (${subscriptions.filter((s) => s.is_split).length})` },
+          { value: "personal", label: `${t.subscriptions.tabPersonal} (${subscriptions.filter((s) => !s.is_split).length})` },
+        ]}
+      />
 
       {/* Subscription Cards List */}
       <div className="flex flex-col gap-3">
@@ -587,9 +571,9 @@ export default function SubscriptionsClient({
             <button
               type="button"
               onClick={openCreateModal}
-              className="mt-3.5 inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 text-white px-3.5 py-1.5 text-xs font-semibold hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all cursor-pointer"
+              className="mt-3.5 inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-zinc-900 text-white px-4 text-sm font-semibold hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus aria-hidden="true" className="w-4 h-4" />
               <span>{t.subscriptions.addSubscription}</span>
             </button>
           </div>
@@ -676,9 +660,9 @@ export default function SubscriptionsClient({
                 )}
 
                 {/* Bottom Row: Renewal Countdown + Controls */}
-                <div className="mt-3.5 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
+                <div className="mt-3.5 pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                   <div className="flex items-center gap-1.5 text-xs">
-                    <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+                    <Calendar aria-hidden="true" className="w-3.5 h-3.5 text-zinc-400" />
                     <span
                       className={`font-semibold text-xs ${
                         isToday
@@ -698,17 +682,16 @@ export default function SubscriptionsClient({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="-mr-2 ml-auto flex flex-wrap items-center justify-end gap-1">
                     {/* Pay / Record Payment Now */}
                     {!isPaused && (
                       <button
                         type="button"
                         onClick={() => handlePaySubscription(sub)}
                         disabled={processingSubId === sub.id}
-                        title={t.subscriptions.payNowBtn}
-                        className="flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 px-2 py-1 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+                        className="flex min-h-11 items-center gap-1 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 px-3 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
                       >
-                        <CheckCircle2 className="w-3 h-3" />
+                        <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5" />
                         <span>{processingSubId === sub.id ? "..." : t.subscriptions.payNowBtn}</span>
                       </button>
                     )}
@@ -719,10 +702,9 @@ export default function SubscriptionsClient({
                         type="button"
                         onClick={() => handleManualSplitBillCreation(sub)}
                         disabled={processingSubId === sub.id}
-                        title={t.subscriptions.splitBillBtn}
-                        className="flex items-center gap-1 rounded-lg bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 px-2 py-1 text-xs font-semibold transition-all cursor-pointer"
+                        className="flex min-h-11 items-center gap-1 rounded-xl bg-purple-100 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 px-3 text-xs font-semibold transition-all cursor-pointer"
                       >
-                        <Receipt className="w-3 h-3" />
+                        <Receipt aria-hidden="true" className="w-3.5 h-3.5" />
                         <span>{t.subscriptions.splitBillBtn}</span>
                       </button>
                     )}
@@ -730,38 +712,38 @@ export default function SubscriptionsClient({
                     {sub.last_split_bill_id && (
                       <Link
                         href={`/split/${sub.last_split_bill_id}`}
-                        title={t.subscriptions.viewLastSplitBill}
-                        className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
+                        aria-label={`${t.subscriptions.viewLastSplitBill}: ${sub.name}`}
+                        className="flex h-11 w-11 items-center justify-center rounded-xl text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
                       >
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <ExternalLink aria-hidden="true" className="w-4 h-4" />
                       </Link>
                     )}
 
                     <button
                       type="button"
                       onClick={() => handleToggleStatus(sub.id, sub.status)}
-                      title={isPaused ? t.subscriptions.resumeTitle : t.subscriptions.pauseTitle}
-                      className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                      aria-label={`${isPaused ? t.subscriptions.resumeTitle : t.subscriptions.pauseTitle}: ${sub.name}`}
+                      className="flex h-11 w-11 items-center justify-center rounded-xl text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
                     >
-                      {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                      {isPaused ? <Play aria-hidden="true" className="w-4 h-4" /> : <Pause aria-hidden="true" className="w-4 h-4" />}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => openEditModal(sub)}
-                      title={t.subscriptions.editTitle}
-                      className="p-1.5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                      aria-label={`${t.subscriptions.editTitle}: ${sub.name}`}
+                      className="flex h-11 w-11 items-center justify-center rounded-xl text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
+                      <Edit2 aria-hidden="true" className="w-4 h-4" />
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleDelete(sub.id, sub.name)}
-                      title={t.subscriptions.deleteTitle}
-                      className="p-1.5 text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                      aria-label={`${t.subscriptions.deleteTitle}: ${sub.name}`}
+                      className="flex h-11 w-11 items-center justify-center rounded-xl text-danger hover:bg-danger-soft transition-colors cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 aria-hidden="true" className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -771,334 +753,229 @@ export default function SubscriptionsClient({
         )}
       </div>
 
-      {/* Add / Edit Subscription Modal */}
-      {isModalOpen && (
-        <ModalOverlay className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-zinc-950/60 animate-fade-in">
-          <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl p-5 border border-zinc-200 dark:border-zinc-800 max-h-[90vh] overflow-y-auto shadow-2xl animate-modal-in">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                {editingSub ? t.subscriptions.editModalTitle : t.subscriptions.createModalTitle}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                aria-label={t.subscriptions.cancelBtn}
-                className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      {/* Add / Edit Subscription */}
+      <Dialog
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        busy={isSubmitting}
+        title={editingSub ? t.subscriptions.editModalTitle : t.subscriptions.createModalTitle}
+        closeLabel={t.common.close}
+        footer={
+          <>
+            <Button block onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>
+              {t.subscriptions.cancelBtn}
+            </Button>
+            <Button block variant="primary" type="submit" form="subscription-form" disabled={isSubmitting}>
+              {isSubmitting ? t.subscriptions.savingBtn : editingSub ? t.subscriptions.saveChanges : t.subscriptions.addSubscription}
+            </Button>
+          </>
+        }
+      >
+        {!editingSub && (
+          <div className="mb-4 flex flex-col gap-1.5">
+            <span id="subscription-presets-label" className="text-sm font-semibold text-ink">
+              {t.subscriptions.quickPresetsTitle}
+            </span>
+            <div role="group" aria-labelledby="subscription-presets-label" className="flex flex-wrap gap-1.5">
+              {POPULAR_PRESETS.map((preset) => (
+                <ToggleChip
+                  key={preset.id}
+                  pressed={name === preset.name}
+                  onClick={() => selectPreset(preset)}
+                  aria-label={preset.name}
+                >
+                  {preset.name.split(" ")[0]}
+                </ToggleChip>
+              ))}
             </div>
+          </div>
+        )}
 
-            {/* Quick Presets Pills (only when creating new) */}
-            {!editingSub && (
-              <div className="my-3.5">
-                <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2">
-                  {t.subscriptions.quickPresetsTitle}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {POPULAR_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => selectPreset(preset)}
-                      className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                        name === preset.name
-                          ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 border-zinc-900 dark:border-zinc-100"
-                          : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700"
-                      }`}
-                    >
-                      {preset.name.split(" ")[0]}
-                    </button>
-                  ))}
+        <form id="subscription-form" onSubmit={handleFormSubmit} className="flex flex-col gap-4">
+          <TextField
+            label={t.subscriptions.serviceNameLabel}
+            type="text"
+            required
+            placeholder={t.subscriptions.serviceNamePlaceholder}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {currency === "IDR" ? (
+              <MoneyField
+                label={t.subscriptions.priceLabel}
+                value={price}
+                onChange={(v) => {
+                  setPrice(v);
+                  setPriceError(null);
+                }}
+                prefix={currencySymbol}
+                placeholder="86.900"
+                error={priceError}
+                allowZero
+                required
+              />
+            ) : (
+              <TextField
+                label={`${t.subscriptions.priceLabel} (${currencySymbol})`}
+                type="text"
+                inputMode="decimal"
+                required
+                placeholder="9.99"
+                value={price}
+                onChange={(e) => {
+                  setPrice(e.target.value);
+                  setPriceError(null);
+                }}
+                error={priceError}
+              />
+            )}
+            <SelectField
+              label={t.subscriptions.billingCycleLabel}
+              value={billingCycle}
+              onChange={(e) => setBillingCycle(e.target.value as BillingCycle)}
+            >
+              <option value="monthly">{t.subscriptions.cycleMonthly}</option>
+              <option value="yearly">{t.subscriptions.cycleYearly}</option>
+              <option value="weekly">{t.subscriptions.cycleWeekly}</option>
+            </SelectField>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
+            <TextField
+              label={t.subscriptions.renewalDateLabel}
+              type="date"
+              required
+              value={nextRenewalDate}
+              onChange={(e) => setNextRenewalDate(e.target.value)}
+              className="scheme-light dark:scheme-dark"
+            />
+            <SelectField
+              label={t.subscriptions.paymentPlatformLabel}
+              value={paymentPlatform}
+              onChange={(e) => setPaymentPlatform(e.target.value)}
+            >
+              {PAYMENT_PLATFORMS.map((platform) => (
+                <option key={platform} value={platform}>
+                  {platform}
+                </option>
+              ))}
+            </SelectField>
+          </div>
+
+          {multiSakuEnabled && wallets.length > 0 && (
+            <SelectField
+              label={t.subscriptions.payFromWalletLabel}
+              value={payFromWalletId}
+              onChange={(e) => setPayFromWalletId(e.target.value)}
+            >
+              {wallets.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.emoji} {w.name} {w.is_primary ? t.subscriptions.primaryBadge : ""}
+                </option>
+              ))}
+            </SelectField>
+          )}
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-ink" aria-hidden="true">
+              {t.subscriptions.remindBeforeLabel}
+            </span>
+            <SegmentedControl
+              ariaLabel={t.subscriptions.remindBeforeLabel}
+              value={String(reminderDaysBefore)}
+              onChange={(v) => setReminderDaysBefore(Number(v))}
+              options={["1", "2", "3", "7"].map((days) => ({
+                value: days,
+                label: t.subscriptions.daysCount.replace("{days}", days),
+              }))}
+              className="[&>button]:px-1"
+            />
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-line pt-3">
+            <CheckboxField
+              checked={isSplit}
+              onChange={(e) => setIsSplit(e.target.checked)}
+              label={<span className="font-semibold">{t.subscriptions.splitAccountTitle}</span>}
+              hint={t.subscriptions.splitAccountDesc}
+            />
+
+            {isSplit && (
+              <div className="flex flex-col gap-3 rounded-2xl border border-purple-500/30 bg-purple-500/5 p-3">
+                <div className="flex items-end gap-2">
+                  <div className="min-w-0 flex-1">
+                    <TextField
+                      label={t.subscriptions.addFriendLabel}
+                      type="text"
+                      placeholder={t.subscriptions.addFriendPlaceholder}
+                      value={friendInput}
+                      onChange={(e) => setFriendInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddFriend();
+                        }
+                      }}
+                    />
+                  </div>
+                  <Button onClick={handleAddFriend}>{t.subscriptions.addFriendBtn}</Button>
+                </div>
+
+                {friends.length > 0 && (
+                  <ul className="flex flex-wrap gap-1.5">
+                    <li className="flex min-h-11 items-center rounded-xl bg-purple-200/80 px-3 text-xs font-semibold text-purple-900 dark:bg-purple-900/60 dark:text-purple-200">
+                      {t.subscriptions.hostBadge}
+                    </li>
+                    {friends.map((f) => (
+                      <li
+                        key={f}
+                        className="flex min-h-11 items-center gap-1 rounded-xl border border-purple-300 bg-card pl-3 text-xs font-medium text-purple-900 dark:border-purple-700 dark:text-purple-200"
+                      >
+                        <span>{f}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFriend(f)}
+                          aria-label={t.subscriptions.removeFriendAria.replace("{name}", f)}
+                          className="flex h-11 w-11 items-center justify-center rounded-xl text-purple-700 hover:bg-purple-500/10 dark:text-purple-300"
+                        >
+                          <X aria-hidden="true" className="w-4 h-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="rounded-xl border border-purple-200 bg-card p-2.5 text-xs dark:border-purple-800">
+                  <div className="flex justify-between font-semibold text-purple-950 dark:text-purple-100">
+                    <span>{t.subscriptions.portionPerPerson}</span>
+                    <span>{formatCurrency((Number(price) || 0) / Math.max(1, friends.length + 1))}</span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-purple-800 dark:text-purple-300">
+                    {t.subscriptions.totalSplitDesc
+                      .replace("{total}", formatCurrency(Number(price) || 0))
+                      .replace("{count}", String(friends.length + 1))}
+                  </p>
+                </div>
+
+                <div className="flex flex-col">
+                  <CheckboxField
+                    checked={autoCreateSplit}
+                    onChange={(e) => setAutoCreateSplit(e.target.checked)}
+                    label={t.subscriptions.autoCreateSplit}
+                  />
+                  <CheckboxField
+                    checked={autoLogExpenses}
+                    onChange={(e) => setAutoLogExpenses(e.target.checked)}
+                    label={t.subscriptions.autoLogExpenses}
+                  />
                 </div>
               </div>
             )}
-
-            <form onSubmit={handleFormSubmit} className="space-y-3.5 mt-3">
-              {/* Name */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                  {t.subscriptions.serviceNameLabel}
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder={t.subscriptions.serviceNamePlaceholder}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
-                />
-              </div>
-
-              {/* Price & Cycle */}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {currency === "IDR" ? (
-                  <MoneyField
-                    label={t.subscriptions.priceLabel}
-                    value={price}
-                    onChange={(v) => {
-                      setPrice(v);
-                      setPriceError(null);
-                    }}
-                    prefix={currencySymbol}
-                    placeholder="86.900"
-                    error={priceError}
-                    allowZero
-                    required
-                  />
-                ) : (
-                  <div>
-                    <label htmlFor="subscription-price" className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                      {t.subscriptions.priceLabel} ({currencySymbol})
-                    </label>
-                    <input
-                      id="subscription-price"
-                      type="text"
-                      inputMode="decimal"
-                      required
-                      placeholder="9.99"
-                      value={price}
-                      onChange={(e) => {
-                        setPrice(e.target.value);
-                        setPriceError(null);
-                      }}
-                      aria-invalid={priceError ? true : undefined}
-                      aria-describedby={priceError ? "subscription-price-error" : undefined}
-                      className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
-                    />
-                    {priceError && (
-                      <p id="subscription-price-error" role="alert" className="mt-1 text-xs font-medium text-danger">
-                        {priceError}
-                      </p>
-                    )}
-                  </div>
-                )}
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                    {t.subscriptions.billingCycleLabel}
-                  </label>
-                  <select
-                    value={billingCycle}
-                    onChange={(e) => setBillingCycle(e.target.value as BillingCycle)}
-                    className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
-                  >
-                    <option value="monthly">{t.subscriptions.cycleMonthly}</option>
-                    <option value="yearly">{t.subscriptions.cycleYearly}</option>
-                    <option value="weekly">{t.subscriptions.cycleWeekly}</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Next Renewal Date & Platform */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                    {t.subscriptions.renewalDateLabel}
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={nextRenewalDate}
-                    onChange={(e) => setNextRenewalDate(e.target.value)}
-                    className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                    {t.subscriptions.paymentPlatformLabel}
-                  </label>
-                  <select
-                    value={paymentPlatform}
-                    onChange={(e) => setPaymentPlatform(e.target.value)}
-                    className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
-                  >
-                    {PAYMENT_PLATFORMS.map((platform) => (
-                      <option key={platform} value={platform}>
-                        {platform}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Saku Selector (Multi-Saku Enabled) */}
-                {multiSakuEnabled && wallets.length > 0 && (
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                      {t.subscriptions.payFromWalletLabel}
-                    </label>
-                    <select
-                      value={payFromWalletId}
-                      onChange={(e) => setPayFromWalletId(e.target.value)}
-                      className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 cursor-pointer"
-                    >
-                      {wallets.map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.emoji} {w.name} {w.is_primary ? t.subscriptions.primaryBadge : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {/* Reminder days in advance */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                  {t.subscriptions.remindBeforeLabel}
-                </label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 7].map((days) => (
-                    <button
-                      key={days}
-                      type="button"
-                      onClick={() => setReminderDaysBefore(days)}
-                      className={`flex-1 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                        reminderDaysBefore === days
-                          ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 border-zinc-900 dark:border-zinc-100"
-                          : "bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700"
-                      }`}
-                    >
-                      {t.subscriptions.daysCount.replace("{days}", String(days))}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Split Toggle */}
-              <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                      {t.subscriptions.splitAccountTitle}
-                    </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {t.subscriptions.splitAccountDesc}
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={isSplit}
-                    onChange={(e) => setIsSplit(e.target.checked)}
-                    className="w-4 h-4 rounded-md text-purple-600 focus:ring-purple-500 cursor-pointer"
-                  />
-                </div>
-
-                {isSplit && (
-                  <div className="mt-3 p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-3">
-                    {/* Add Friend Input */}
-                    <div>
-                      <label className="block text-xs font-semibold text-purple-900 dark:text-purple-200 mb-1">
-                        {t.subscriptions.addFriendLabel}
-                      </label>
-                      <div className="flex gap-1.5">
-                        <input
-                          type="text"
-                          placeholder={t.subscriptions.addFriendPlaceholder}
-                          value={friendInput}
-                          onChange={(e) => setFriendInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleAddFriend();
-                            }
-                          }}
-                          className="flex-1 rounded-xl border border-purple-300 dark:border-purple-700 bg-white dark:bg-zinc-800 px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddFriend}
-                          className="rounded-xl bg-purple-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-purple-700 cursor-pointer"
-                        >
-                          {t.subscriptions.addFriendBtn}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Friend Tags */}
-                    {friends.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        <span className="text-xs bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 px-2 py-0.5 rounded-lg font-semibold">
-                          {t.subscriptions.hostBadge}
-                        </span>
-                        {friends.map((f) => (
-                          <span
-                            key={f}
-                            className="text-xs bg-white dark:bg-zinc-800 border border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-200 px-2 py-0.5 rounded-lg flex items-center gap-1 font-medium"
-                          >
-                            <span>{f}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveFriend(f)}
-                              className="text-purple-400 hover:text-purple-700 dark:hover:text-purple-200"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Breakdown Preview */}
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800 border border-purple-200 dark:border-purple-800 text-xs">
-                      <div className="flex justify-between font-semibold text-purple-950 dark:text-purple-100">
-                        <span>{t.subscriptions.portionPerPerson}</span>
-                        <span>
-                          {formatCurrency(
-                            (Number(price) || 0) / Math.max(1, friends.length + 1)
-                          )}
-                        </span>
-                      </div>
-                      <p className="text-xs text-purple-700/80 dark:text-purple-300/80 mt-0.5">
-                        {t.subscriptions.totalSplitDesc.replace("{total}", formatCurrency(Number(price) || 0)).replace("{count}", String(friends.length + 1))}
-                      </p>
-                    </div>
-
-                    {/* Auto-Creation Options */}
-                    <div className="space-y-1.5 pt-1">
-                      <label className="flex items-center gap-2 text-xs text-purple-950 dark:text-purple-200 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={autoCreateSplit}
-                          onChange={(e) => setAutoCreateSplit(e.target.checked)}
-                          className="w-3.5 h-3.5 rounded text-purple-600 focus:ring-purple-500"
-                        />
-                        <span>{t.subscriptions.autoCreateSplit}</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-xs text-purple-950 dark:text-purple-200 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={autoLogExpenses}
-                          onChange={(e) => setAutoLogExpenses(e.target.checked)}
-                          className="w-3.5 h-3.5 rounded text-purple-600 focus:ring-purple-500"
-                        />
-                        <span>{t.subscriptions.autoLogExpenses}</span>
-                      </label>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Submit Buttons */}
-              <div className="flex items-center gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 rounded-xl border border-zinc-200 dark:border-zinc-700 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                >
-                  {t.subscriptions.cancelBtn}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 py-2 text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
-                >
-                  {isSubmitting ? t.subscriptions.savingBtn : editingSub ? t.subscriptions.saveChanges : t.subscriptions.addSubscription}
-                </button>
-              </div>
-            </form>
           </div>
-        </ModalOverlay>
-      )}
-    </div>
+        </form>
+      </Dialog>
+    </main>
   );
 }

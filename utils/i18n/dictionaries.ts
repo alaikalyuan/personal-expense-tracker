@@ -627,6 +627,9 @@ export interface Dictionary {
     spentThisWeek: string;
   };
   subscriptions: {
+    filterLabel: string;
+    removeFriendAria: string;
+    dismissMessage: string;
     title: string;
     subtitle: string;
     add: string;
@@ -1676,6 +1679,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       spentThisWeek: "Terpakai Minggu Ini",
     },
     subscriptions: {
+      filterLabel: "Saring langganan",
+      removeFriendAria: "Hapus {name}",
+      dismissMessage: "Tutup pesan",
       title: "Langganan Digital",
       subtitle: "Kelola aplikasi digital & tagihan patungan",
       add: "Tambah",
@@ -2723,6 +2729,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       spentThisWeek: "Spent This Week",
     },
     subscriptions: {
+      filterLabel: "Filter subscriptions",
+      removeFriendAria: "Remove {name}",
+      dismissMessage: "Dismiss message",
       title: "Digital Subscriptions",
       subtitle: "Manage digital subscriptions & shared bills",
       add: "Add",
