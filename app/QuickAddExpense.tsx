@@ -1299,7 +1299,7 @@ function QuickAddModalContent({
                       ) : (
                         <Icon aria-hidden="true" className={`w-4 h-4 shrink-0 ${style.activeText}`} />
                       )}
-                      <span className="truncate">{getCategoryLabel(catKey)}</span>
+                      <span className="min-w-0 leading-tight">{getCategoryLabel(catKey)}</span>
                     </button>
                   );
                 })}
@@ -1606,7 +1606,7 @@ function QuickAddModalContent({
               {parsedExpense.isValid ? (
                 <div className="flex flex-col gap-2 pt-0.5">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                    <span className="text-base font-bold text-zinc-900 dark:text-zinc-100 min-w-0 [overflow-wrap:anywhere]">
                       {parsedExpense.name}
                     </span>
                     <span className="text-lg font-extrabold text-zinc-900 dark:text-white shrink-0">
@@ -1699,7 +1699,7 @@ function QuickAddModalContent({
                             ) : (
                               <Icon aria-hidden="true" className={`w-3.5 h-3.5 shrink-0 ${style.activeText}`} />
                             )}
-                            <span className="truncate text-xs">{getCategoryLabel(catKey)}</span>
+                            <span className="min-w-0 text-xs leading-tight">{getCategoryLabel(catKey)}</span>
                           </button>
                         );
                       })}

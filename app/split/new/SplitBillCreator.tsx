@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useId, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -53,8 +53,10 @@ interface FormItem {
 }
 
 import type { Wallet } from "@/utils/wallets/server";
-import ModalOverlay from "@/app/ui/ModalOverlay";
-import { AmountInput } from "@/app/ui/Field";
+import Dialog from "@/app/ui/Dialog";
+import Button from "@/app/ui/Button";
+import { AmountInput, CheckboxField, SelectField, TextField } from "@/app/ui/Field";
+import { SegmentedControl, ToggleChip } from "@/app/ui/Toggle";
 
 export interface SplitBillInitialData {
   bill: SplitBillRecord;
@@ -111,6 +113,7 @@ export default function SplitBillCreator({
 }: SplitBillCreatorProps) {
   const router = useRouter();
   const { formatCurrency, currencySymbol, currency, t } = useTranslation();
+  const fieldIds = useId();
   const isEditMode = mode === "edit" && Boolean(initialData);
 
   // General Bill Info
@@ -640,9 +643,9 @@ export default function SplitBillCreator({
       <div className="flex items-center justify-between">
         <Link
           href={isEditMode && initialData ? `/split/${initialData.bill.id}` : "/split"}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft aria-hidden="true" className="w-4 h-4" />
           <span>{isEditMode ? t.splitBill.backToBill : t.splitBill.historyBack}</span>
         </Link>
         <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
@@ -662,23 +665,23 @@ export default function SplitBillCreator({
 
       {/* Draft Notification */}
       {draftNotice && (
-        <div className="rounded-2xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/30 p-3.5 flex items-center justify-between text-xs">
+        <div role="status" className="rounded-2xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/30 p-3.5 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
-            <Info className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <Info aria-hidden="true" className="w-4 h-4 shrink-0 text-amber-700 dark:text-amber-400" />
             <span>{t.splitBill.draftFoundNotice}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleRestoreDraft}
-              className="px-2.5 py-1 bg-accent hover:brightness-95 text-on-accent font-semibold rounded-lg cursor-pointer"
+              className="min-h-11 px-3 bg-accent hover:brightness-95 text-on-accent font-semibold rounded-xl cursor-pointer"
             >
               {t.splitBill.restoreDraftBtn}
             </button>
             <button
               type="button"
               onClick={handleDiscardDraft}
-              className="px-2 py-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 cursor-pointer"
+              className="min-h-11 px-3 rounded-xl text-zinc-700 dark:text-zinc-300 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 cursor-pointer"
             >
               {t.splitBill.discardDraftBtn}
             </button>
@@ -688,7 +691,7 @@ export default function SplitBillCreator({
 
       {/* Error Alert */}
       {errorMsg && (
-        <div className="rounded-2xl border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-3.5 text-xs text-rose-700 dark:text-rose-300 font-medium">
+        <div role="alert" className="rounded-2xl border border-danger bg-danger-soft p-3.5 text-sm text-danger font-medium">
           {errorMsg}
         </div>
       )}
@@ -710,19 +713,16 @@ export default function SplitBillCreator({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
-            {t.splitBill.billTitleLabel}
-          </label>
-          <input
+          <TextField
+            label={t.splitBill.billTitleLabel}
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t.splitBill.billTitlePlaceholder}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-sm font-medium text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
           />
 
           {/* Quick presets for title */}
-          <div className="flex flex-wrap gap-1.5 mt-2">
+          <div role="group" aria-label={t.splitBill.titleIdeasLabel} className="flex flex-wrap gap-1.5 mt-2">
             {[
               t.splitBill.presetLunch,
               t.splitBill.presetCoffee,
@@ -730,24 +730,19 @@ export default function SplitBillCreator({
               t.splitBill.presetWifi,
               t.splitBill.presetGroceries,
             ].map((sug) => (
-              <button
-                key={sug}
-                type="button"
-                onClick={() => setTitle(sug)}
-                className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-              >
+              <ToggleChip key={sug} pressed={title === sug} onClick={() => setTitle(sug)} className="text-xs">
                 {sug}
-              </button>
+              </ToggleChip>
             ))}
           </div>
         </div>
 
         {/* Elaborated Split Mode Switcher (Moved below Bill Name) */}
         <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2">
-          <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+          <span id={`${fieldIds}-method`} className="block text-sm font-semibold text-ink">
             {t.splitBill.splitMethodLabel}
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          </span>
+          <div role="group" aria-labelledby={`${fieldIds}-method`} className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {/* Option 1: Itemized */}
             <button
               type="button"
@@ -763,38 +758,26 @@ export default function SplitBillCreator({
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-7 h-7 rounded-xl flex items-center justify-center ${
+                      className={`w-7 h-7 shrink-0 rounded-xl flex items-center justify-center ${
                         splitMode === "itemized"
                           ? "bg-accent text-on-accent"
                           : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
                       }`}
                     >
-                      <Utensils className="w-3.5 h-3.5" />
+                      <Utensils aria-hidden="true" className="w-3.5 h-3.5" />
                     </div>
                     <div>
-                      <h3 className="text-xs font-bold">{t.splitBill.modeItemizedTitle}</h3>
-                      <p
-                        className={`text-xs font-semibold ${
-                          splitMode === "itemized"
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-emerald-600 dark:text-emerald-400"
-                        }`}
-                      >
+                      <span className="block text-sm font-bold">{t.splitBill.modeItemizedTitle}</span>
+                      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                         {t.splitBill.modeItemizedSubtitle}
                       </p>
                     </div>
                   </div>
                   {splitMode === "itemized" && (
-                    <Check className="w-4 h-4 text-accent-strong shrink-0 mt-0.5" />
+                    <Check aria-hidden="true" className="w-5 h-5 text-accent-strong shrink-0" strokeWidth={3} />
                   )}
                 </div>
-                <p
-                  className={`text-xs mt-2 leading-relaxed ${
-                    splitMode === "itemized"
-                      ? "text-ink-soft"
-                      : "text-zinc-500 dark:text-zinc-400"
-                  }`}
-                >
+                <p className="text-xs mt-2 leading-relaxed text-ink-soft">
                   {t.splitBill.modeItemizedDesc}
                 </p>
               </div>
@@ -815,38 +798,26 @@ export default function SplitBillCreator({
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-7 h-7 rounded-xl flex items-center justify-center ${
+                      className={`w-7 h-7 shrink-0 rounded-xl flex items-center justify-center ${
                         splitMode === "equal"
                           ? "bg-accent text-on-accent"
                           : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
                       }`}
                     >
-                      <Zap className="w-3.5 h-3.5" />
+                      <Zap aria-hidden="true" className="w-3.5 h-3.5" />
                     </div>
                     <div>
-                      <h3 className="text-xs font-bold">{t.splitBill.modeEqualTitle}</h3>
-                      <p
-                        className={`text-xs font-semibold ${
-                          splitMode === "equal"
-                            ? "text-blue-600 dark:text-blue-400"
-                            : "text-blue-600 dark:text-blue-400"
-                        }`}
-                      >
+                      <span className="block text-sm font-bold">{t.splitBill.modeEqualTitle}</span>
+                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">
                         {t.splitBill.modeEqualSubtitle}
                       </p>
                     </div>
                   </div>
                   {splitMode === "equal" && (
-                    <Check className="w-4 h-4 text-accent-strong shrink-0 mt-0.5" />
+                    <Check aria-hidden="true" className="w-5 h-5 text-accent-strong shrink-0" strokeWidth={3} />
                   )}
                 </div>
-                <p
-                  className={`text-xs mt-2 leading-relaxed ${
-                    splitMode === "equal"
-                      ? "text-ink-soft"
-                      : "text-zinc-500 dark:text-zinc-400"
-                  }`}
-                >
+                <p className="text-xs mt-2 leading-relaxed text-ink-soft">
                   {t.splitBill.modeEqualDesc}
                 </p>
               </div>
@@ -872,36 +843,38 @@ export default function SplitBillCreator({
         </div>
 
         {/* Input Add Friend */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={friendNameInput}
-            onChange={(e) => setFriendNameInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleAddParticipant();
-              }
-            }}
-            placeholder={t.splitBill.friendNamePlaceholder}
-            className="flex-1 px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
-          />
+        <div className="flex items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <TextField
+              label={t.splitBill.friendNameLabel}
+              type="text"
+              value={friendNameInput}
+              onChange={(e) => setFriendNameInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddParticipant();
+                }
+              }}
+              placeholder={t.splitBill.friendNamePlaceholder}
+            />
+          </div>
           <button
             type="button"
             onClick={handleAddParticipant}
-            className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-xl text-xs font-semibold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+            className="min-h-11 px-4 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-xl text-sm font-semibold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus aria-hidden="true" className="w-4 h-4" />
             <span>{t.splitBill.addFriendBtn}</span>
           </button>
         </div>
 
         {/* Participant Chips */}
-        <div className="flex flex-wrap gap-2 pt-1">
+        <ul className="flex flex-wrap gap-2 pt-1">
           {participants.map((p) => (
-            <div
+            <li
               key={p.id}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${
+              className={`flex min-h-11 items-center gap-1.5 pl-3 ${p.isCreator ? "pr-3" : "pr-0"} rounded-full text-xs font-medium border ${
                 p.isCreator
                   ? "bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
                   : "bg-zinc-50 border-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-200"
@@ -909,7 +882,7 @@ export default function SplitBillCreator({
             >
               <span>{p.name}</span>
               {p.isCreator ? (
-                <span className="text-xs opacity-75 font-semibold">({t.splitBill.hostBadge})</span>
+                <span className="text-xs font-semibold">({t.splitBill.hostBadge})</span>
               ) : (
                 <>
                   {isEditMode && p.isPaid && (
@@ -921,15 +894,15 @@ export default function SplitBillCreator({
                     type="button"
                     onClick={() => handleRemoveParticipant(p.id)}
                     aria-label={t.splitBill.removeParticipantAria.replace("{name}", p.name)}
-                    className="text-zinc-400 hover:text-rose-500 transition-colors ml-0.5 cursor-pointer"
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-zinc-600 hover:text-danger dark:text-zinc-300 transition-colors cursor-pointer"
                   >
-                    &times;
+                    <X aria-hidden="true" className="w-4 h-4" />
                   </button>
                 </>
               )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
 
       {/* SECTION 3: Items & Assignments */}
@@ -956,10 +929,10 @@ export default function SplitBillCreator({
               <button
                 type="button"
                 onClick={() => setIsImageModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 px-2.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95 transition-all cursor-pointer"
+                className="flex min-h-11 items-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 px-3 text-xs font-semibold text-teal-800 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95 transition-all cursor-pointer"
                 title="Pindai foto struk belanja untuk mengisi otomatis item, pajak, dan diskon"
               >
-                <Camera className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                <Camera aria-hidden="true" className="w-4 h-4 text-teal-700 dark:text-teal-400" />
                 <span>Scan Struk</span>
               </button>
             )}
@@ -968,9 +941,9 @@ export default function SplitBillCreator({
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                className="-mr-2 min-h-11 px-2 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 flex items-center gap-1 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus aria-hidden="true" className="w-4 h-4" />
                 <span>{t.splitBill.addItemBtn}</span>
               </button>
             )}
@@ -979,26 +952,27 @@ export default function SplitBillCreator({
 
         {/* Scan Error Banner */}
         {extractError && (
-          <div className="flex items-center justify-between text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 p-2.5 rounded-xl border border-rose-200">
+          <div role="alert" className="flex items-center justify-between gap-2 text-xs text-danger bg-danger-soft py-1 pl-2.5 pr-1 rounded-xl border border-danger">
             <div className="flex items-center gap-1.5">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+              <AlertCircle aria-hidden="true" className="w-4 h-4 shrink-0" />
               <span>{extractError}</span>
             </div>
             <button
               type="button"
               onClick={clearExtractError}
-              className="text-rose-400 hover:text-rose-600 cursor-pointer"
+              aria-label={t.splitBill.dismissNotice}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl hover:bg-danger/10 cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
+              <X aria-hidden="true" className="w-4 h-4" />
             </button>
           </div>
         )}
 
         {/* Receipt Discrepancy Notice */}
         {scannedReceiptTotal !== null && Math.abs(calculation.grandTotal - scannedReceiptTotal) > 500 && (
-          <div className="flex items-center justify-between gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-200/80">
+          <div role="status" className="flex items-center justify-between gap-2 text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 py-1 pl-2.5 pr-1 rounded-xl border border-amber-200/80">
             <div className="flex items-center gap-1.5">
-              <Info className="w-4 h-4 shrink-0 text-amber-600" />
+              <Info aria-hidden="true" className="w-4 h-4 shrink-0 text-amber-700" />
               <span>
                 Total struk: <strong>{formatCurrency(scannedReceiptTotal)}</strong> vs Total terhitung: <strong>{formatCurrency(calculation.grandTotal)}</strong>
               </span>
@@ -1006,10 +980,10 @@ export default function SplitBillCreator({
             <button
               type="button"
               onClick={() => setScannedReceiptTotal(null)}
-              className="text-zinc-400 hover:text-zinc-600 cursor-pointer"
-              title="Tutup pesan"
+              aria-label={t.splitBill.dismissNotice}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-amber-800 hover:bg-amber-200/50 dark:text-amber-300 cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
+              <X aria-hidden="true" className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -1038,17 +1012,17 @@ export default function SplitBillCreator({
                       ? t.splitBill.menuItemPlaceholder.replace("{index}", String(index + 1))
                       : t.splitBill.totalAmountPlaceholder
                   }
-                  className="min-w-0 flex-1 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 font-medium focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
+                  className="min-w-0 flex-1 px-3 min-h-11 rounded-xl border border-field-line bg-paper text-ink placeholder:text-ink-soft/70 hover:border-ink-soft text-base font-medium"
                 />
 
                 {items.length > 1 && (
                   <button
                     type="button"
                     onClick={() => handleRemoveItem(item.id)}
-                    aria-label={t.splitBill.deleteItemAria}
-                    className="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer"
+                    aria-label={`${t.splitBill.deleteItemAria}: ${item.name || t.splitBill.menuItemPlaceholder.replace("{index}", String(index + 1))}`}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-danger hover:bg-danger-soft rounded-xl transition-colors cursor-pointer"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 aria-hidden="true" className="w-4 h-4" />
                   </button>
                 )}
               </div>
@@ -1057,7 +1031,7 @@ export default function SplitBillCreator({
               <div className="flex items-start gap-2">
                 {splitMode === "itemized" && (
                   <div className="relative w-20 shrink-0">
-                    <span aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400">
+                    <span aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-ink-soft">
                       &times;
                     </span>
                     <input
@@ -1072,7 +1046,7 @@ export default function SplitBillCreator({
                           quantity: Math.max(1, Math.floor(Number(e.target.value) || 1)),
                         })
                       }
-                      className="w-full pl-6 pr-2 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
+                      className="w-full pl-6 pr-2 min-h-11 rounded-xl border border-field-line bg-paper text-ink placeholder:text-ink-soft/70 hover:border-ink-soft text-base font-semibold text-right"
                     />
                   </div>
                 )}
@@ -1084,7 +1058,7 @@ export default function SplitBillCreator({
                   prefix={currencySymbol}
                   ariaLabel={t.splitBill.itemPriceAria.replace("{index}", String(index + 1))}
                   className="min-w-0 flex-1"
-                  inputClassName="w-full pl-9 pr-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
+                  inputClassName="w-full pl-9 pr-3 min-h-11 rounded-xl border border-field-line bg-paper text-ink placeholder:text-ink-soft/70 hover:border-ink-soft text-base font-semibold text-right"
                 />
               </div>
 
@@ -1101,37 +1075,30 @@ export default function SplitBillCreator({
               {splitMode === "itemized" && (
                 <div className="pt-1.5 border-t border-zinc-100 dark:border-zinc-800/80">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                    <span id={`${fieldIds}-assign-${item.id}`} className="text-xs font-semibold text-ink-soft">
                       {t.splitBill.assignedToLabel}
                     </span>
                     <button
                       type="button"
                       onClick={() => assignItemToAll(item.id)}
-                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
+                      className="-mr-2 min-h-11 px-2 rounded-xl text-xs text-emerald-700 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
                     >
                       {t.splitBill.assignAllBtn.replace("{count}", String(participants.length))}
                     </button>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5">
-                    {participants.map((p) => {
-                      const isAssigned = item.assignedParticipantIds.includes(p.id);
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => toggleItemParticipant(item.id, p.id)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1 ${
-                            isAssigned
-                              ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-2xs font-semibold"
-                              : "bg-white text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100"
-                          }`}
-                        >
-                          {isAssigned && <Check className="w-3 h-3 stroke-[3]" />}
-                          <span>{p.name}</span>
-                        </button>
-                      );
-                    })}
+                  <div role="group" aria-labelledby={`${fieldIds}-assign-${item.id}`} className="flex flex-wrap gap-1.5">
+                    {participants.map((p) => (
+                      <ToggleChip
+                        key={p.id}
+                        pressed={item.assignedParticipantIds.includes(p.id)}
+                        onClick={() => toggleItemParticipant(item.id, p.id)}
+                        aria-label={`${p.name}: ${item.name || t.splitBill.menuItemPlaceholder.replace("{index}", String(index + 1))}`}
+                        className="text-xs"
+                      >
+                        {p.name}
+                      </ToggleChip>
+                    ))}
                   </div>
                 </div>
               )}
@@ -1143,9 +1110,9 @@ export default function SplitBillCreator({
             <button
               type="button"
               onClick={handleAddItem}
-              className="w-full py-2.5 rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:border-emerald-500 hover:text-emerald-600 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full min-h-11 rounded-2xl border-2 border-dashed border-field-line text-sm font-semibold text-ink-soft hover:border-emerald-600 hover:text-emerald-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
+              <Plus aria-hidden="true" className="w-4 h-4" />
               <span>{t.splitBill.addAnotherItemBtn}</span>
             </button>
           )}
@@ -1170,10 +1137,10 @@ export default function SplitBillCreator({
 
         {/* Tax Presets */}
         <div>
-          <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
+          <span id={`${fieldIds}-tax`} className="mb-1.5 block text-sm font-semibold text-ink">
             {t.splitBill.taxLabel}
-          </label>
-          <div className="grid grid-cols-4 gap-2">
+          </span>
+          <div role="group" aria-labelledby={`${fieldIds}-tax`} className="grid grid-cols-2 gap-2">
             {[
               { id: "0", label: t.splitBill.taxPresetNone, desc: t.splitBill.taxPresetNoneDesc },
               { id: "10", label: t.splitBill.taxPresetPB1, desc: t.splitBill.taxPresetPB1Desc },
@@ -1187,14 +1154,17 @@ export default function SplitBillCreator({
                   type="button"
                   onClick={() => setTaxPreset(p.id as typeof taxPreset)}
                   aria-pressed={active}
-                  className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                  className={`min-h-11 p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
                     active
-                      ? "border-accent bg-card text-ink ring-2 ring-accent"
-                      : "border-line bg-card text-ink hover:bg-paper"
+                      ? "border-ink bg-card text-ink ring-1 ring-ink"
+                      : "border-field-line bg-card text-ink hover:bg-paper"
                   }`}
                 >
-                  <p className="text-xs font-bold">{p.label}</p>
-                  <p className="text-xs text-ink-soft">{p.desc}</p>
+                  <span className="flex items-center justify-center gap-1 text-sm font-bold">
+                    {active && <Check aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={3} />}
+                    {p.label}
+                  </span>
+                  <span className="block text-xs text-ink-soft">{p.desc}</span>
                 </button>
               );
             })}
@@ -1202,31 +1172,37 @@ export default function SplitBillCreator({
 
           {taxPreset === "custom" && (
             <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs text-zinc-500">{t.splitBill.taxPercentageLabel}</span>
+              <label htmlFor={`${fieldIds}-custom-tax`} className="text-sm text-ink">
+                {t.splitBill.taxPercentageLabel}
+              </label>
               <input
+                id={`${fieldIds}-custom-tax`}
                 type="number"
+                inputMode="decimal"
                 min="0"
                 max="100"
                 step="0.5"
                 value={customTax || ""}
                 onChange={(e) => setCustomTax(Number(e.target.value))}
                 placeholder="cth: 12"
-                className="w-24 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-xs font-bold text-right"
+                className="w-24 px-3 min-h-11 rounded-xl border border-field-line bg-paper text-ink placeholder:text-ink-soft/70 hover:border-ink-soft text-base font-bold text-right"
               />
-              <span className="text-xs font-bold text-zinc-500">%</span>
+              <span aria-hidden="true" className="text-sm font-bold text-ink-soft">%</span>
             </div>
           )}
         </div>
 
         {/* Service, Discount, Fee Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+        <div className="grid grid-cols-1 gap-4 pt-2">
           {/* Service Charge */}
           <div>
-            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+            <label htmlFor={`${fieldIds}-service`} className="block text-sm font-semibold text-ink mb-1">
               {t.splitBill.servicePercentageLabel}
             </label>
             <div className="relative">
               <input
+                id={`${fieldIds}-service`}
+                inputMode="decimal"
                 type="number"
                 min="0"
                 max="50"
@@ -1234,9 +1210,9 @@ export default function SplitBillCreator({
                 value={servicePercentage || ""}
                 onChange={(e) => setServicePercentage(Number(e.target.value))}
                 placeholder="0"
-                className="w-full pr-7 pl-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-xs font-semibold text-zinc-900 dark:text-zinc-100 text-right focus:outline-hidden"
+                className="w-full pr-7 pl-3 min-h-11 rounded-xl border border-field-line bg-paper text-ink placeholder:text-ink-soft/70 hover:border-ink-soft text-base font-semibold text-right"
               />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">
+              <span aria-hidden="true" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-ink-soft">
                 %
               </span>
             </div>
@@ -1244,42 +1220,45 @@ export default function SplitBillCreator({
 
           {/* Delivery / Extra Fee */}
           <div>
-            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+            <span aria-hidden="true" className="block text-sm font-semibold text-ink mb-1">
               {t.splitBill.extraFeeInputLabel}
-            </label>
+            </span>
             <AmountInput
               value={extraFee}
               onChange={setExtraFee}
               currency={currency}
               prefix={currencySymbol}
               ariaLabel={t.splitBill.extraFeeInputLabel}
-              inputClassName="w-full pl-9 pr-2.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right focus:outline-hidden"
+              inputClassName="w-full pl-9 pr-2.5 min-h-11 rounded-xl border border-field-line bg-paper text-ink placeholder:text-ink-soft/70 hover:border-ink-soft text-base font-semibold text-right"
             />
           </div>
 
           {/* Discount / Voucher */}
           <div>
-            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+            <span aria-hidden="true" className="block text-sm font-semibold text-ink mb-1">
               {t.splitBill.discountInputLabel}
-            </label>
+            </span>
             <AmountInput
               value={discountAmount}
               onChange={setDiscountAmount}
               currency={currency}
               prefix={`-${currencySymbol}`}
               ariaLabel={t.splitBill.discountInputLabel}
-              inputClassName="w-full pl-10 pr-2.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-sm font-semibold text-emerald-600 dark:text-emerald-400 text-right focus:outline-hidden"
+              inputClassName="w-full pl-10 pr-2.5 min-h-11 rounded-xl border border-field-line bg-paper placeholder:text-ink-soft/70 hover:border-ink-soft text-base font-semibold text-emerald-700 dark:text-emerald-400 text-right"
             />
           </div>
         </div>
 
         {/* Rounding option */}
-        <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between text-xs">
-          <span className="font-semibold text-zinc-600 dark:text-zinc-400">
+        <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex flex-col gap-1.5">
+          <span aria-hidden="true" className="text-sm font-semibold text-ink">
             {t.splitBill.roundingPersonLabel}
           </span>
-          <div className="flex gap-1.5">
-            {(currency === "IDR"
+          <SegmentedControl
+            ariaLabel={t.splitBill.roundingPersonLabel}
+            value={String(roundingStep)}
+            onChange={(v) => setRoundingStep(Number(v))}
+            options={(currency === "IDR"
               ? [
                   { step: 100, label: "Rp 100" },
                   { step: 500, label: "Rp 500" },
@@ -1290,21 +1269,8 @@ export default function SplitBillCreator({
                   { step: 0.1, label: `${currencySymbol} 0.1` },
                   { step: 0.01, label: t.splitBill.roundingExact },
                 ]
-            ).map((r) => (
-              <button
-                key={r.step}
-                type="button"
-                onClick={() => setRoundingStep(r.step)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  roundingStep === r.step
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-bold"
-                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                }`}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
+            ).map((r) => ({ value: String(r.step), label: r.label }))}
+          />
         </div>
       </section>
 
@@ -1327,65 +1293,42 @@ export default function SplitBillCreator({
         <div className="space-y-3">
           {/* Method selector */}
           <div>
-            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
+            <span id={`${fieldIds}-payment`} className="mb-1.5 block text-sm font-semibold text-ink">
               {t.splitBill.paymentMethodLabel}
-            </label>
-            <div className="flex flex-wrap gap-1.5">
+            </span>
+            <div role="group" aria-labelledby={`${fieldIds}-payment`} className="flex flex-wrap gap-1.5">
               {PAYMENT_METHODS.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setPaymentMethod(m)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    paymentMethod === m
-                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs"
-                      : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                  }`}
-                >
+                <ToggleChip key={m} pressed={paymentMethod === m} onClick={() => setPaymentMethod(m)} className="text-xs">
                   {m}
-                </button>
+                </ToggleChip>
               ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
-                {t.splitBill.accountNumberLabel}
-              </label>
-              <input
-                type="text"
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value)}
-                placeholder={t.splitBill.accountNumberPlaceholder}
-                className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-xs sm:text-sm font-mono text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
-                {t.splitBill.accountNameLabel}
-              </label>
-              <input
-                type="text"
-                value={accountName}
-                onChange={(e) => setAccountName(e.target.value)}
-                placeholder={t.splitBill.accountNamePlaceholder}
-                className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/50"
-              />
-            </div>
+          <div className="grid grid-cols-1 gap-4">
+            <TextField
+              label={t.splitBill.accountNumberLabel}
+              type="text"
+              value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value)}
+              placeholder={t.splitBill.accountNumberPlaceholder}
+              className="font-mono"
+            />
+            <TextField
+              label={t.splitBill.accountNameLabel}
+              type="text"
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+              placeholder={t.splitBill.accountNamePlaceholder}
+            />
           </div>
 
           {/* Checkbox: Save as default */}
-          <label className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 pt-1 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={saveAsDefault}
-              onChange={(e) => setSaveAsDefault(e.target.checked)}
-              className="rounded-md border-zinc-300 dark:border-zinc-700 text-emerald-600 focus:ring-emerald-500"
-            />
-            <span>{t.splitBill.saveAsDefaultLabel}</span>
-          </label>
+          <CheckboxField
+            checked={saveAsDefault}
+            onChange={(e) => setSaveAsDefault(e.target.checked)}
+            label={t.splitBill.saveAsDefaultLabel}
+          />
         </div>
       </section>
 
@@ -1393,59 +1336,54 @@ export default function SplitBillCreator({
       <section className="rounded-3xl border border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-950/20 p-4 sm:p-5 shadow-xs space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs mt-0.5">
+            <div aria-hidden="true" className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-xs mt-0.5">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <h2 id={`${fieldIds}-autolog`} className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 {t.splitBill.autoLogTrackerLabel}
               </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              <p id={`${fieldIds}-autolog-desc`} className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
                 {t.splitBill.autoLogTrackerDesc.replace("{amount}", formatCurrency(creatorShare))}
               </p>
             </div>
           </div>
 
-          <input
-            type="checkbox"
-            checked={autoLogToTracker}
-            onChange={(e) => setAutoLogToTracker(e.target.checked)}
-            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mt-1 cursor-pointer"
-          />
+          {/* The section heading names the switch; the label element only widens the target to 44px. */}
+          <label className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center">
+            <input
+              type="checkbox"
+              checked={autoLogToTracker}
+              onChange={(e) => setAutoLogToTracker(e.target.checked)}
+              aria-labelledby={`${fieldIds}-autolog`}
+              aria-describedby={`${fieldIds}-autolog-desc`}
+              className="h-5 w-5 accent-[var(--accent)] cursor-pointer"
+            />
+          </label>
         </div>
 
         {autoLogToTracker && (
-          <div className="pt-2 border-t border-emerald-500/20 space-y-2 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-zinc-600 dark:text-zinc-400 font-medium">{t.splitBill.categoryLabel}</span>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="px-2.5 py-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-semibold text-zinc-900 dark:text-zinc-100 cursor-pointer"
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="pt-3 border-t border-emerald-500/20 grid grid-cols-1 gap-4">
+            <SelectField label={t.splitBill.categoryLabel} value={category} onChange={(e) => setCategory(e.target.value)}>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </SelectField>
 
             {multiSakuEnabled && wallets.length > 0 && (
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-600 dark:text-zinc-400 font-medium">{t.splitBill.walletSourceLabel}</span>
-                <select
-                  value={selectedWalletId}
-                  onChange={(e) => setSelectedWalletId(e.target.value)}
-                  className="px-2.5 py-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-semibold text-zinc-900 dark:text-zinc-100 cursor-pointer"
-                >
-                  {wallets.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.emoji} {w.name} {w.is_primary ? ` ${t.splitBill.primaryBadge}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <SelectField
+                label={t.splitBill.walletSourceLabel}
+                value={selectedWalletId}
+                onChange={(e) => setSelectedWalletId(e.target.value)}
+              >
+                {wallets.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.emoji} {w.name} {w.is_primary ? ` ${t.splitBill.primaryBadge}` : ""}
+                  </option>
+                ))}
+              </SelectField>
             )}
           </div>
         )}
@@ -1453,9 +1391,9 @@ export default function SplitBillCreator({
 
       {/* SECTION 7: Live Summary Card */}
       <section className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-xs space-y-3">
-        <h3 className="text-xs font-bold text-zinc-400">
+        <h2 className="text-xs font-bold text-ink-soft">
           {t.splitBill.realtimeSummaryTitle}
-        </h3>
+        </h2>
 
         <div className="space-y-1.5 text-xs">
           <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
@@ -1519,7 +1457,7 @@ export default function SplitBillCreator({
           <p className="text-xs font-semibold text-zinc-500 mb-2">
             {t.splitBill.estimatedOwedPerPerson}
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {calculation.participants.map((p) => (
               <div
                 key={p.participantId}
@@ -1552,9 +1490,9 @@ export default function SplitBillCreator({
             <button
               type="button"
               onClick={() => setIsPreviewOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-semibold text-xs active:scale-95 transition-all cursor-pointer"
+              className="flex min-h-11 items-center gap-1.5 px-3.5 rounded-xl border border-field-line text-ink hover:bg-paper font-semibold text-xs active:scale-95 transition-all cursor-pointer"
             >
-              <Eye className="w-4 h-4 text-amber-500" />
+              <Eye aria-hidden="true" className="w-4 h-4 text-amber-600" />
               <span className="hidden sm:inline">{t.splitBill.previewFriendBtn}</span>
               <span className="sm:hidden">{t.splitBill.previewShortBtn}</span>
             </button>
@@ -1564,13 +1502,13 @@ export default function SplitBillCreator({
               type="button"
               onClick={handlePublish}
               disabled={isPublishing}
-              className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 font-bold text-xs active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
+              className="flex min-h-11 items-center gap-1.5 px-4 sm:px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 font-bold text-xs active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
             >
               {isPublishing ? (
                 <span>{isEditMode ? t.splitBill.savingChangesBtn : t.splitBill.publishingBtn}</span>
               ) : (
                 <>
-                  <Receipt className="w-4 h-4" />
+                  <Receipt aria-hidden="true" className="w-4 h-4" />
                   <span>{isEditMode ? t.splitBill.saveChangesBtn : t.splitBill.publishBtn}</span>
                 </>
               )}
@@ -1603,63 +1541,40 @@ export default function SplitBillCreator({
         }}
       />
 
-      {/* Replace vs Append Modal for Scanned Receipt */}
-      {showReplaceDialog && pendingScannedDoc && (
-        <ModalOverlay className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in">
-          <div className="w-full max-w-sm rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-2xl space-y-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                  Hasil Pindai Struk
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowReplaceDialog(false);
-                  setPendingScannedDoc(null);
-                }}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+      {/* Replace vs Append for a scanned receipt */}
+      <Dialog
+        isOpen={showReplaceDialog && pendingScannedDoc !== null}
+        onClose={() => {
+          setShowReplaceDialog(false);
+          setPendingScannedDoc(null);
+        }}
+        title={t.splitBill.scanReplaceTitle}
+        closeLabel={t.common.close}
+      >
+        {pendingScannedDoc && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm leading-relaxed text-ink-soft">
               Form split bill ini sudah memiliki item yang dicatat. Apakah ingin menambahkan{" "}
-              <strong>{pendingScannedDoc.items.length} item</strong> dari struk ke daftar yang sudah ada, atau mengganti semua item?
+              <strong className="text-ink">{pendingScannedDoc.items.length} item</strong> dari struk ke daftar yang sudah ada, atau mengganti semua item?
             </p>
-
-            <div className="flex flex-col gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => applyExtractedBill(pendingScannedDoc, true)}
-                className="w-full py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
-              >
-                Tambahkan ke Item yang Ada (Append)
-              </button>
-              <button
-                type="button"
-                onClick={() => applyExtractedBill(pendingScannedDoc, false)}
-                className="w-full py-2 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer"
-              >
-                Ganti Semua Item (Replace)
-              </button>
-              <button
-                type="button"
+            <div className="flex flex-col gap-2">
+              <Button variant="primary" onClick={() => applyExtractedBill(pendingScannedDoc, true)}>
+                Tambahkan ke Item yang Ada
+              </Button>
+              <Button onClick={() => applyExtractedBill(pendingScannedDoc, false)}>Ganti Semua Item</Button>
+              <Button
+                variant="ghost"
                 onClick={() => {
                   setShowReplaceDialog(false);
                   setPendingScannedDoc(null);
                 }}
-                className="w-full py-1.5 text-center text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 cursor-pointer"
               >
-                Batal
-              </button>
+                {t.common.cancel}
+              </Button>
             </div>
           </div>
-        </ModalOverlay>
-      )}
+        )}
+      </Dialog>
     </div>
   );
 }
