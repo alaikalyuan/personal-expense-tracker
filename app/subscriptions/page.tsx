@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import SubscriptionsClient from "./SubscriptionsClient";
 import { SubscriptionRecord } from "./types";
+import { withNormalizedSplitConfig } from "./splitConfig";
 import { processSubscriptionRenewals } from "./actions";
 import { getWallets, getUserSettings } from "@/utils/wallets/server";
 
@@ -47,7 +48,7 @@ export default async function SubscriptionsPage() {
 
   return (
     <SubscriptionsClient
-      initialSubscriptions={(subscriptions || []) as SubscriptionRecord[]}
+      initialSubscriptions={(subscriptions || []).map(withNormalizedSplitConfig) as SubscriptionRecord[]}
       isGuest={isGuest}
       wallets={wallets}
       multiSakuEnabled={multiSakuEnabled}

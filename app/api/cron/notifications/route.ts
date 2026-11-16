@@ -4,6 +4,7 @@ import { sendWebPushNotification } from "@/utils/pwa/webPushServer";
 import { getDailyQuote } from "@/utils/pwa/quotes";
 import { getTodayString, getNowInTimezone } from "@/utils/date";
 import { computeNextRenewalDate } from "@/app/subscriptions/types";
+import { normalizeSplitConfig } from "@/app/subscriptions/splitConfig";
 import { formatMoney } from "@/utils/money";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -53,7 +54,8 @@ async function handleCron(req: NextRequest) {
     );
 
     if (!subsError && subs && subs.length > 0) {
-      for (const sub of subs) {
+      for (const row of subs) {
+        const sub = { ...row, split_config: normalizeSplitConfig(row.split_config) };
         const daysDiff = Math.ceil(
           (new Date(sub.next_renewal_date).getTime() - new Date(todayStr).getTime()) /
             (1000 * 60 * 60 * 24)
@@ -72,13 +74,13 @@ async function handleCron(req: NextRequest) {
           // Auto-split renewals need the owner's session to create the bill, so
           // processSubscriptionRenewals handles them on the next app load. Advancing
           // the date here would mean the bill is never created.
-          const waitsForApp = sub.is_split && sub.split_config?.auto_create_split_bill;
+          const waitsForApp = sub.is_split && sub.split_config.auto_create_split_bill;
 
           if (!waitsForApp) {
             const nextDate = computeNextRenewalDate(sub.next_renewal_date, sub.billing_cycle);
 
             // Auto-log expense if auto_log_to_expenses is true (default true)
-            if (Number(sub.price) > 0 && sub.split_config?.auto_log_to_expenses !== false) {
+            if (Number(sub.price) > 0 && sub.split_config.auto_log_to_expenses) {
               try {
                 await supabase.from("expenses").insert({
                   user_id: sub.user_id,

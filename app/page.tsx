@@ -28,6 +28,7 @@ import {
   getSelectedSakuServer,
 } from "@/utils/wallets/server";
 import { processSubscriptionRenewals } from "@/app/subscriptions/actions";
+import { withNormalizedSplitConfig } from "@/app/subscriptions/splitConfig";
 import type { PendingEmailTransaction } from "@/app/email-sync/actions";
 import { resolveBudgets } from "@/utils/budget";
 
@@ -206,7 +207,7 @@ export default async function DashboardPage(props: {
       unifiedExpenses,
       streakWindowDates,
       priorMtdExpenses,
-      upcomingSubscriptions: upcomingSubscriptions || [],
+      upcomingSubscriptions: (upcomingSubscriptions || []).map(withNormalizedSplitConfig),
       pendingEmailTransactions: (pendingEmailTransactions || []) as PendingEmailTransaction[],
     };
   };
