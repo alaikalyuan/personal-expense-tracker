@@ -6,6 +6,7 @@ import { useTranslation } from "@/utils/i18n/context";
 import Dialog from "@/app/ui/Dialog";
 import Button from "@/app/ui/Button";
 import { MoneyField } from "@/app/ui/Field";
+import { ToggleChip } from "@/app/ui/Toggle";
 import { parseRupiahInput } from "@/utils/money";
 
 // Mount this only while it is open: each opening starts from the current budget.
@@ -133,17 +134,14 @@ export default function BudgetEditDialog({ onClose, period, currentBudget }: Bud
               {presetBudgets.map((preset) => {
                 const selected = budgetInput === String(preset.value);
                 return (
-                  <button
+                  <ToggleChip
                     key={preset.value}
-                    type="button"
-                    aria-pressed={selected}
+                    pressed={selected}
                     onClick={() => setBudgetInput(String(preset.value))}
-                    className={`min-h-11 rounded-xl border text-sm font-semibold ${
-                      selected ? "border-ink bg-ink text-card" : "border-line bg-card text-ink hover:bg-paper active:bg-line"
-                    }`}
+                    className="px-1"
                   >
                     {preset.label}
-                  </button>
+                  </ToggleChip>
                 );
               })}
             </div>

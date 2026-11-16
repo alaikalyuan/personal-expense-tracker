@@ -6,6 +6,14 @@ import type { HTMLAttributes } from "react";
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+interface ModalOverlayProps extends HTMLAttributes<HTMLDivElement> {
+  /**
+   * Called on Escape. Pass the same handler as the modal's own close or
+   * cancel button, including any "busy" guard.
+   */
+  onClose?: () => void;
+}
+
 /**
  * Drop-in replacement for the `<div className="fixed inset-0 ...">` backdrop
  * used by the older modals. It keeps their markup and adds what they lacked:
@@ -14,7 +22,7 @@ const FOCUSABLE =
  *
  * New dialogs should use `app/ui/Dialog.tsx` instead.
  */
-export default function ModalOverlay({ children, onMouseDown, onKeyDown, ...rest }: HTMLAttributes<HTMLDivElement>) {
+export default function ModalOverlay({ children, onClose, onMouseDown, onKeyDown, ...rest }: ModalOverlayProps) {
   const ref = useRef<HTMLDivElement>(null);
   const fallbackTitleId = useId();
 
@@ -32,6 +40,10 @@ export default function ModalOverlay({ children, onMouseDown, onKeyDown, ...rest
       }
     }
 
+    if (process.env.NODE_ENV !== "production" && !el.getAttribute("aria-labelledby") && !el.getAttribute("aria-label")) {
+      console.warn("ModalOverlay has no accessible name: give it a heading or aria-label.", el);
+    }
+
     // Leave focus alone if the modal placed it itself (for example on an amount field).
     if (!el.contains(document.activeElement)) {
       el.focus();
@@ -43,9 +55,13 @@ export default function ModalOverlay({ children, onMouseDown, onKeyDown, ...rest
   }, [fallbackTitleId]);
 
   const close = () => {
+    if (onClose) {
+      onClose();
+      return;
+    }
     const el = ref.current;
     if (!el) return;
-    // Prefer the modal's own close button so its "busy" guards still apply.
+    // Fallback while older modals move to `onClose`: their own close button keeps its "busy" guards.
     const closeButton = Array.from(el.querySelectorAll<HTMLButtonElement>("button")).find(
       (button) => button.querySelector("svg.lucide-x") && !button.closest("li, label")
     );

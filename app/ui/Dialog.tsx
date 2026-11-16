@@ -15,7 +15,19 @@ interface DialogProps {
   busy?: boolean;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** `md` for forms (default), `lg` for wide content, `sheet` for a tall bottom sheet such as the AI chat. */
+  size?: "md" | "lg" | "sheet";
+  /** Element to focus on open; otherwise `[data-autofocus]`, then the first focusable element. */
+  initialFocusRef?: React.RefObject<HTMLElement | null>;
+  /** Extra classes for the scrolling body, for example to remove its padding. */
+  bodyClassName?: string;
 }
+
+const PANEL_SIZE: Record<NonNullable<DialogProps["size"]>, string> = {
+  md: "max-h-[92dvh] max-w-md",
+  lg: "max-h-[92dvh] max-w-2xl",
+  sheet: "h-[88dvh] max-h-[88dvh] max-w-2xl",
+};
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -37,6 +49,9 @@ export default function Dialog({
   busy = false,
   children,
   footer,
+  size = "md",
+  initialFocusRef,
+  bodyClassName = "px-5 py-4",
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -47,7 +62,10 @@ export default function Dialog({
     if (!isOpen) return;
     openerRef.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
-    const first = panel?.querySelector<HTMLElement>("[data-autofocus]") ?? panel?.querySelector<HTMLElement>(FOCUSABLE);
+    const first =
+      initialFocusRef?.current ??
+      panel?.querySelector<HTMLElement>("[data-autofocus]") ??
+      panel?.querySelector<HTMLElement>(FOCUSABLE);
     (first ?? panel)?.focus();
 
     const previousOverflow = document.body.style.overflow;
@@ -57,7 +75,7 @@ export default function Dialog({
       document.body.style.overflow = previousOverflow;
       openerRef.current?.focus?.();
     };
-  }, [isOpen]);
+  }, [isOpen, initialFocusRef]);
 
   if (!isOpen) return null;
 
@@ -101,7 +119,7 @@ export default function Dialog({
         aria-labelledby={titleId}
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
-        className="flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-2xl border border-line bg-card text-ink sm:rounded-2xl animate-modal-in"
+        className={`flex w-full ${PANEL_SIZE[size]} flex-col rounded-t-2xl border border-line bg-card text-ink sm:rounded-2xl animate-modal-in`}
       >
         <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0">
@@ -124,7 +142,7 @@ export default function Dialog({
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-4">{children}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto ${bodyClassName}`}>{children}</div>
         {footer && <div className="flex gap-3 border-t border-line px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</div>}
       </div>
     </div>,

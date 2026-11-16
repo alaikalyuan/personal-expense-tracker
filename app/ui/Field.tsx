@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import type { InputHTMLAttributes, SelectHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { deleteAcrossSeparator, formatRupiahInput, parseMoneyTyping, parseRupiahInput, parseRupiahTyping } from "@/utils/money";
 import type { SupportedCurrency } from "@/utils/money";
 import { useGroupedCaret } from "./useGroupedCaret";
 
 export const CONTROL_CLASS =
-  "min-h-11 w-full rounded-xl border border-line bg-paper px-3 text-base text-ink placeholder:text-ink-soft/70 hover:border-ink-soft disabled:opacity-50";
+  "min-h-11 w-full rounded-xl border border-field-line bg-paper px-3 text-base text-ink placeholder:text-ink-soft/70 hover:border-ink-soft disabled:opacity-50";
 
 interface FieldShellProps {
   label: string;
@@ -75,11 +75,73 @@ export function SelectField({ label, hint, error, className = "", children, ...r
   return (
     <FieldShell label={label} hint={hint} error={error}>
       {({ id, describedBy }) => (
-        <select id={id} aria-describedby={describedBy} className={`${CONTROL_CLASS} ${className}`} {...rest}>
+        <select
+          id={id}
+          aria-describedby={describedBy}
+          aria-invalid={error ? true : undefined}
+          className={`${CONTROL_CLASS} ${className}`}
+          {...rest}
+        >
           {children}
         </select>
       )}
     </FieldShell>
+  );
+}
+
+interface TextareaFieldProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "id"> {
+  label: string;
+  hint?: string;
+  error?: string | null;
+}
+
+export function TextareaField({ label, hint, error, className = "", rows = 3, ...rest }: TextareaFieldProps) {
+  return (
+    <FieldShell label={label} hint={hint} error={error}>
+      {({ id, describedBy }) => (
+        <textarea
+          id={id}
+          rows={rows}
+          aria-describedby={describedBy}
+          aria-invalid={error ? true : undefined}
+          className={`${CONTROL_CLASS} py-2.5 ${className}`}
+          {...rest}
+        />
+      )}
+    </FieldShell>
+  );
+}
+
+interface CheckboxFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "id"> {
+  label: ReactNode;
+  hint?: string;
+}
+
+/**
+ * A checkbox inside its label, so the whole row (at least 44px tall) is the
+ * target and the label text is its accessible name.
+ */
+export function CheckboxField({ label, hint, className = "", ...rest }: CheckboxFieldProps) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+  return (
+    <div className={`flex flex-col gap-1 ${className}`}>
+      <label htmlFor={id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl text-sm font-medium text-ink">
+        <input
+          id={id}
+          type="checkbox"
+          aria-describedby={hint ? hintId : undefined}
+          className="h-5 w-5 shrink-0 accent-[var(--accent)]"
+          {...rest}
+        />
+        <span className="min-w-0 flex-1">{label}</span>
+      </label>
+      {hint && (
+        <p id={hintId} className="pl-8 text-xs text-ink-soft">
+          {hint}
+        </p>
+      )}
+    </div>
   );
 }
 
