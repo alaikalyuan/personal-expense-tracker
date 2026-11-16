@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useId, useRef, useMemo } from "react";
 import { addExpense, addExpensesBatch } from "@/app/actions";
 import {
   X,
@@ -52,7 +52,9 @@ import { subDays, format, parseISO } from "date-fns";
 import { getActiveWallets } from "@/app/saku/actions";
 import { Wallet } from "@/utils/wallets/server";
 import ModalOverlay from "@/app/ui/ModalOverlay";
-import { deleteAcrossSeparator, formatRupiahInput, parseMoneyInput, parseMoneyTyping } from "@/utils/money";
+import { deleteAcrossSeparator, formatRupiahInput, parseMoneyInput, parseMoneyTyping, toRupiahFieldValue } from "@/utils/money";
+import { CheckboxField, MoneyField, SelectField, TextField } from "@/app/ui/Field";
+import { SegmentedControl, ToggleChip } from "@/app/ui/Toggle";
 import { useGroupedCaret } from "@/app/ui/useGroupedCaret";
 
 interface QuickAddModalProps {
@@ -356,9 +358,11 @@ function QuickAddModalContent({
     saveKeepBatch(checked);
   };
 
-  // Auto focus input on mount or mode switch
+  // Auto focus input on mount or mode switch, unless the user is moving
+  // through the mode radios with the arrow keys.
   useEffect(() => {
     const timer = setTimeout(() => {
+      if (document.activeElement?.closest('[role="radiogroup"]')) return;
       if (inputMode === "quick_type") {
         quickInputRef.current?.focus();
       } else {
@@ -779,7 +783,7 @@ function QuickAddModalContent({
     setChipToEdit(chip);
     setNewChipName(chip.name);
     setNewChipCategory(chip.category);
-    setNewChipAmount(chip.defaultAmount ? String(chip.defaultAmount) : "");
+    setNewChipAmount(chip.defaultAmount ? (currency === "IDR" ? toRupiahFieldValue(chip.defaultAmount) : String(chip.defaultAmount)) : "");
     setChipAmountError(null);
     setNewChipEmoji(chip.emoji || "");
   };
@@ -840,50 +844,90 @@ function QuickAddModalContent({
     handleOpenAddChip();
   };
 
+  const fieldIds = useId();
+  const amountId = `${fieldIds}-amount`;
+  const quickBarId = `${fieldIds}-quick`;
+  const quickHintId = `${fieldIds}-quick-hint`;
+  const scanSakuId = `${fieldIds}-scan-saku`;
+  const shortcutsLabelId = `${fieldIds}-shortcuts`;
+  const sakuLabelId = `${fieldIds}-saku`;
+  const categoryLabelId = `${fieldIds}-category`;
+  const chipManagerTitleId = `${fieldIds}-chip-manager`;
+  const chipManagerRef = useRef<HTMLDivElement>(null);
+  const chipOpenerRef = useRef<HTMLElement | null>(null);
+
+  const openChipManager = () => {
+    chipOpenerRef.current = document.activeElement as HTMLElement | null;
+    setIsManagingChips(true);
+    handleOpenAddChip();
+  };
+
+  const closeChipManager = () => {
+    setIsManagingChips(false);
+    // The opener is inert until the manager unmounts, so focus it on the next frame.
+    requestAnimationFrame(() => chipOpenerRef.current?.focus());
+  };
+
+  useEffect(() => {
+    if (isManagingChips) chipManagerRef.current?.querySelector<HTMLElement>("input")?.focus();
+  }, [isManagingChips]);
+
+  const handleEscape = () => {
+    if (isManagingChips) {
+      closeChipManager();
+      return;
+    }
+    if (isExtracting) return;
+    handleClose();
+  };
+
   return (
     <ModalOverlay
       aria-label={t.expenses.addTitle}
+      onClose={handleEscape}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 animate-fade-in"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) handleClose();
       }}
     >
       <div
-        className="w-full max-w-lg rounded-t-3xl sm:rounded-2xl border-t sm:border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 animate-modal-in max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+        className="relative w-full max-w-lg rounded-t-3xl sm:rounded-2xl border-t sm:border border-line bg-card text-ink p-5 shadow-2xl animate-modal-in max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
       >
         {/* Mobile Drag Indicator */}
-        <div className="sm:hidden w-10 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-2 shrink-0" />
+        <div aria-hidden="true" className="sm:hidden w-10 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-2 shrink-0" />
+
+        {/* Everything under the shortcut manager stays out of reach while it is open. */}
+        <div className="contents" inert={isManagingChips}>
 
         {/* Modal Header: Title, Segmented Mode Tabs, Photo Upload, Close */}
-        <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800/80 gap-2 shrink-0">
+        <div className="flex items-center justify-between pb-3 border-b border-line gap-2 shrink-0">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Segmented Mode Selector */}
-            <div className="flex items-center rounded-xl bg-zinc-100 dark:bg-zinc-800/80 p-1 text-xs">
-              <button
-                type="button"
-                onClick={() => handleModeChange("quick_type")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold transition-all cursor-pointer ${
-                  inputMode === "quick_type"
-                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
-                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5 text-amber-500" />
-                <span>{t.expenses.quickTypeTab}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange("standard")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold transition-all cursor-pointer ${
-                  inputMode === "standard"
-                    ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
-                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-                }`}
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>{t.expenses.standardTab}</span>
-              </button>
-            </div>
+            <SegmentedControl
+              ariaLabel={t.expenses.inputModeLabel}
+              value={inputMode}
+              onChange={handleModeChange}
+              options={[
+                {
+                  value: "quick_type",
+                  label: (
+                    <>
+                      <Zap aria-hidden="true" className="w-4 h-4 text-amber-500" />
+                      <span className="whitespace-nowrap">{t.expenses.quickTypeTab}</span>
+                    </>
+                  ),
+                },
+                {
+                  value: "standard",
+                  label: (
+                    <>
+                      <SlidersHorizontal aria-hidden="true" className="w-4 h-4" />
+                      <span className="whitespace-nowrap">{t.expenses.standardTab}</span>
+                    </>
+                  ),
+                },
+              ]}
+            />
 
             {/* AI Photo Scan Button (hidden if AI mode is disabled) */}
             {isAiEnabled && (
@@ -891,10 +935,10 @@ function QuickAddModalContent({
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => setIsImageModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 px-2.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                className="flex min-h-11 items-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 px-3 text-sm font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
                 title="Pindai struk belanja atau tangkapan layar transfer"
               >
-                <Camera className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                <Camera aria-hidden="true" className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                 <span>Upload Foto</span>
               </button>
             )}
@@ -905,9 +949,9 @@ function QuickAddModalContent({
             onClick={handleClose}
             disabled={isSubmitting || isExtracting}
             aria-label={t.common.close}
-            className="text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 cursor-pointer"
+            className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft hover:bg-paper hover:text-ink transition-colors disabled:opacity-50 cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X aria-hidden="true" className="w-5 h-5" />
           </button>
         </div>
 
@@ -952,44 +996,24 @@ function QuickAddModalContent({
               <button
                 type="button"
                 onClick={handleDismissScan}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg"
-                title="Batal dan tutup hasil scan"
+                aria-label={t.expenses.scanDismiss}
+                className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft hover:bg-paper hover:text-ink"
               >
-                <X className="w-4 h-4" />
+                <X aria-hidden="true" className="w-4 h-4" />
               </button>
             </div>
 
             {/* Receipt Itemization Mode Switch (only if receipt has items) */}
             {scannedDoc.kind === "receipt" && scannedDoc.items.length > 0 && (
-              <div className="flex items-center justify-between text-xs bg-white/60 dark:bg-zinc-900/60 p-2 rounded-xl border border-zinc-200/60 dark:border-zinc-800">
-                <span className="text-zinc-600 dark:text-zinc-400 font-medium text-xs">
-                  Mode Pencatatan:
-                </span>
-                <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg text-xs">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleReceiptBreakdown("summary")}
-                    className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${
-                      receiptBreakdownMode === "summary"
-                        ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
-                        : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400"
-                    }`}
-                  >
-                    Ringkas (1 Total)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleReceiptBreakdown("itemized")}
-                    className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${
-                      receiptBreakdownMode === "itemized"
-                        ? "bg-white text-zinc-900 shadow-xs dark:bg-zinc-700 dark:text-white"
-                        : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400"
-                    }`}
-                  >
-                    Rincian ({scannedDoc.items.length} Item)
-                  </button>
-                </div>
-              </div>
+              <SegmentedControl
+                ariaLabel={t.expenses.receiptModeLabel}
+                value={receiptBreakdownMode}
+                onChange={handleToggleReceiptBreakdown}
+                options={[
+                  { value: "summary", label: "Ringkas (1 Total)" },
+                  { value: "itemized", label: `Rincian (${scannedDoc.items.length} Item)` },
+                ]}
+              />
             )}
 
             {/* List of scanned transaction rows */}
@@ -1009,7 +1033,8 @@ function QuickAddModalContent({
                         type="checkbox"
                         checked={row.selected}
                         onChange={() => handleToggleRowSelected(row.id)}
-                        className="mt-0.5 h-4 w-4 rounded-sm border-zinc-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                        aria-label={`${row.name}, ${formatCurrency(row.amount)}`}
+                        className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--accent)] cursor-pointer"
                       />
                       <div>
                         <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-100 block">
@@ -1044,13 +1069,14 @@ function QuickAddModalContent({
             {/* Saku Selector if multiple wallets */}
             {multiSakuEnabled && wallets.length > 1 && (
               <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-zinc-500 dark:text-zinc-400 font-medium text-xs">
-                  Catat ke Saku:
-                </span>
+                <label htmlFor={scanSakuId} className="text-ink-soft font-medium text-sm">
+                  {t.expenses.scanSakuLabel}
+                </label>
                 <select
+                  id={scanSakuId}
                   value={selectedWalletId}
                   onChange={(e) => setSelectedWalletId(e.target.value)}
-                  className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2 py-1 text-xs text-zinc-800 dark:text-zinc-200 outline-none"
+                  className="min-h-11 rounded-xl border border-field-line bg-paper px-3 text-sm text-ink"
                 >
                   {wallets.map((w) => (
                     <option key={w.id} value={w.id}>
@@ -1111,44 +1137,37 @@ function QuickAddModalContent({
             {/* Quick-Fill Chips Shelf */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                <span id={shortcutsLabelId} className="text-sm font-semibold text-ink">
                   {t.expenses.quickShortcuts}
                 </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsManagingChips(true);
-                    handleOpenAddChip();
-                  }}
-                  className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 py-0.5 px-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  onClick={openChipManager}
+                  className="-mr-2 flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors cursor-pointer"
                 >
-                  <Settings2 className="w-3 h-3" />
+                  <Settings2 aria-hidden="true" className="w-4 h-4" />
                   <span>{t.expenses.manageChips}</span>
                 </button>
               </div>
 
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar -mx-1 px-1">
+              <div role="group" aria-labelledby={shortcutsLabelId} className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar -mx-1 px-1">
                 {chips.map((chip) => {
                   const isSelected = activeChipId === chip.id && name === chip.name;
                   return (
-                    <button
+                    <ToggleChip
                       key={chip.id}
-                      type="button"
+                      pressed={isSelected}
                       onClick={() => handleChipClick(chip)}
-                      className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer active:scale-95 ${
-                        isSelected
-                          ? "border-zinc-900 bg-zinc-900 text-white shadow-xs dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
-                          : "border-zinc-200/90 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                      }`}
+                      className="whitespace-nowrap shrink-0"
                     >
-                      {chip.emoji && <span className="text-sm">{chip.emoji}</span>}
+                      {chip.emoji && <span aria-hidden="true">{chip.emoji}</span>}
                       <span>{chip.name}</span>
                       {chip.defaultAmount && (
                         <span className="text-xs opacity-75 font-normal">
                           {(chip.defaultAmount / 1000).toFixed(0)}k
                         </span>
                       )}
-                    </button>
+                    </ToggleChip>
                   );
                 })}
               </div>
@@ -1157,39 +1176,36 @@ function QuickAddModalContent({
             {/* Multi-Saku Selector in Standard Mode */}
             {multiSakuEnabled && wallets.length > 1 && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                <span id={sakuLabelId} className="text-sm font-semibold text-ink">
                   {t.saku.switchToSaku}
                 </span>
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar -mx-1 px-1">
-                  {wallets.map((w) => {
-                    const isSelected = selectedWalletId === w.id;
-                    return (
-                      <button
-                        key={w.id}
-                        type="button"
-                        onClick={() => setSelectedWalletId(w.id)}
-                        className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer active:scale-95 ${
-                          isSelected
-                            ? "border-zinc-900 bg-zinc-900 text-white shadow-xs dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
-                            : "border-zinc-200/90 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                        }`}
-                      >
-                        <span className="text-sm">{w.emoji || "👛"}</span>
-                        <span>{w.name}</span>
-                      </button>
-                    );
-                  })}
+                <div role="group" aria-labelledby={sakuLabelId} className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar -mx-1 px-1">
+                  {wallets.map((w) => (
+                    <ToggleChip
+                      key={w.id}
+                      pressed={selectedWalletId === w.id}
+                      onClick={() => setSelectedWalletId(w.id)}
+                      className="whitespace-nowrap shrink-0"
+                    >
+                      <span aria-hidden="true">{w.emoji || "👛"}</span>
+                      <span>{w.name}</span>
+                    </ToggleChip>
+                  ))}
                 </div>
               </div>
             )}
 
             {/* Hero Amount Input with live currency display */}
             <div className="flex flex-col gap-1.5">
-              <div className="relative flex items-center rounded-2xl border-2 border-zinc-200 bg-zinc-50/70 p-3 focus-within:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:focus-within:border-zinc-200 transition-all">
-                <span className="text-base font-bold text-zinc-400 dark:text-zinc-500 mr-2 select-none">
+              <label htmlFor={amountId} className="text-sm font-semibold text-ink">
+                {t.home.amountLabel}
+              </label>
+              <div className="relative flex items-center rounded-2xl border-2 border-field-line bg-paper p-3 focus-within:border-ink transition-all">
+                <span aria-hidden="true" className="text-base font-bold text-ink-soft mr-2 select-none">
                   {currencySymbol}
                 </span>
                 <input
+                  id={amountId}
                   ref={amountInputRef}
                   type="text"
                   inputMode={currency === "IDR" ? "numeric" : "decimal"}
@@ -1199,16 +1215,16 @@ function QuickAddModalContent({
                   aria-invalid={showAmountError && amountError ? true : undefined}
                   aria-describedby={showAmountError && amountError ? "quick-add-amount-error" : undefined}
                   placeholder="0"
-                  className="w-full bg-transparent text-2xl font-extrabold tracking-tight outline-none placeholder:text-zinc-300 text-zinc-900 dark:placeholder:text-zinc-600 dark:text-zinc-50"
+                  className="w-full bg-transparent text-2xl font-extrabold tracking-tight outline-none placeholder:text-ink-soft/60 text-ink"
                 />
                 {(amount > 0 || amountDraftActive) && (
                   <button
                     type="button"
                     onClick={clearAmount}
                     aria-label={t.expenses.clearAmount}
-                    className="p-1 rounded-full text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    className="-my-2 -mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft hover:text-ink hover:bg-line transition-colors cursor-pointer"
                   >
-                    <X className="w-4 h-4" />
+                    <X aria-hidden="true" className="w-4 h-4" />
                   </button>
                 )}
               </div>
@@ -1238,7 +1254,8 @@ function QuickAddModalContent({
                     key={item.label}
                     type="button"
                     onClick={() => addQuickAmount(item.val)}
-                    className="py-1.5 rounded-lg border border-zinc-200/80 bg-zinc-50 hover:bg-zinc-100 text-xs font-semibold text-zinc-700 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    aria-label={`+${formatCurrency(item.val)}`}
+                    className="min-h-11 rounded-xl border border-field-line bg-card hover:bg-paper text-sm font-semibold text-ink active:scale-95 transition-all cursor-pointer"
                   >
                     {item.label}
                   </button>
@@ -1246,7 +1263,8 @@ function QuickAddModalContent({
                 <button
                   type="button"
                   onClick={clearAmount}
-                  className="py-1.5 rounded-lg border border-zinc-200/80 bg-zinc-50 hover:bg-rose-50 hover:text-rose-600 text-xs font-semibold text-zinc-500 active:scale-95 transition-all cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+                  aria-label={t.expenses.clearAmount}
+                  className="min-h-11 rounded-xl border border-field-line bg-card hover:bg-danger-soft hover:text-danger text-sm font-semibold text-ink-soft active:scale-95 transition-all cursor-pointer"
                 >
                   C
                 </button>
@@ -1255,10 +1273,10 @@ function QuickAddModalContent({
 
             {/* 1-Tap Category Grid */}
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+              <span id={categoryLabelId} className="text-sm font-semibold text-ink">
                 {t.expenses.categoryLabel}
               </span>
-              <div className="grid grid-cols-3 gap-2">
+              <div role="group" aria-labelledby={categoryLabelId} className="grid grid-cols-3 gap-2">
                 {CATEGORY_KEYS.map((catKey) => {
                   const Icon = CATEGORY_ICONS[catKey] || Package;
                   const isSelected = category === catKey;
@@ -1268,14 +1286,19 @@ function QuickAddModalContent({
                     <button
                       key={catKey}
                       type="button"
+                      aria-pressed={isSelected}
                       onClick={() => setCategory(catKey)}
-                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition-all text-left cursor-pointer active:scale-95 ${
+                      className={`flex min-h-11 items-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition-all text-left cursor-pointer active:scale-95 ${
                         isSelected
-                          ? `${style.activeBg} border-transparent`
-                          : "border-zinc-200/90 bg-zinc-50/60 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                          ? `${style.activeBg} border-ink ring-1 ring-ink font-bold`
+                          : "border-field-line bg-card text-ink hover:bg-paper"
                       }`}
                     >
-                      <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-white" : style.activeText}`} />
+                      {isSelected ? (
+                        <Check aria-hidden="true" className="w-4 h-4 shrink-0" strokeWidth={3} />
+                      ) : (
+                        <Icon aria-hidden="true" className={`w-4 h-4 shrink-0 ${style.activeText}`} />
+                      )}
                       <span className="truncate">{getCategoryLabel(catKey)}</span>
                     </button>
                   );
@@ -1284,70 +1307,53 @@ function QuickAddModalContent({
             </div>
 
             {/* Name Input */}
-            <div className="flex flex-col gap-1.5">
-              <input
-                ref={nameInputRef}
-                type="text"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setActiveChipId(null);
-                }}
-                placeholder={t.expenses.namePlaceholder}
-                required
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm outline-none focus:border-zinc-900 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:placeholder:text-zinc-500 dark:focus:border-zinc-300 dark:text-zinc-100"
-              />
-            </div>
+            <TextField
+              ref={nameInputRef}
+              label={t.home.nameLabel}
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setActiveChipId(null);
+              }}
+              placeholder={t.expenses.namePlaceholder}
+              required
+            />
 
             {/* Smart Date Selector (Today / Yesterday / Custom) */}
-            <div className="flex items-center gap-1.5 select-none">
-              <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 mr-1">
-                {t.expenses.whenLabel}:
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold text-ink" aria-hidden="true">
+                {t.expenses.whenLabel}
               </span>
-              <button
-                type="button"
-                onClick={() => setDateMode("today")}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                  dateMode === "today"
-                    ? "bg-zinc-900 text-white shadow-xs dark:bg-zinc-100 dark:text-zinc-950"
-                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                }`}
-              >
-                {t.common.today}
-              </button>
-              <button
-                type="button"
-                onClick={() => setDateMode("yesterday")}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                  dateMode === "yesterday"
-                    ? "bg-zinc-900 text-white shadow-xs dark:bg-zinc-100 dark:text-zinc-950"
-                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                }`}
-              >
-                {t.common.yesterday}
-              </button>
-              <button
-                type="button"
-                onClick={() => setDateMode("custom")}
-                className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                  dateMode === "custom"
-                    ? "bg-zinc-900 text-white shadow-xs dark:bg-zinc-100 dark:text-zinc-950"
-                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                }`}
-              >
-                <Calendar className="w-3 h-3" />
-                <span>{t.expenses.customDate}</span>
-              </button>
+              <SegmentedControl
+                ariaLabel={t.expenses.whenLabel}
+                value={dateMode}
+                onChange={setDateMode}
+                options={[
+                  { value: "today", label: t.common.today },
+                  { value: "yesterday", label: t.common.yesterday },
+                  {
+                    value: "custom",
+                    label: (
+                      <>
+                        <Calendar aria-hidden="true" className="w-4 h-4" />
+                        <span>{t.expenses.customDate}</span>
+                      </>
+                    ),
+                  },
+                ]}
+              />
             </div>
 
             {/* Custom Date Input if selected */}
             {dateMode === "custom" && (
-              <input
+              <TextField
+                label={t.home.dateLabel}
                 type="date"
                 value={customDate}
                 onChange={(e) => setCustomDate(e.target.value)}
                 required
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 scheme-light dark:scheme-dark outline-none focus:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-300 animate-fade-in"
+                className="scheme-light dark:scheme-dark"
               />
             )}
 
@@ -1356,26 +1362,29 @@ function QuickAddModalContent({
               <button
                 type="button"
                 onClick={() => setShowNote(true)}
-                className="self-start text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                className="-ml-2 self-start min-h-11 rounded-xl px-2 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors cursor-pointer"
               >
                 {t.expenses.addNote}
               </button>
             ) : (
-              <div className="flex items-center gap-2 animate-fade-in">
-                <input
-                  type="text"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={t.expenses.notePlaceholder}
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs outline-none focus:border-zinc-400 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:text-zinc-100"
-                />
+              <div className="flex items-end gap-1 animate-fade-in">
+                <div className="min-w-0 flex-1">
+                  <TextField
+                    label={t.home.noteLabel}
+                    type="text"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder={t.expenses.notePlaceholder}
+                  />
+                </div>
                 {!note && (
                   <button
                     type="button"
                     onClick={() => setShowNote(false)}
-                    className="text-xs text-zinc-400 hover:text-zinc-600 p-1.5"
+                    aria-label={t.expenses.hideNoteAria}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft hover:bg-paper hover:text-ink"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X aria-hidden="true" className="w-4 h-4" />
                   </button>
                 )}
               </div>
@@ -1394,16 +1403,17 @@ function QuickAddModalContent({
                   <button
                     type="button"
                     onClick={() => setIsExempt(true)}
-                    className="rounded-lg bg-accent px-2.5 py-1 text-xs font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-95 transition-all cursor-pointer"
+                    className="min-h-11 rounded-xl bg-accent px-3 text-xs font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-95 transition-all cursor-pointer"
                   >
                     {t.expenses.oneOffMarkButton}
                   </button>
                   <button
                     type="button"
                     onClick={() => setDismissedAnomalySuggestion(true)}
-                    className="p-1 text-amber-600 hover:text-amber-900 dark:text-amber-400 rounded-md cursor-pointer"
+                    aria-label={t.expenses.dismissSuggestion}
+                    className="-my-2 flex h-11 w-11 items-center justify-center text-amber-700 hover:text-amber-900 dark:text-amber-400 rounded-xl cursor-pointer"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X aria-hidden="true" className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -1419,7 +1429,7 @@ function QuickAddModalContent({
                 <button
                   type="button"
                   onClick={() => setIsExempt(false)}
-                  className="text-xs text-amber-600 hover:text-amber-900 dark:text-amber-400 font-semibold cursor-pointer underline"
+                  className="-my-2 -mr-2 min-h-11 px-2 text-xs text-amber-800 hover:text-amber-950 dark:text-amber-300 font-semibold cursor-pointer underline"
                 >
                   {t.expenses.oneOffRemoveButton}
                 </button>
@@ -1433,24 +1443,18 @@ function QuickAddModalContent({
                   <button
                     type="button"
                     onClick={() => setShowMoreOptions(true)}
-                    className="text-xs font-medium text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors cursor-pointer"
+                    className="-ml-2 min-h-11 rounded-xl px-2 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors cursor-pointer"
                   >
                     + {t.expenses.moreOptions}
                   </button>
                 ) : (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-zinc-200/80 bg-zinc-50/50 p-2.5 dark:border-zinc-800/70 dark:bg-zinc-950/40 animate-fade-in">
-                    <input
-                      type="checkbox"
-                      id="manualOneOff"
-                      checked={isExempt}
-                      onChange={(e) => setIsExempt(e.target.checked)}
-                      className="rounded border-zinc-300 text-amber-500 focus:ring-amber-500 h-4 w-4 mt-0.5 cursor-pointer"
-                    />
-                    <label htmlFor="manualOneOff" className="text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
-                      <p className="font-semibold text-xs text-zinc-900 dark:text-zinc-100">{t.expenses.oneOffCheckbox}</p>
-                      <p className="text-xs text-zinc-500">{t.expenses.oneOffHelp}</p>
-                    </label>
-                  </div>
+                  <CheckboxField
+                    className="rounded-xl border border-line px-3 py-1 animate-fade-in"
+                    checked={isExempt}
+                    onChange={(e) => setIsExempt(e.target.checked)}
+                    label={t.expenses.oneOffCheckbox}
+                    hint={t.expenses.oneOffHelp}
+                  />
                 )}
               </div>
             )}
@@ -1481,31 +1485,28 @@ function QuickAddModalContent({
             {/* Quick-Fill Chips Shelf in Quick Mode */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                <span id={shortcutsLabelId} className="text-sm font-semibold text-ink">
                   {t.expenses.quickShortcuts}
                 </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsManagingChips(true);
-                    handleOpenAddChip();
-                  }}
-                  className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 py-0.5 px-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  onClick={openChipManager}
+                  className="-mr-2 flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors cursor-pointer"
                 >
-                  <Settings2 className="w-3 h-3" />
+                  <Settings2 aria-hidden="true" className="w-4 h-4" />
                   <span>{t.expenses.manageChips}</span>
                 </button>
               </div>
 
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar -mx-1 px-1">
+              <div role="group" aria-labelledby={shortcutsLabelId} className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar -mx-1 px-1">
                 {chips.map((chip) => (
                   <button
                     key={chip.id}
                     type="button"
                     onClick={() => handleQuickChipInQuickMode(chip)}
-                    className="flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-zinc-200/90 bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-all shrink-0 cursor-pointer active:scale-95"
+                    className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-xl border border-field-line bg-card px-3 text-sm font-semibold text-ink hover:bg-paper transition-all shrink-0 cursor-pointer active:scale-95"
                   >
-                    {chip.emoji && <span className="text-sm">{chip.emoji}</span>}
+                    {chip.emoji && <span aria-hidden="true">{chip.emoji}</span>}
                     <span>{chip.name}</span>
                     {chip.defaultAmount && (
                       <span className="text-xs opacity-75 font-normal">
@@ -1520,43 +1521,41 @@ function QuickAddModalContent({
             {/* Multi-Saku Selector in Quick Type Mode */}
             {multiSakuEnabled && wallets.length > 1 && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                <span id={sakuLabelId} className="text-sm font-semibold text-ink">
                   {t.saku.switchToSaku}
                 </span>
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar -mx-1 px-1">
-                  {wallets.map((w) => {
-                    const isSelected = selectedWalletId === w.id;
-                    return (
-                      <button
-                        key={w.id}
-                        type="button"
-                        onClick={() => setSelectedWalletId(w.id)}
-                        className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer active:scale-95 ${
-                          isSelected
-                            ? "border-zinc-900 bg-zinc-900 text-white shadow-xs dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950"
-                            : "border-zinc-200/90 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                        }`}
-                      >
-                        <span className="text-sm">{w.emoji || "👛"}</span>
-                        <span>{w.name}</span>
-                      </button>
-                    );
-                  })}
+                <div role="group" aria-labelledby={sakuLabelId} className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar -mx-1 px-1">
+                  {wallets.map((w) => (
+                    <ToggleChip
+                      key={w.id}
+                      pressed={selectedWalletId === w.id}
+                      onClick={() => setSelectedWalletId(w.id)}
+                      className="whitespace-nowrap shrink-0"
+                    >
+                      <span aria-hidden="true">{w.emoji || "👛"}</span>
+                      <span>{w.name}</span>
+                    </ToggleChip>
+                  ))}
                 </div>
               </div>
             )}
 
             {/* Command Input Bar */}
             <div className="flex flex-col gap-1.5">
-              <div className="relative flex items-center rounded-2xl border-2 border-zinc-200 bg-zinc-50/70 p-3.5 focus-within:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:focus-within:border-zinc-200 transition-all">
-                <Zap className="w-5 h-5 text-amber-500 mr-2.5 shrink-0" />
+              <label htmlFor={quickBarId} className="text-sm font-semibold text-ink">
+                {t.expenses.quickBarLabel}
+              </label>
+              <div className="relative flex items-center rounded-2xl border-2 border-field-line bg-paper p-3.5 focus-within:border-ink transition-all">
+                <Zap aria-hidden="true" className="w-5 h-5 text-amber-500 mr-2.5 shrink-0" />
                 <input
+                  id={quickBarId}
                   ref={quickInputRef}
                   type="text"
                   value={quickInput}
                   onChange={(e) => handleQuickInputChange(e.target.value)}
                   placeholder={t.expenses.quickBarPlaceholder}
-                  className="w-full bg-transparent text-sm sm:text-base font-semibold outline-none placeholder:text-zinc-400 text-zinc-900 dark:placeholder:text-zinc-600 dark:text-zinc-100"
+                  aria-describedby={quickHintId}
+                  className="w-full bg-transparent text-base font-semibold outline-none placeholder:text-ink-soft/70 text-ink"
                 />
                 {quickInput && (
                   <button
@@ -1565,13 +1564,14 @@ function QuickAddModalContent({
                       handleQuickInputChange("");
                       quickInputRef.current?.focus();
                     }}
-                    className="p-1 rounded-full text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    aria-label={t.expenses.clearQuickInput}
+                    className="-my-2 -mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft hover:text-ink hover:bg-line transition-colors cursor-pointer"
                   >
-                    <X className="w-4 h-4" />
+                    <X aria-hidden="true" className="w-4 h-4" />
                   </button>
                 )}
               </div>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 pl-1">
+              <p id={quickHintId} className="text-xs text-ink-soft pl-1">
                 {t.expenses.quickBarHint}
               </p>
             </div>
@@ -1588,12 +1588,12 @@ function QuickAddModalContent({
                       <button
                         type="button"
                         onClick={() => setOverrideExempt(false)}
-                        className="flex items-center gap-1 rounded-md bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800/80 px-2 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors cursor-pointer"
-                        title="Remove One-off tag"
+                        aria-label={`${t.expenses.oneOffRemoveButton}: One-Off`}
+                        className="flex min-h-8 items-center gap-1 rounded-md bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800/80 px-2 text-xs font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors cursor-pointer"
                       >
-                        <Tag className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                        <Tag aria-hidden="true" className="w-3 h-3 text-amber-700 dark:text-amber-400" />
                         <span>One-Off</span>
-                        <X className="w-2.5 h-2.5 opacity-60 hover:opacity-100" />
+                        <X aria-hidden="true" className="w-3 h-3" />
                       </button>
                     )}
                     <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -1619,6 +1619,7 @@ function QuickAddModalContent({
                     {/* Category Badge - Clickable */}
                     <button
                       type="button"
+                      aria-expanded={showCategoryPicker}
                       onClick={() => {
                         setShowCategoryPicker((prev) => !prev);
                         setShowDatePicker(false);
@@ -1628,19 +1629,20 @@ function QuickAddModalContent({
                       } ${CATEGORY_STYLES[effectiveCategory].badgeText} ${
                         showCategoryPicker ? "ring-2 ring-zinc-400 dark:ring-zinc-600" : ""
                       }`}
-                      title={t.expenses.categoryLabel}
+                      aria-label={`${t.expenses.categoryLabel}: ${getCategoryLabel(effectiveCategory)}`}
                     >
                       {(() => {
                         const CatIcon = CATEGORY_ICONS[effectiveCategory] || Package;
                         return <CatIcon className="w-3 h-3 shrink-0" />;
                       })()}
                       <span>{getCategoryLabel(effectiveCategory)}</span>
-                      <span className="text-xs opacity-70 ml-0.5">▾</span>
+                      <span aria-hidden="true" className="text-xs opacity-70 ml-0.5">▾</span>
                     </button>
 
                     {/* Date Badge - Clickable */}
                     <button
                       type="button"
+                      aria-expanded={showDatePicker}
                       onClick={() => {
                         setShowDatePicker((prev) => !prev);
                         setShowCategoryPicker(false);
@@ -1648,8 +1650,8 @@ function QuickAddModalContent({
                       className={`flex items-center gap-1 rounded-lg border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all cursor-pointer ${
                         showDatePicker ? "ring-2 ring-zinc-400 dark:ring-zinc-600" : ""
                       }`}
-                      title={t.expenses.whenLabel}
                     >
+                      <span className="sr-only">{t.expenses.whenLabel}: </span>
                       <Calendar className="w-3 h-3 text-zinc-400" />
                       <span>
                         {effectiveSpentAt === today
@@ -1658,7 +1660,7 @@ function QuickAddModalContent({
                           ? t.common.yesterday
                           : formatDate(effectiveSpentAt, "EEEE, d MMM")}
                       </span>
-                      <span className="text-xs opacity-70 ml-0.5">▾</span>
+                      <span aria-hidden="true" className="text-xs opacity-70 ml-0.5">▾</span>
                     </button>
 
                     {/* Saku Badge (Multi-Saku Enabled) */}
@@ -1681,17 +1683,22 @@ function QuickAddModalContent({
                           <button
                             key={catKey}
                             type="button"
+                            aria-pressed={isSel}
                             onClick={() => {
                               setOverrideCategory(catKey);
                               setShowCategoryPicker(false);
                             }}
-                            className={`flex items-center gap-1.5 rounded-lg p-2 text-xs font-medium transition-all text-left cursor-pointer ${
+                            className={`flex min-h-11 items-center gap-1.5 rounded-lg p-2 text-xs font-medium transition-all text-left cursor-pointer ${
                               isSel
-                                ? `${style.activeBg}`
-                                : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                                ? `${style.activeBg} ring-1 ring-ink font-bold`
+                                : "hover:bg-paper text-ink"
                             }`}
                           >
-                            <Icon className={`w-3.5 h-3.5 shrink-0 ${isSel ? "text-white" : style.activeText}`} />
+                            {isSel ? (
+                              <Check aria-hidden="true" className="w-3.5 h-3.5 shrink-0" strokeWidth={3} />
+                            ) : (
+                              <Icon aria-hidden="true" className={`w-3.5 h-3.5 shrink-0 ${style.activeText}`} />
+                            )}
                             <span className="truncate text-xs">{getCategoryLabel(catKey)}</span>
                           </button>
                         );
@@ -1705,43 +1712,47 @@ function QuickAddModalContent({
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
+                          aria-pressed={effectiveSpentAt === today}
                           onClick={() => {
                             setOverrideDate(today);
                             setShowDatePicker(false);
                           }}
-                          className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                          className={`flex min-h-11 flex-1 items-center justify-center gap-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                             effectiveSpentAt === today
-                              ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                              ? "bg-ink text-card font-bold"
+                              : "bg-paper text-ink"
                           }`}
                         >
+                          {effectiveSpentAt === today && <Check aria-hidden="true" className="w-3.5 h-3.5" strokeWidth={3} />}
                           {t.common.today}
                         </button>
                         <button
                           type="button"
+                          aria-pressed={effectiveSpentAt === yesterdayStr}
                           onClick={() => {
                             setOverrideDate(yesterdayStr);
                             setShowDatePicker(false);
                           }}
-                          className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                          className={`flex min-h-11 flex-1 items-center justify-center gap-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                             effectiveSpentAt === yesterdayStr
-                              ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
-                              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                              ? "bg-ink text-card font-bold"
+                              : "bg-paper text-ink"
                           }`}
                         >
+                          {effectiveSpentAt === yesterdayStr && <Check aria-hidden="true" className="w-3.5 h-3.5" strokeWidth={3} />}
                           {t.common.yesterday}
                         </button>
                       </div>
-                      <div className="flex items-center gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
-                        <span className="text-xs text-zinc-400">{t.expenses.customDate}:</span>
-                        <input
+                      <div className="pt-1 border-t border-line">
+                        <TextField
+                          label={t.expenses.customDate}
                           type="date"
                           value={effectiveSpentAt}
                           onChange={(e) => {
                             setOverrideDate(e.target.value);
                             setShowDatePicker(false);
                           }}
-                          className="flex-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-2 py-1 text-xs outline-none"
+                          className="scheme-light dark:scheme-dark"
                         />
                       </div>
                     </div>
@@ -1769,36 +1780,34 @@ function QuickAddModalContent({
                   <button
                     type="button"
                     onClick={() => setOverrideExempt(true)}
-                    className="rounded-lg bg-accent px-2.5 py-1 text-xs font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-95 transition-all cursor-pointer"
+                    className="min-h-11 rounded-xl bg-accent px-3 text-xs font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-95 transition-all cursor-pointer"
                   >
                     {t.expenses.oneOffMarkButton}
                   </button>
                   <button
                     type="button"
                     onClick={() => setDismissedAnomalySuggestion(true)}
-                    className="p-1 text-amber-600 hover:text-amber-900 dark:text-amber-400 rounded-md cursor-pointer"
+                    aria-label={t.expenses.dismissSuggestion}
+                    className="-my-2 flex h-11 w-11 items-center justify-center text-amber-700 hover:text-amber-900 dark:text-amber-400 rounded-xl cursor-pointer"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X aria-hidden="true" className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             )}
 
             {/* Keep Open for Batch Consecutive Logging Toggle */}
-            <div className="flex items-center justify-between rounded-xl border border-zinc-200/70 dark:border-zinc-800/80 p-3 bg-white dark:bg-zinc-900/60 select-none">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-zinc-400" />
-                <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+            <CheckboxField
+              className="rounded-xl border border-line px-3"
+              checked={keepBatch}
+              onChange={(e) => handleKeepBatchToggle(e.target.checked)}
+              label={
+                <span className="flex items-center gap-2">
+                  <FileText aria-hidden="true" className="w-4 h-4 text-ink-soft" />
                   {t.expenses.keepOpenBatch}
                 </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={keepBatch}
-                onChange={(e) => handleKeepBatchToggle(e.target.checked)}
-                className="h-4 w-4 rounded accent-zinc-900 dark:accent-zinc-100 cursor-pointer"
-              />
-            </div>
+              }
+            />
 
             {/* Quick-Type Submit CTA */}
             <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
@@ -1820,129 +1829,143 @@ function QuickAddModalContent({
           </form>
         )}
 
-        {/* CHIP MANAGER MODAL OVERLAY */}
+        </div>
+
+        {/* Shortcut manager: covers the form; Escape closes it and focus returns to "Kelola". */}
         {isManagingChips && (
-          <div className="absolute inset-0 z-20 rounded-t-3xl sm:rounded-2xl bg-white dark:bg-zinc-900 p-5 flex flex-col gap-3.5 animate-modal-in overflow-y-auto">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
+          <div
+            ref={chipManagerRef}
+            role="group"
+            aria-labelledby={chipManagerTitleId}
+            className="absolute inset-0 z-20 rounded-t-3xl sm:rounded-2xl bg-card text-ink p-5 flex flex-col gap-3.5 animate-modal-in overflow-y-auto"
+          >
+            <div className="flex items-start justify-between gap-3 pb-2 border-b border-line">
               <div>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                <h3 id={chipManagerTitleId} className="text-base font-bold text-ink">
                   {t.expenses.manageChipsTitle}
                 </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {t.expenses.manageChipsSubtitle}
-                </p>
+                <p className="text-sm text-ink-soft">{t.expenses.manageChipsSubtitle}</p>
               </div>
               <button
                 type="button"
-                onClick={() => setIsManagingChips(false)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                onClick={closeChipManager}
+                aria-label={t.expenses.closeChipManager}
+                className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft hover:bg-paper hover:text-ink"
               >
-                <X className="w-4 h-4" />
+                <X aria-hidden="true" className="w-5 h-5" />
               </button>
             </div>
 
             {/* List of existing chips */}
-            <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+            <ul className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
               {chips.map((chip) => (
-                <div
+                <li
                   key={chip.id}
-                  className="flex items-center justify-between rounded-xl border border-zinc-200/80 bg-zinc-50 p-2.5 text-xs dark:border-zinc-800 dark:bg-zinc-950"
+                  className="flex items-center justify-between rounded-xl border border-line bg-paper py-1 pl-3 pr-1 text-sm"
                 >
-                  <div className="flex items-center gap-2">
-                    {chip.emoji && <span className="text-base">{chip.emoji}</span>}
-                    <div>
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-100">{chip.name}</p>
-                      <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <div className="flex min-w-0 items-center gap-2">
+                    {chip.emoji && <span aria-hidden="true" className="text-base">{chip.emoji}</span>}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-ink">{chip.name}</p>
+                      <span className="text-xs text-ink-soft">
                         {getCategoryLabel(chip.category)}
                         {chip.defaultAmount ? ` • ${formatCurrency(chip.defaultAmount)}` : ""}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex shrink-0 items-center">
                     <button
                       type="button"
                       onClick={() => handleOpenEditChip(chip)}
-                      className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 cursor-pointer"
+                      aria-label={t.expenses.editChipAria.replace("{name}", chip.name)}
+                      className="flex h-11 w-11 items-center justify-center rounded-xl text-ink-soft hover:text-ink hover:bg-line cursor-pointer"
                     >
-                      <Pencil className="w-3.5 h-3.5" />
+                      <Pencil aria-hidden="true" className="w-4 h-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteChip(chip.id)}
-                      className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                      aria-label={t.expenses.deleteChipAria.replace("{name}", chip.name)}
+                      className="flex h-11 w-11 items-center justify-center rounded-xl text-danger hover:bg-danger-soft cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 aria-hidden="true" className="w-4 h-4" />
                     </button>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
 
             {/* Add / Edit Chip Form */}
-            <form onSubmit={handleSaveChip} className="flex flex-col gap-2.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+            <form onSubmit={handleSaveChip} className="flex flex-col gap-3 pt-2 border-t border-line">
+              <h4 className="text-sm font-bold text-ink">
                 {chipToEdit ? t.expenses.editChip : t.expenses.addChip}
-              </span>
+              </h4>
 
-              <div className="flex gap-2">
-                <input
+              <div className="grid grid-cols-[6rem_1fr] gap-2">
+                <TextField
+                  label={t.expenses.chipEmojiLabel}
                   type="text"
                   value={newChipEmoji}
                   onChange={(e) => setNewChipEmoji(e.target.value)}
-                  placeholder="Emoji"
-                  className="w-16 rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-center text-sm outline-none focus:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                  placeholder="🍔"
+                  className="text-center"
                 />
-                <input
+                <TextField
+                  label={t.expenses.chipNameLabel}
                   type="text"
                   value={newChipName}
                   onChange={(e) => setNewChipName(e.target.value)}
                   placeholder={t.expenses.chipNamePlaceholder}
                   required
-                  className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs outline-none focus:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 />
               </div>
 
-              <div className="flex gap-2">
-                <select
-                  value={newChipCategory}
-                  onChange={(e) => setNewChipCategory(e.target.value as CategoryKey)}
-                  className="w-1/2 rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-xs outline-none focus:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
-                >
-                  {CATEGORY_KEYS.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {getCategoryLabel(cat)}
-                    </option>
-                  ))}
-                </select>
-                <input
+              <SelectField
+                label={t.expenses.categoryLabel}
+                value={newChipCategory}
+                onChange={(e) => setNewChipCategory(e.target.value as CategoryKey)}
+              >
+                {CATEGORY_KEYS.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {getCategoryLabel(cat)}
+                  </option>
+                ))}
+              </SelectField>
+
+              {currency === "IDR" ? (
+                <MoneyField
+                  label={t.expenses.defaultAmountLabel}
+                  value={newChipAmount}
+                  onChange={(value) => {
+                    setNewChipAmount(value);
+                    setChipAmountError(null);
+                  }}
+                  prefix={currencySymbol}
+                  allowZero
+                  error={chipAmountError}
+                />
+              ) : (
+                <TextField
+                  label={`${t.expenses.defaultAmountLabel} (${currencySymbol})`}
                   type="text"
-                  inputMode={currency === "IDR" ? "numeric" : "decimal"}
+                  inputMode="decimal"
                   value={newChipAmount}
                   onChange={(e) => {
                     setNewChipAmount(e.target.value);
                     setChipAmountError(null);
                   }}
-                  placeholder={t.expenses.defaultAmountOptional}
-                  aria-label={t.expenses.defaultAmountOptional}
-                  aria-invalid={chipAmountError ? true : undefined}
-                  aria-describedby={chipAmountError ? "chip-amount-error" : undefined}
-                  className="w-1/2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs outline-none focus:border-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                  error={chipAmountError}
                 />
-              </div>
-              {chipAmountError && (
-                <p id="chip-amount-error" role="alert" className="text-xs font-medium text-danger">
-                  {chipAmountError}
-                </p>
               )}
 
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <button
                   type="button"
                   onClick={handleResetChips}
-                  className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer"
+                  className="-ml-2 flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm text-ink-soft hover:bg-paper hover:text-ink cursor-pointer"
                 >
-                  <RotateCcw className="w-3 h-3" />
+                  <RotateCcw aria-hidden="true" className="w-4 h-4" />
                   <span>{t.expenses.resetDefaults}</span>
                 </button>
 
@@ -1951,14 +1974,14 @@ function QuickAddModalContent({
                     <button
                       type="button"
                       onClick={handleOpenAddChip}
-                      className="rounded-xl border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 cursor-pointer"
+                      className="min-h-11 rounded-xl border border-field-line px-3 text-sm font-semibold text-ink hover:bg-paper cursor-pointer"
                     >
                       {t.common.cancel}
                     </button>
                   )}
                   <button
                     type="submit"
-                    className="rounded-xl bg-zinc-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 cursor-pointer"
+                    className="min-h-11 rounded-xl bg-ink px-4 text-sm font-semibold text-card hover:opacity-90 cursor-pointer"
                   >
                     {t.expenses.saveChip}
                   </button>

@@ -47,6 +47,7 @@ interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id
   label: string;
   hint?: string;
   error?: string | null;
+  ref?: React.Ref<HTMLInputElement>;
 }
 
 export function TextField({ label, hint, error, className = "", ...rest }: TextFieldProps) {

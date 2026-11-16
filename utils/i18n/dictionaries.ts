@@ -277,6 +277,21 @@ export interface Dictionary {
     oneOffRemoveButton: string;
     moreOptions: string;
     lessOptions: string;
+    inputModeLabel: string;
+    quickBarLabel: string;
+    clearQuickInput: string;
+    dismissSuggestion: string;
+    hideNoteAria: string;
+    closeChipManager: string;
+    editChipAria: string;
+    deleteChipAria: string;
+    chipEmojiLabel: string;
+    chipNameLabel: string;
+    defaultAmountLabel: string;
+    sakuPickerLabel: string;
+    scanDismiss: string;
+    receiptModeLabel: string;
+    scanSakuLabel: string;
   };
   exportShare: {
     modalTitle: string;
@@ -1269,6 +1284,21 @@ export const dictionaries: Record<Locale, Dictionary> = {
       oneOffRemoveButton: "Batal Tandai",
       moreOptions: "Opsi lainnya",
       lessOptions: "Sembunyikan opsi",
+      inputModeLabel: "Cara mencatat",
+      quickBarLabel: "Ketik pengeluaran",
+      clearQuickInput: "Hapus teks",
+      dismissSuggestion: "Tutup saran",
+      hideNoteAria: "Sembunyikan catatan",
+      closeChipManager: "Tutup kelola pintasan",
+      editChipAria: "Ubah pintasan {name}",
+      deleteChipAria: "Hapus pintasan {name}",
+      chipEmojiLabel: "Emoji (opsional)",
+      chipNameLabel: "Nama pintasan",
+      defaultAmountLabel: "Nominal bawaan (opsional)",
+      sakuPickerLabel: "Saku",
+      scanDismiss: "Tutup hasil pindai",
+      receiptModeLabel: "Mode pencatatan",
+      scanSakuLabel: "Catat ke Saku",
     },
     exportShare: {
       modalTitle: "Bagikan & Ekspor",
@@ -2271,6 +2301,21 @@ export const dictionaries: Record<Locale, Dictionary> = {
       oneOffRemoveButton: "Remove Tag",
       moreOptions: "More options",
       lessOptions: "Hide options",
+      inputModeLabel: "Entry mode",
+      quickBarLabel: "Type an expense",
+      clearQuickInput: "Clear text",
+      dismissSuggestion: "Dismiss suggestion",
+      hideNoteAria: "Hide note",
+      closeChipManager: "Close shortcut manager",
+      editChipAria: "Edit shortcut {name}",
+      deleteChipAria: "Delete shortcut {name}",
+      chipEmojiLabel: "Emoji (optional)",
+      chipNameLabel: "Shortcut name",
+      defaultAmountLabel: "Default amount (optional)",
+      sakuPickerLabel: "Saku",
+      scanDismiss: "Close scan result",
+      receiptModeLabel: "Recording mode",
+      scanSakuLabel: "Record to Saku",
     },
     exportShare: {
       modalTitle: "Share & Export",
