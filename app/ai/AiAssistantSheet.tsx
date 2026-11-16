@@ -18,6 +18,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import Dialog from "@/app/ui/Dialog";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "@/utils/i18n/context";
 import { usePathname } from "next/navigation";
@@ -113,17 +114,6 @@ export default function AiAssistantSheet() {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isLoading, isOpen, statusLabel, isExtracting, extractStatus]);
-
-  // Handle escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        closeAi();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, closeAi]);
 
   if (!isOpen || !isAiEnabled) return null;
 
@@ -275,118 +265,97 @@ export default function AiAssistantSheet() {
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="ai-assistant-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-zinc-950/60 animate-fade-in"
+    <Dialog
+      isOpen={isOpen}
+      onClose={closeAi}
+      title={t.aiAdvisor.modalTitle}
+      closeLabel={t.common.close}
+      size="sheet"
+      bodyClassName="p-0"
+      initialFocusRef={textareaRef}
+      headerActions={
+        <>
+          {/* Key config / Limit indicator with circular progress */}
+          {hasPersonalKey ? (
+            <button
+              type="button"
+              onClick={() => setShowKeyConfig((prev) => !prev)}
+              aria-expanded={showKeyConfig}
+              aria-label={t.aiAdvisor.apiKeyModalTitle}
+              title={t.aiAdvisor.apiKeyModalTitle}
+              className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors cursor-pointer ${
+                showKeyConfig
+                  ? "bg-teal-500/15 text-teal-600 dark:text-teal-400 ring-1 ring-teal-500/30"
+                  : "text-teal-600 dark:text-teal-400 bg-teal-500/10 hover:bg-teal-500/20"
+              }`}
+            >
+              <KeyRound aria-hidden="true" className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowKeyConfig((prev) => !prev)}
+              aria-expanded={showKeyConfig}
+              aria-label={t.aiAdvisor.apiKeyModalTitle}
+              title={t.aiAdvisor.dailyLimitTooltip}
+              className={`flex min-h-11 items-center gap-1.5 px-2.5 rounded-xl border transition-all cursor-pointer ${
+                showKeyConfig
+                  ? "border-teal-500 bg-teal-500/10 text-teal-800 dark:text-teal-300"
+                  : isDailyLimitReached
+                  ? "border-rose-200 dark:border-rose-800/60 bg-rose-50/70 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
+                  : "border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/80 dark:hover:bg-zinc-750"
+              }`}
+            >
+              {/* Circular Progress Bar */}
+              <svg aria-hidden="true" className="w-3.5 h-3.5 shrink-0" viewBox="0 0 18 18">
+                <circle
+                  cx="9"
+                  cy="9"
+                  r="6.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  className="text-zinc-300 dark:text-zinc-700"
+                />
+                <circle
+                  cx="9"
+                  cy="9"
+                  r="6.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeDasharray={40.84}
+                  strokeDashoffset={40.84 - progressRatio * 40.84}
+                  transform="rotate(-90 9 9)"
+                  className={`transition-all duration-300 ${
+                    isDailyLimitReached
+                      ? "text-rose-500"
+                      : displayRemaining <= 5
+                      ? "text-amber-500"
+                      : "text-teal-500"
+                  }`}
+                />
+              </svg>
+              <span className="text-xs font-semibold tabular-nums">
+                {displayCount}/{displayLimit}
+              </span>
+            </button>
+          )}
+
+          {/* Reset chat */}
+          <button
+            type="button"
+            onClick={resetChat}
+            aria-label={t.aiAdvisor.resetChat}
+            title={t.aiAdvisor.resetChat}
+            className="flex h-11 w-11 items-center justify-center rounded-xl text-zinc-600 dark:text-zinc-300 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+          >
+            <RotateCcw aria-hidden="true" className="w-4 h-4" />
+          </button>
+        </>
+      }
     >
-      <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col h-[90vh] sm:h-[82vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h3 id="ai-assistant-title" className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                  {t.aiAdvisor.modalTitle}
-                </h3>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            {/* Key config / Limit indicator with circular progress */}
-            {hasPersonalKey ? (
-              <button
-                type="button"
-                onClick={() => setShowKeyConfig((prev) => !prev)}
-                aria-label={t.aiAdvisor.apiKeyModalTitle}
-                title={t.aiAdvisor.apiKeyModalTitle}
-                className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                  showKeyConfig
-                    ? "bg-teal-500/15 text-teal-600 dark:text-teal-400 ring-1 ring-teal-500/30"
-                    : "text-teal-600 dark:text-teal-400 bg-teal-500/10 hover:bg-teal-500/20"
-                }`}
-              >
-                <KeyRound className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowKeyConfig((prev) => !prev)}
-                aria-label={t.aiAdvisor.apiKeyModalTitle}
-                title={t.aiAdvisor.dailyLimitTooltip}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer ${
-                  showKeyConfig
-                    ? "border-teal-500 bg-teal-500/10 text-teal-600 dark:text-teal-400"
-                    : isDailyLimitReached
-                    ? "border-rose-200 dark:border-rose-800/60 bg-rose-50/70 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
-                    : "border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/80 dark:hover:bg-zinc-750"
-                }`}
-              >
-                {/* Circular Progress Bar */}
-                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 18 18">
-                  <circle
-                    cx="9"
-                    cy="9"
-                    r="6.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    className="text-zinc-300 dark:text-zinc-700"
-                  />
-                  <circle
-                    cx="9"
-                    cy="9"
-                    r="6.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeDasharray={40.84}
-                    strokeDashoffset={40.84 - progressRatio * 40.84}
-                    transform="rotate(-90 9 9)"
-                    className={`transition-all duration-300 ${
-                      isDailyLimitReached
-                        ? "text-rose-500"
-                        : displayRemaining <= 5
-                        ? "text-amber-500"
-                        : "text-teal-500"
-                    }`}
-                  />
-                </svg>
-                <span className="text-xs font-semibold tabular-nums">
-                  {displayCount}/{displayLimit}
-                </span>
-              </button>
-            )}
-
-            {/* Reset chat */}
-            <button
-              type="button"
-              onClick={resetChat}
-              aria-label={t.aiAdvisor.resetChat}
-              title={t.aiAdvisor.resetChat}
-              className="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-
-            {/* Close button */}
-            <button
-              type="button"
-              onClick={closeAi}
-              aria-label={t.common.close}
-              className="p-2 rounded-xl text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
         {/* Collapsible Key Config & Elaborate Usage Stats Drawer */}
         {showKeyConfig && (
           <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-xs animate-fade-in max-h-[70vh] overflow-y-auto">
@@ -398,9 +367,10 @@ export default function AiAssistantSheet() {
               <button
                 type="button"
                 onClick={() => setShowKeyConfig(false)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                aria-label={locale === "id" ? "Tutup info pemakaian" : "Hide usage details"}
+                className="-mr-2 flex h-11 w-11 items-center justify-center rounded-xl text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
-                <ChevronUp className="w-4 h-4" />
+                <ChevronUp aria-hidden="true" className="w-4 h-4" />
               </button>
             </div>
 
@@ -556,7 +526,7 @@ export default function AiAssistantSheet() {
             {/* API Key Configuration Section */}
             <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800">
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                <label htmlFor="ai-api-key" className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
                   {t.aiAdvisor.apiKeyLabel}
                 </label>
                 <a
@@ -569,21 +539,24 @@ export default function AiAssistantSheet() {
                   <ExternalLink className="w-2.5 h-2.5" />
                 </a>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">
+              <p id="ai-api-key-hint" className="text-xs text-zinc-600 dark:text-zinc-400 mb-2">
                 {t.aiAdvisor.apiKeyHint}
               </p>
               <div className="flex gap-2">
                 <input
+                  id="ai-api-key"
+                  aria-describedby="ai-api-key-hint"
                   type="password"
+                  autoComplete="off"
                   value={keyInput}
                   onChange={(e) => setKeyInput(e.target.value)}
                   placeholder={t.aiAdvisor.apiKeyPlaceholder}
-                  className="flex-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-teal-500/50"
+                  className="min-h-11 min-w-0 flex-1 rounded-xl border border-field-line bg-white dark:bg-zinc-900 px-3 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-teal-500/50"
                 />
                 <button
                   type="button"
                   onClick={handleSaveKey}
-                  className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-medium text-xs cursor-pointer active:scale-95 transition-all"
+                  className="min-h-11 px-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-medium text-xs cursor-pointer active:scale-95 transition-all"
                 >
                   {t.aiAdvisor.apiKeySave}
                 </button>
@@ -591,7 +564,7 @@ export default function AiAssistantSheet() {
                   <button
                     type="button"
                     onClick={handleRemoveKey}
-                    className="px-2.5 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs cursor-pointer"
+                    className="min-h-11 px-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs cursor-pointer"
                   >
                     {t.aiAdvisor.apiKeyRemove}
                   </button>
@@ -615,7 +588,12 @@ export default function AiAssistantSheet() {
         )}
 
         {/* Messages transcript area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
+        <div
+          role="region"
+          aria-label={locale === "id" ? "Percakapan" : "Conversation"}
+          tabIndex={0}
+          className="flex-1 overflow-y-auto p-4 space-y-3.5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal-600"
+        >
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -754,7 +732,7 @@ export default function AiAssistantSheet() {
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400 mt-0.5">
                 <Bot className="w-3.5 h-3.5" />
               </div>
-              <div className="rounded-2xl rounded-tl-xs px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/60 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+              <div role="status" className="rounded-2xl rounded-tl-xs px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700/60 flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
                 <Loader2 className="w-3.5 h-3.5 text-teal-500 animate-spin" />
                 <span className="text-xs font-medium">
                   {extractStatus || statusLabel || t.aiAdvisor.thinking}
@@ -793,9 +771,10 @@ export default function AiAssistantSheet() {
               <button
                 type="button"
                 onClick={() => setImageExtractError(null)}
-                className="text-rose-400 hover:text-rose-600 cursor-pointer"
+                aria-label={t.common.close}
+                className="-my-1 -mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-rose-700 hover:bg-rose-100 dark:text-rose-300 dark:hover:bg-rose-900/40 cursor-pointer"
               >
-                <X className="w-3.5 h-3.5" />
+                <X aria-hidden="true" className="w-4 h-4" />
               </button>
             </div>
           )}
@@ -819,10 +798,10 @@ export default function AiAssistantSheet() {
               <button
                 type="button"
                 onClick={removeAttachment}
-                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                title="Hapus gambar"
+                aria-label={locale === "id" ? "Hapus gambar" : "Remove image"}
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X aria-hidden="true" className="w-4 h-4" />
               </button>
             </div>
           )}
@@ -874,20 +853,20 @@ export default function AiAssistantSheet() {
               type="button"
               disabled={isLoading || isExtracting || isDailyLimitReached}
               onClick={() => fileInputRef.current?.click()}
-              aria-label="Unggah foto struk atau bukti transfer"
-              title={locale === "id" ? "Unggah foto struk / bukti transfer" : "Upload receipt or payment proof"}
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all cursor-pointer ${
+              aria-label={locale === "id" ? "Unggah foto struk atau bukti transfer" : "Upload receipt or payment proof"}
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-all cursor-pointer ${
                 attachedFile
                   ? "border-teal-500 bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-400"
                   : "border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               } disabled:opacity-40 disabled:cursor-not-allowed active:scale-95`}
             >
-              <ImageIcon className="w-4 h-4" />
+              <ImageIcon aria-hidden="true" className="w-4 h-4" />
             </button>
 
             <textarea
               ref={textareaRef}
               rows={1}
+              aria-label={locale === "id" ? "Pesan untuk asisten" : "Message to the assistant"}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -901,28 +880,27 @@ export default function AiAssistantSheet() {
                   : t.aiAdvisor.inputPlaceholder
               }
               disabled={isLoading || isExtracting || isDailyLimitReached}
-              className="flex-1 resize-none rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-3.5 py-2 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-teal-500/50 max-h-24 disabled:opacity-60"
+              className="min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-field-line bg-zinc-50 dark:bg-zinc-800/50 px-3.5 py-2 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-teal-500/50 max-h-24 disabled:opacity-60"
             />
             <button
               type="submit"
               disabled={(!inputValue.trim() && !attachedFile) || isLoading || isExtracting || isDailyLimitReached}
               aria-label={t.aiAdvisor.send}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all cursor-pointer"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all cursor-pointer"
             >
               {isExtracting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 aria-hidden="true" className="w-4 h-4 motion-safe:animate-spin" />
               ) : (
-                <Send className="w-4 h-4" />
+                <Send aria-hidden="true" className="w-4 h-4" />
               )}
             </button>
           </form>
 
           {/* Disclaimer footer */}
-          <p className="mt-2 text-xs text-center text-zinc-400 dark:text-zinc-500">
+          <p className="mt-2 text-xs text-center text-zinc-600 dark:text-zinc-400">
             {t.aiAdvisor.disclaimer}
           </p>
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

@@ -21,6 +21,8 @@ interface DialogProps {
   initialFocusRef?: React.RefObject<HTMLElement | null>;
   /** Extra classes for the scrolling body, for example to remove its padding. */
   bodyClassName?: string;
+  /** Extra buttons shown in the header before the close button. */
+  headerActions?: React.ReactNode;
 }
 
 const PANEL_SIZE: Record<NonNullable<DialogProps["size"]>, string> = {
@@ -52,6 +54,7 @@ export default function Dialog({
   size = "md",
   initialFocusRef,
   bodyClassName = "px-5 py-4",
+  headerActions,
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -62,8 +65,9 @@ export default function Dialog({
     if (!isOpen) return;
     openerRef.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
+    const preferred = initialFocusRef?.current;
     const first =
-      initialFocusRef?.current ??
+      (preferred && !preferred.matches(":disabled") ? preferred : null) ??
       panel?.querySelector<HTMLElement>("[data-autofocus]") ??
       panel?.querySelector<HTMLElement>(FOCUSABLE);
     (first ?? panel)?.focus();
@@ -132,17 +136,23 @@ export default function Dialog({
               </p>
             )}
           </div>
+          <div className="-mr-2 -mt-1 flex shrink-0 items-center gap-1">
+          {headerActions}
           <button
             type="button"
             onClick={onClose}
             disabled={busy}
             aria-label={closeLabel}
-            className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft hover:bg-paper hover:text-ink active:bg-line disabled:opacity-50"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft hover:bg-paper hover:text-ink active:bg-line disabled:opacity-50"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
+          </div>
         </div>
-        <div className={`min-h-0 flex-1 overflow-y-auto ${bodyClassName}`}>{children}</div>
+        {/* A sheet lays out its own scrolling area (the chat transcript) between fixed parts. */}
+        <div className={`min-h-0 flex-1 ${size === "sheet" ? "flex flex-col overflow-hidden" : "overflow-y-auto"} ${bodyClassName}`}>
+          {children}
+        </div>
         {footer && <div className="flex gap-3 border-t border-line px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</div>}
       </div>
     </div>,
