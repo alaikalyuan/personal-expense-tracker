@@ -298,6 +298,9 @@ export interface Dictionary {
     clearQuickInput: string;
     dismissSuggestion: string;
     hideNoteAria: string;
+    notePill: string;
+    detailsLabel: string;
+    scanPhotoAria: string;
     closeChipManager: string;
     editChipAria: string;
     deleteChipAria: string;
@@ -1365,6 +1368,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       clearQuickInput: "Hapus teks",
       dismissSuggestion: "Tutup saran",
       hideNoteAria: "Sembunyikan catatan",
+      notePill: "Catatan",
+      detailsLabel: "Detail pengeluaran",
+      scanPhotoAria: "Pindai foto struk atau bukti transfer",
       closeChipManager: "Tutup kelola pintasan",
       editChipAria: "Ubah pintasan {name}",
       deleteChipAria: "Hapus pintasan {name}",
@@ -2442,6 +2448,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       clearQuickInput: "Clear text",
       dismissSuggestion: "Dismiss suggestion",
       hideNoteAria: "Hide note",
+      notePill: "Note",
+      detailsLabel: "Expense details",
+      scanPhotoAria: "Scan a receipt or transfer screenshot",
       closeChipManager: "Close shortcut manager",
       editChipAria: "Edit shortcut {name}",
       deleteChipAria: "Delete shortcut {name}",

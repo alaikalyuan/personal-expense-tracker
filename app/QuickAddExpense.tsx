@@ -27,6 +27,7 @@ import {
   Loader2,
   Layers,
   ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 import { useTranslation } from "@/utils/i18n/context";
 import { detectOneOffAnomaly, attachExemptTag } from "@/utils/exemptions";
@@ -219,7 +220,7 @@ function QuickAddModalContent({
 
   // One-off exemption states
   const [isExempt, setIsExempt] = useState(false);
-  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [openDetail, setOpenDetail] = useState<"date" | "saku" | null>(null);
   const [dismissedAnomalySuggestion, setDismissedAnomalySuggestion] = useState(false);
 
   // Proactive anomaly detection
@@ -238,6 +239,8 @@ function QuickAddModalContent({
   const [overrideDate, setOverrideDate] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [overrideExempt, setOverrideExempt] = useState<boolean | null>(null);
+  const [overrideWalletId, setOverrideWalletId] = useState<string | null>(null);
+  const [showWalletPicker, setShowWalletPicker] = useState(false);
 
   // Chip Manager state
   const [isManagingChips, setIsManagingChips] = useState(false);
@@ -275,6 +278,9 @@ function QuickAddModalContent({
   const effectiveCategory = overrideCategory ?? parsedExpense.category;
   const effectiveSpentAt = overrideDate ?? parsedExpense.spentAt;
   const effectiveIsExempt = overrideExempt !== null ? overrideExempt : Boolean(parsedExpense.isExempt);
+  // A Saku picked from the badge beats one named in the typed text.
+  const effectiveWalletId = overrideWalletId || parsedExpense.walletId || selectedWalletId;
+  const effectiveWallet = wallets.find((w) => w.id === effectiveWalletId);
 
   // Proactive anomaly/splurge detection in Quick Mode
   const isQuickAnomaly = useMemo(() => {
@@ -302,8 +308,8 @@ function QuickAddModalContent({
           setCustomDate(effectiveSpentAt);
         }
         setIsExempt(effectiveIsExempt);
-        if (parsedExpense.walletId) {
-          setSelectedWalletId(parsedExpense.walletId);
+        if (effectiveWalletId) {
+          setSelectedWalletId(effectiveWalletId);
         }
       }
     } else {
@@ -337,6 +343,8 @@ function QuickAddModalContent({
     if (!val.trim()) {
       setOverrideCategory(null);
       setOverrideDate(null);
+      setOverrideWalletId(null);
+      setShowWalletPicker(false);
       setOverrideExempt(null);
       setShowCategoryPicker(false);
       setShowDatePicker(false);
@@ -737,9 +745,8 @@ function QuickAddModalContent({
       if (finalNote) {
         formData.set("note", finalNote);
       }
-      const activeWallet = parsedExpense.walletId || selectedWalletId;
-      if (activeWallet) {
-        formData.set("wallet_id", activeWallet);
+      if (effectiveWalletId) {
+        formData.set("wallet_id", effectiveWalletId);
       }
 
       await addExpense(formData);
@@ -750,6 +757,8 @@ function QuickAddModalContent({
         setQuickInput("");
         setOverrideCategory(null);
         setOverrideDate(null);
+        setOverrideWalletId(null);
+        setShowWalletPicker(false);
         setOverrideExempt(null);
         setShowCategoryPicker(false);
         setShowDatePicker(false);
@@ -849,10 +858,29 @@ function QuickAddModalContent({
   const quickBarId = `${fieldIds}-quick`;
   const quickHintId = `${fieldIds}-quick-hint`;
   const scanSakuId = `${fieldIds}-scan-saku`;
-  const shortcutsLabelId = `${fieldIds}-shortcuts`;
-  const sakuLabelId = `${fieldIds}-saku`;
-  const categoryLabelId = `${fieldIds}-category`;
   const chipManagerTitleId = `${fieldIds}-chip-manager`;
+  const standardFormId = `${fieldIds}-standard-form`;
+  const quickFormId = `${fieldIds}-quick-form`;
+  const datePanelId = `${fieldIds}-date-panel`;
+  const sakuPanelId = `${fieldIds}-saku-panel`;
+  const notePanelId = `${fieldIds}-note-panel`;
+  const oneOffHintId = `${fieldIds}-one-off-hint`;
+
+  const selectedWallet = wallets.find((w) => w.id === selectedWalletId);
+  const selectedScanCount = scannedRows.filter((r) => r.selected).length;
+  const dateSummary =
+    dateMode === "today"
+      ? t.common.today
+      : dateMode === "yesterday"
+      ? t.common.yesterday
+      : customDate
+      ? formatDate(customDate, "d MMM yyyy")
+      : t.expenses.customDate;
+
+  const detailPillClass =
+    "inline-flex min-h-11 items-center gap-1 rounded-full border px-3 text-sm font-semibold text-ink hover:bg-paper transition-colors cursor-pointer";
+  const primaryButtonClass =
+    "flex min-h-12 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-base font-bold text-on-accent shadow-xs hover:brightness-95 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50";
   const chipManagerRef = useRef<HTMLDivElement>(null);
   const chipOpenerRef = useRef<HTMLElement | null>(null);
 
@@ -872,6 +900,17 @@ function QuickAddModalContent({
     if (isManagingChips) chipManagerRef.current?.querySelector<HTMLElement>("input")?.focus();
   }, [isManagingChips]);
 
+  const manageChipsButton = (
+    <button
+      type="button"
+      onClick={openChipManager}
+      className="flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-dashed border-field-line px-3 text-sm font-semibold text-ink-soft hover:bg-paper hover:text-ink transition-colors cursor-pointer"
+    >
+      <Settings2 aria-hidden="true" className="w-4 h-4" />
+      <span>{t.expenses.manageChips}</span>
+    </button>
+  );
+
   const handleEscape = () => {
     if (isManagingChips) {
       closeChipManager();
@@ -890,19 +929,19 @@ function QuickAddModalContent({
         if (event.target === event.currentTarget) handleClose();
       }}
     >
+      {/* Header, scrolling body and a pinned footer: the submit button stays on screen however much the body holds. */}
       <div
-        className="relative w-full max-w-lg rounded-t-3xl sm:rounded-2xl border-t sm:border border-line bg-card text-ink p-5 shadow-2xl animate-modal-in max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+        className="relative w-full max-w-lg rounded-t-3xl sm:rounded-2xl border-t sm:border border-line bg-card text-ink shadow-2xl animate-modal-in max-h-[92dvh] sm:max-h-[88dvh] flex flex-col overflow-hidden"
       >
         {/* Mobile Drag Indicator */}
-        <div aria-hidden="true" className="sm:hidden w-10 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-2 shrink-0" />
+        <div aria-hidden="true" className="sm:hidden w-10 h-1 bg-line rounded-full mx-auto mt-2 shrink-0" />
 
         {/* Everything under the shortcut manager stays out of reach while it is open. */}
         <div className="contents" inert={isManagingChips}>
 
-        {/* Modal Header: Title, Segmented Mode Tabs, Photo Upload, Close */}
-        <div className="flex items-center justify-between pb-3 border-b border-line gap-2 shrink-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Segmented Mode Selector */}
+        {/* Modal Header: mode switch, photo scan, close */}
+        <div className="flex items-center gap-1 pl-5 pr-3 pt-2 pb-2.5 sm:pt-4 border-b border-line shrink-0">
+          <div className="min-w-0 mr-auto">
             <SegmentedControl
               ariaLabel={t.expenses.inputModeLabel}
               value={inputMode}
@@ -928,43 +967,46 @@ function QuickAddModalContent({
                 },
               ]}
             />
-
-            {/* AI Photo Scan Button (hidden if AI mode is disabled) */}
-            {isAiEnabled && (
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => setIsImageModalOpen(true)}
-                className="flex min-h-11 items-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 px-3 text-sm font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                title="Pindai struk belanja atau tangkapan layar transfer"
-              >
-                <Camera aria-hidden="true" className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                <span>Upload Foto</span>
-              </button>
-            )}
           </div>
+
+          {/* AI Photo Scan Button (hidden if AI mode is disabled) */}
+          {isAiEnabled && (
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => setIsImageModalOpen(true)}
+              aria-label={t.expenses.scanPhotoAria}
+              title={t.expenses.scanPhotoAria}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-teal-700 dark:text-teal-300 hover:bg-teal-500/10 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Camera aria-hidden="true" className="w-5 h-5" />
+            </button>
+          )}
 
           <button
             type="button"
             onClick={handleClose}
             disabled={isSubmitting || isExtracting}
             aria-label={t.common.close}
-            className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft hover:bg-paper hover:text-ink transition-colors disabled:opacity-50 cursor-pointer"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft hover:bg-paper hover:text-ink transition-colors disabled:opacity-50 cursor-pointer"
           >
             <X aria-hidden="true" className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Scrolling body */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
+
         {/* Global Error Banner */}
         {(error || extractError) && (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950/40 p-2.5 text-xs text-rose-600 dark:text-rose-300 shrink-0">
+          <div role="alert" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950/40 p-2.5 text-xs text-rose-600 dark:text-rose-300">
             {error || extractError}
           </div>
         )}
 
         {/* Continuous Batch Feedback Toast */}
         {batchFeedback && (
-          <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/40 p-2.5 text-xs text-emerald-700 dark:text-emerald-300 animate-fade-in shrink-0">
+          <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/40 p-2.5 text-xs text-emerald-700 dark:text-emerald-300 animate-fade-in">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
               <span>
@@ -1087,121 +1129,52 @@ function QuickAddModalContent({
               </div>
             )}
 
-            {/* Scanned Footer Actions */}
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-teal-500/15">
-              <button
-                type="button"
-                onClick={handleApplyScanToForm}
-                className="text-xs text-teal-700 dark:text-teal-300 hover:underline cursor-pointer flex items-center gap-1"
-              >
-                <span>Gunakan di Form</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleDismissScan}
-                  className="px-2.5 py-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  disabled={isSubmitting || scannedRows.filter((r) => r.selected).length === 0}
-                  onClick={handleLogScannedRows}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Mencatat...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      <span>
-                        Catat {scannedRows.filter((r) => r.selected).length} Transaksi
-                      </span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
+            {/* Fill the standard form instead of logging straight away */}
+            <button
+              type="button"
+              onClick={handleApplyScanToForm}
+              className="-ml-2 flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-teal-700 dark:text-teal-300 hover:underline cursor-pointer"
+            >
+              <span>Gunakan di Form</span>
+              <ArrowRight aria-hidden="true" className="w-4 h-4" />
+            </button>
           </div>
         )}
 
         {/* MODE 1: STANDARD FORM */}
         {!scannedDoc && inputMode === "standard" && (
-          <form onSubmit={handleStandardSubmit} className="flex flex-col gap-4 pt-3.5">
-            {/* Quick-Fill Chips Shelf */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <span id={shortcutsLabelId} className="text-sm font-semibold text-ink">
-                  {t.expenses.quickShortcuts}
-                </span>
-                <button
-                  type="button"
-                  onClick={openChipManager}
-                  className="-mr-2 flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors cursor-pointer"
-                >
-                  <Settings2 aria-hidden="true" className="w-4 h-4" />
-                  <span>{t.expenses.manageChips}</span>
-                </button>
-              </div>
-
-              <div role="group" aria-labelledby={shortcutsLabelId} className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar -mx-1 px-1">
-                {chips.map((chip) => {
-                  const isSelected = activeChipId === chip.id && name === chip.name;
-                  return (
-                    <ToggleChip
-                      key={chip.id}
-                      pressed={isSelected}
-                      onClick={() => handleChipClick(chip)}
-                      className="whitespace-nowrap shrink-0"
-                    >
-                      {chip.emoji && <span aria-hidden="true">{chip.emoji}</span>}
-                      <span>{chip.name}</span>
-                      {chip.defaultAmount && (
-                        <span className="text-xs opacity-75 font-normal">
-                          {(chip.defaultAmount / 1000).toFixed(0)}k
-                        </span>
-                      )}
-                    </ToggleChip>
-                  );
-                })}
-              </div>
+          <form id={standardFormId} onSubmit={handleStandardSubmit} className="flex flex-col gap-4 pt-3.5">
+            {/* Quick-fill shortcuts: one tap fills name, category and amount */}
+            <div role="group" aria-label={t.expenses.quickShortcuts} className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-5 px-5 py-0.5">
+              {chips.map((chip) => {
+                const isSelected = activeChipId === chip.id && name === chip.name;
+                return (
+                  <ToggleChip
+                    key={chip.id}
+                    pressed={isSelected}
+                    onClick={() => handleChipClick(chip)}
+                    className="whitespace-nowrap shrink-0"
+                  >
+                    {chip.emoji && <span aria-hidden="true">{chip.emoji}</span>}
+                    <span>{chip.name}</span>
+                    {chip.defaultAmount && (
+                      <span className="text-xs opacity-75 font-normal">
+                        {(chip.defaultAmount / 1000).toFixed(0)}k
+                      </span>
+                    )}
+                  </ToggleChip>
+                );
+              })}
+              {manageChipsButton}
             </div>
 
-            {/* Multi-Saku Selector in Standard Mode */}
-            {multiSakuEnabled && wallets.length > 1 && (
-              <div className="flex flex-col gap-1.5">
-                <span id={sakuLabelId} className="text-sm font-semibold text-ink">
-                  {t.saku.switchToSaku}
-                </span>
-                <div role="group" aria-labelledby={sakuLabelId} className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar -mx-1 px-1">
-                  {wallets.map((w) => (
-                    <ToggleChip
-                      key={w.id}
-                      pressed={selectedWalletId === w.id}
-                      onClick={() => setSelectedWalletId(w.id)}
-                      className="whitespace-nowrap shrink-0"
-                    >
-                      <span aria-hidden="true">{w.emoji || "👛"}</span>
-                      <span>{w.name}</span>
-                    </ToggleChip>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Hero Amount Input with live currency display */}
-            <div className="flex flex-col gap-1.5">
+            {/* Hero Amount Input */}
+            <div className="flex flex-col gap-2">
               <label htmlFor={amountId} className="text-sm font-semibold text-ink">
                 {t.home.amountLabel}
               </label>
-              <div className="relative flex items-center rounded-2xl border-2 border-field-line bg-paper p-3 focus-within:border-ink transition-all">
-                <span aria-hidden="true" className="text-base font-bold text-ink-soft mr-2 select-none">
+              <div className="flex items-baseline gap-2 border-b-2 border-field-line pb-1 focus-within:border-ink transition-colors">
+                <span aria-hidden="true" className="text-lg font-bold text-ink-soft select-none">
                   {currencySymbol}
                 </span>
                 <input
@@ -1215,14 +1188,15 @@ function QuickAddModalContent({
                   aria-invalid={showAmountError && amountError ? true : undefined}
                   aria-describedby={showAmountError && amountError ? "quick-add-amount-error" : undefined}
                   placeholder="0"
-                  className="w-full bg-transparent text-2xl font-extrabold tracking-tight outline-none placeholder:text-ink-soft/60 text-ink"
+                  // `!` beats the global 16px touch-input rule; anything 16px or larger avoids iOS focus zoom.
+                  className="min-w-0 w-full bg-transparent text-3xl! font-extrabold tracking-tight outline-none placeholder:text-ink-soft/60 text-ink"
                 />
                 {(amount > 0 || amountDraftActive) && (
                   <button
                     type="button"
                     onClick={clearAmount}
                     aria-label={t.expenses.clearAmount}
-                    className="-my-2 -mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft hover:text-ink hover:bg-line transition-colors cursor-pointer"
+                    className="flex h-11 w-11 shrink-0 self-center items-center justify-center rounded-full text-ink-soft hover:text-ink hover:bg-line transition-colors cursor-pointer"
                   >
                     <X aria-hidden="true" className="w-4 h-4" />
                   </button>
@@ -1235,7 +1209,7 @@ function QuickAddModalContent({
               )}
 
               {/* Quick Amount Pills */}
-              <div className="grid grid-cols-5 gap-1.5">
+              <div className="grid grid-cols-4 gap-1.5">
                 {(currency === "IDR"
                   ? [
                       { label: "+10k", val: 10000 },
@@ -1255,54 +1229,11 @@ function QuickAddModalContent({
                     type="button"
                     onClick={() => addQuickAmount(item.val)}
                     aria-label={`+${formatCurrency(item.val)}`}
-                    className="min-h-11 rounded-xl border border-field-line bg-card hover:bg-paper text-sm font-semibold text-ink active:scale-95 transition-all cursor-pointer"
+                    className="min-h-11 rounded-xl border border-line bg-paper hover:border-field-line text-sm font-semibold text-ink active:scale-95 transition-all cursor-pointer"
                   >
                     {item.label}
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={clearAmount}
-                  aria-label={t.expenses.clearAmount}
-                  className="min-h-11 rounded-xl border border-field-line bg-card hover:bg-danger-soft hover:text-danger text-sm font-semibold text-ink-soft active:scale-95 transition-all cursor-pointer"
-                >
-                  C
-                </button>
-              </div>
-            </div>
-
-            {/* 1-Tap Category Grid */}
-            <div className="flex flex-col gap-1.5">
-              <span id={categoryLabelId} className="text-sm font-semibold text-ink">
-                {t.expenses.categoryLabel}
-              </span>
-              <div role="group" aria-labelledby={categoryLabelId} className="grid grid-cols-3 gap-2">
-                {CATEGORY_KEYS.map((catKey) => {
-                  const Icon = CATEGORY_ICONS[catKey] || Package;
-                  const isSelected = category === catKey;
-                  const style = CATEGORY_STYLES[catKey];
-
-                  return (
-                    <button
-                      key={catKey}
-                      type="button"
-                      aria-pressed={isSelected}
-                      onClick={() => setCategory(catKey)}
-                      className={`flex min-h-11 items-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition-all text-left cursor-pointer active:scale-95 ${
-                        isSelected
-                          ? `${style.activeBg} border-ink ring-1 ring-ink font-bold`
-                          : "border-field-line bg-card text-ink hover:bg-paper"
-                      }`}
-                    >
-                      {isSelected ? (
-                        <Check aria-hidden="true" className="w-4 h-4 shrink-0" strokeWidth={3} />
-                      ) : (
-                        <Icon aria-hidden="true" className={`w-4 h-4 shrink-0 ${style.activeText}`} />
-                      )}
-                      <span className="min-w-0 leading-tight">{getCategoryLabel(catKey)}</span>
-                    </button>
-                  );
-                })}
               </div>
             </div>
 
@@ -1320,55 +1251,147 @@ function QuickAddModalContent({
               required
             />
 
-            {/* Smart Date Selector (Today / Yesterday / Custom) */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-semibold text-ink" aria-hidden="true">
-                {t.expenses.whenLabel}
-              </span>
-              <SegmentedControl
-                ariaLabel={t.expenses.whenLabel}
-                value={dateMode}
-                onChange={setDateMode}
-                options={[
-                  { value: "today", label: t.common.today },
-                  { value: "yesterday", label: t.common.yesterday },
-                  {
-                    value: "custom",
-                    label: (
-                      <>
-                        <Calendar aria-hidden="true" className="w-4 h-4" />
-                        <span>{t.expenses.customDate}</span>
-                      </>
-                    ),
-                  },
-                ]}
-              />
+            {/* 1-Tap Category Grid */}
+            <div role="group" aria-label={t.expenses.categoryLabel} className="grid grid-cols-3 gap-2">
+              {CATEGORY_KEYS.map((catKey) => {
+                const Icon = CATEGORY_ICONS[catKey] || Package;
+                const isSelected = category === catKey;
+                const style = CATEGORY_STYLES[catKey];
+
+                return (
+                  <button
+                    key={catKey}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => setCategory(catKey)}
+                    className={`flex min-h-12 items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition-all text-left cursor-pointer active:scale-95 ${
+                      isSelected
+                        ? `${style.activeBg} border-ink ring-1 ring-ink font-bold`
+                        : "border-field-line bg-card text-ink hover:bg-paper"
+                    }`}
+                  >
+                    {isSelected ? (
+                      <Check aria-hidden="true" className="w-4 h-4 shrink-0" strokeWidth={3} />
+                    ) : (
+                      <Icon aria-hidden="true" className={`w-4 h-4 shrink-0 ${style.activeText}`} />
+                    )}
+                    <span className="min-w-0 leading-tight">{getCategoryLabel(catKey)}</span>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Custom Date Input if selected */}
-            {dateMode === "custom" && (
-              <TextField
-                label={t.home.dateLabel}
-                type="date"
-                value={customDate}
-                onChange={(e) => setCustomDate(e.target.value)}
-                required
-                className="scheme-light dark:scheme-dark"
-              />
-            )}
+            {/* Details: date, Saku, note and one-off as pills that open their own controls */}
+            <div className="flex flex-col gap-2.5">
+              <div role="group" aria-label={t.expenses.detailsLabel} className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  aria-expanded={openDetail === "date"}
+                  aria-controls={datePanelId}
+                  onClick={() => setOpenDetail((prev) => (prev === "date" ? null : "date"))}
+                  className={`${detailPillClass} ${openDetail === "date" ? "border-ink bg-paper" : "border-field-line"}`}
+                >
+                  <Calendar aria-hidden="true" className="w-4 h-4 text-ink-soft" />
+                  <span className="sr-only">{t.expenses.whenLabel}: </span>
+                  <span>{dateSummary}</span>
+                  <ChevronDown aria-hidden="true" className={`w-4 h-4 text-ink-soft transition-transform ${openDetail === "date" ? "rotate-180" : ""}`} />
+                </button>
 
-            {/* Collapsible Note Section */}
-            {!showNote && !note ? (
-              <button
-                type="button"
-                onClick={() => setShowNote(true)}
-                className="-ml-2 self-start min-h-11 rounded-xl px-2 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors cursor-pointer"
-              >
-                {t.expenses.addNote}
-              </button>
-            ) : (
-              <div className="flex items-end gap-1 animate-fade-in">
-                <div className="min-w-0 flex-1">
+                {multiSakuEnabled && wallets.length > 1 && (
+                  <button
+                    type="button"
+                    aria-expanded={openDetail === "saku"}
+                    aria-controls={sakuPanelId}
+                    onClick={() => setOpenDetail((prev) => (prev === "saku" ? null : "saku"))}
+                    className={`${detailPillClass} ${openDetail === "saku" ? "border-ink bg-paper" : "border-field-line"}`}
+                  >
+                    <span aria-hidden="true">{selectedWallet?.emoji || "👛"}</span>
+                    <span className="sr-only">{t.saku.switchToSaku}: </span>
+                    <span>{selectedWallet?.name || t.saku.switchToSaku}</span>
+                    <ChevronDown aria-hidden="true" className={`w-4 h-4 text-ink-soft transition-transform ${openDetail === "saku" ? "rotate-180" : ""}`} />
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  aria-expanded={showNote}
+                  aria-controls={notePanelId}
+                  onClick={() => setShowNote((prev) => !prev)}
+                  className={`${detailPillClass} ${showNote || note ? "border-ink bg-paper" : "border-dashed border-field-line text-ink-soft"}`}
+                >
+                  <FileText aria-hidden="true" className="w-4 h-4" />
+                  <span>{t.expenses.notePill}</span>
+                </button>
+
+                <button
+                  type="button"
+                  aria-pressed={isExempt}
+                  aria-describedby={oneOffHintId}
+                  onClick={() => setIsExempt((prev) => !prev)}
+                  className={`${detailPillClass} ${isExempt ? "border-ink bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" : "border-dashed border-field-line text-ink-soft"}`}
+                >
+                  {isExempt ? (
+                    <Check aria-hidden="true" className="w-4 h-4" strokeWidth={3} />
+                  ) : (
+                    <Tag aria-hidden="true" className="w-4 h-4" />
+                  )}
+                  <span>{t.expenses.oneOffBadge}</span>
+                </button>
+                <span id={oneOffHintId} className="sr-only">{t.expenses.oneOffHelp}</span>
+              </div>
+
+              {openDetail === "date" && (
+                <div id={datePanelId} className="flex flex-col gap-2 rounded-2xl border border-line bg-paper p-3 animate-fade-in">
+                  <SegmentedControl
+                    ariaLabel={t.expenses.whenLabel}
+                    value={dateMode}
+                    onChange={setDateMode}
+                    className="bg-card"
+                    options={[
+                      { value: "today", label: t.common.today },
+                      { value: "yesterday", label: t.common.yesterday },
+                      {
+                        value: "custom",
+                        label: (
+                          <>
+                            <Calendar aria-hidden="true" className="w-4 h-4 shrink-0" />
+                            <span>{t.expenses.customDate}</span>
+                          </>
+                        ),
+                      },
+                    ]}
+                  />
+                  {dateMode === "custom" && (
+                    <TextField
+                      label={t.home.dateLabel}
+                      type="date"
+                      value={customDate}
+                      onChange={(e) => setCustomDate(e.target.value)}
+                      required
+                      className="scheme-light dark:scheme-dark"
+                    />
+                  )}
+                </div>
+              )}
+
+              {openDetail === "saku" && multiSakuEnabled && wallets.length > 1 && (
+                <div id={sakuPanelId} role="group" aria-label={t.saku.switchToSaku} className="flex flex-wrap gap-1.5 rounded-2xl border border-line bg-paper p-3 animate-fade-in">
+                  {wallets.map((w) => (
+                    <ToggleChip
+                      key={w.id}
+                      pressed={selectedWalletId === w.id}
+                      onClick={() => setSelectedWalletId(w.id)}
+                      className="whitespace-nowrap"
+                    >
+                      <span aria-hidden="true">{w.emoji || "👛"}</span>
+                      <span>{w.name}</span>
+                    </ToggleChip>
+                  ))}
+                </div>
+              )}
+
+              {showNote && (
+                <div id={notePanelId} className="animate-fade-in">
                   <TextField
                     label={t.home.noteLabel}
                     type="text"
@@ -1377,24 +1400,14 @@ function QuickAddModalContent({
                     placeholder={t.expenses.notePlaceholder}
                   />
                 </div>
-                {!note && (
-                  <button
-                    type="button"
-                    onClick={() => setShowNote(false)}
-                    aria-label={t.expenses.hideNoteAria}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-soft hover:bg-paper hover:text-ink"
-                  >
-                    <X aria-hidden="true" className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Smart Anomaly Suggestion Banner */}
             {isAnomaly && (
               <div className="flex items-start justify-between gap-2.5 rounded-xl border border-amber-200/90 bg-amber-50/80 p-2.5 text-xs text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200 animate-fade-in">
                 <div className="flex items-start gap-2 min-w-0">
-                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <Sparkles aria-hidden="true" className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                   <p className="leading-snug text-xs">
                     {t.expenses.oneOffDetectBanner}
                   </p>
@@ -1418,127 +1431,32 @@ function QuickAddModalContent({
                 </div>
               </div>
             )}
-
-            {/* Active One-Off Tag Pill */}
-            {isExempt && (
-              <div className="flex items-center justify-between rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/90 dark:border-amber-800/70 px-3 py-2 text-xs text-amber-800 dark:text-amber-300 animate-fade-in">
-                <span className="flex items-center gap-1.5 font-semibold text-xs">
-                  <Tag className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                  {t.expenses.oneOffTaggedIndicator}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsExempt(false)}
-                  className="-my-2 -mr-2 min-h-11 px-2 text-xs text-amber-800 hover:text-amber-950 dark:text-amber-300 font-semibold cursor-pointer underline"
-                >
-                  {t.expenses.oneOffRemoveButton}
-                </button>
-              </div>
-            )}
-
-            {/* Subtle More Options Toggle for manual one-off tag */}
-            {!isExempt && !isAnomaly && (
-              <div className="pt-0.5">
-                {!showMoreOptions ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowMoreOptions(true)}
-                    className="-ml-2 min-h-11 rounded-xl px-2 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors cursor-pointer"
-                  >
-                    + {t.expenses.moreOptions}
-                  </button>
-                ) : (
-                  <CheckboxField
-                    className="rounded-xl border border-line px-3 py-1 animate-fade-in"
-                    checked={isExempt}
-                    onChange={(e) => setIsExempt(e.target.checked)}
-                    label={t.expenses.oneOffCheckbox}
-                    hint={t.expenses.oneOffHelp}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Primary Submit Button */}
-            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 py-3 text-sm font-bold shadow-md shadow-zinc-950/10 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <span>{t.common.adding}</span>
-                ) : (
-                  <span>
-                    {t.expenses.addTitle}
-                    {amount > 0 ? ` (${formatCurrency(amount)})` : ""}
-                  </span>
-                )}
-              </button>
-            </div>
           </form>
         )}
 
         {/* MODE 2: ⚡ QUICK TYPE / SMART SINGLE BAR */}
         {!scannedDoc && inputMode === "quick_type" && (
-          <form onSubmit={handleQuickSubmit} className="flex flex-col gap-4 pt-3.5">
-            {/* Quick-Fill Chips Shelf in Quick Mode */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <span id={shortcutsLabelId} className="text-sm font-semibold text-ink">
-                  {t.expenses.quickShortcuts}
-                </span>
+          <form id={quickFormId} onSubmit={handleQuickSubmit} className="flex flex-col gap-4 pt-3.5">
+            {/* Quick-fill shortcuts in Quick Mode */}
+            <div role="group" aria-label={t.expenses.quickShortcuts} className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-5 px-5 py-0.5">
+              {chips.map((chip) => (
                 <button
+                  key={chip.id}
                   type="button"
-                  onClick={openChipManager}
-                  className="-mr-2 flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-ink-soft hover:bg-paper hover:text-ink transition-colors cursor-pointer"
+                  onClick={() => handleQuickChipInQuickMode(chip)}
+                  className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-xl border border-field-line bg-card px-3 text-sm font-semibold text-ink hover:bg-paper transition-all shrink-0 cursor-pointer active:scale-95"
                 >
-                  <Settings2 aria-hidden="true" className="w-4 h-4" />
-                  <span>{t.expenses.manageChips}</span>
+                  {chip.emoji && <span aria-hidden="true">{chip.emoji}</span>}
+                  <span>{chip.name}</span>
+                  {chip.defaultAmount && (
+                    <span className="text-xs opacity-75 font-normal">
+                      {(chip.defaultAmount / 1000).toFixed(0)}k
+                    </span>
+                  )}
                 </button>
-              </div>
-
-              <div role="group" aria-labelledby={shortcutsLabelId} className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar -mx-1 px-1">
-                {chips.map((chip) => (
-                  <button
-                    key={chip.id}
-                    type="button"
-                    onClick={() => handleQuickChipInQuickMode(chip)}
-                    className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-xl border border-field-line bg-card px-3 text-sm font-semibold text-ink hover:bg-paper transition-all shrink-0 cursor-pointer active:scale-95"
-                  >
-                    {chip.emoji && <span aria-hidden="true">{chip.emoji}</span>}
-                    <span>{chip.name}</span>
-                    {chip.defaultAmount && (
-                      <span className="text-xs opacity-75 font-normal">
-                        {(chip.defaultAmount / 1000).toFixed(0)}k
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
+              ))}
+              {manageChipsButton}
             </div>
-
-            {/* Multi-Saku Selector in Quick Type Mode */}
-            {multiSakuEnabled && wallets.length > 1 && (
-              <div className="flex flex-col gap-1.5">
-                <span id={sakuLabelId} className="text-sm font-semibold text-ink">
-                  {t.saku.switchToSaku}
-                </span>
-                <div role="group" aria-labelledby={sakuLabelId} className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar -mx-1 px-1">
-                  {wallets.map((w) => (
-                    <ToggleChip
-                      key={w.id}
-                      pressed={selectedWalletId === w.id}
-                      onClick={() => setSelectedWalletId(w.id)}
-                      className="whitespace-nowrap shrink-0"
-                    >
-                      <span aria-hidden="true">{w.emoji || "👛"}</span>
-                      <span>{w.name}</span>
-                    </ToggleChip>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Command Input Bar */}
             <div className="flex flex-col gap-1.5">
@@ -1623,6 +1541,7 @@ function QuickAddModalContent({
                       onClick={() => {
                         setShowCategoryPicker((prev) => !prev);
                         setShowDatePicker(false);
+                        setShowWalletPicker(false);
                       }}
                       className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer border ${
                         CATEGORY_STYLES[effectiveCategory].badgeBg
@@ -1646,6 +1565,7 @@ function QuickAddModalContent({
                       onClick={() => {
                         setShowDatePicker((prev) => !prev);
                         setShowCategoryPicker(false);
+                        setShowWalletPicker(false);
                       }}
                       className={`flex items-center gap-1 rounded-lg border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-all cursor-pointer ${
                         showDatePicker ? "ring-2 ring-zinc-400 dark:ring-zinc-600" : ""
@@ -1664,10 +1584,29 @@ function QuickAddModalContent({
                     </button>
 
                     {/* Saku Badge (Multi-Saku Enabled) */}
-                    {multiSakuEnabled && wallets.length > 0 && (
+                    {multiSakuEnabled && wallets.length > 1 && (
+                      <button
+                        type="button"
+                        aria-expanded={showWalletPicker}
+                        onClick={() => {
+                          setShowWalletPicker((prev) => !prev);
+                          setShowCategoryPicker(false);
+                          setShowDatePicker(false);
+                        }}
+                        className={`flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-50/50 dark:border-emerald-500/20 dark:bg-emerald-950/30 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:border-emerald-500/60 transition-all cursor-pointer ${
+                          showWalletPicker ? "ring-2 ring-zinc-400 dark:ring-zinc-600" : ""
+                        }`}
+                      >
+                        <span className="sr-only">{t.saku.switchToSaku}: </span>
+                        <span aria-hidden="true">{effectiveWallet?.emoji || "👛"}</span>
+                        <span>{effectiveWallet?.name || "Dompet"}</span>
+                        <span aria-hidden="true" className="text-xs opacity-70 ml-0.5">▾</span>
+                      </button>
+                    )}
+                    {multiSakuEnabled && wallets.length === 1 && (
                       <div className="flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-50/50 dark:border-emerald-500/20 dark:bg-emerald-950/30 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                        <span>{wallets.find((w) => w.id === (parsedExpense.walletId || selectedWalletId))?.emoji || "👛"}</span>
-                        <span>{wallets.find((w) => w.id === (parsedExpense.walletId || selectedWalletId))?.name || "Dompet"}</span>
+                        <span aria-hidden="true">{wallets[0].emoji || "👛"}</span>
+                        <span>{wallets[0].name}</span>
                       </div>
                     )}
                   </div>
@@ -1757,6 +1696,32 @@ function QuickAddModalContent({
                       </div>
                     </div>
                   )}
+
+                  {/* Inline Saku Picker Drawer */}
+                  {showWalletPicker && multiSakuEnabled && wallets.length > 1 && (
+                    <div
+                      role="group"
+                      aria-label={t.saku.switchToSaku}
+                      className="mt-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-2.5 flex flex-wrap gap-1.5 animate-fade-in shadow-xs"
+                    >
+                      {wallets.map((w) => (
+                        <ToggleChip
+                          key={w.id}
+                          pressed={effectiveWalletId === w.id}
+                          onClick={() => {
+                            setOverrideWalletId(w.id);
+                            // Also the default for the next entry when "keep open" is on.
+                            setSelectedWalletId(w.id);
+                            setShowWalletPicker(false);
+                          }}
+                          className="whitespace-nowrap"
+                        >
+                          <span aria-hidden="true">{w.emoji || "👛"}</span>
+                          <span>{w.name}</span>
+                        </ToggleChip>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p className="text-xs text-zinc-400 dark:text-zinc-500 italic py-1">
@@ -1809,25 +1774,73 @@ function QuickAddModalContent({
               }
             />
 
-            {/* Quick-Type Submit CTA */}
-            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
+          </form>
+        )}
+
+        </div>
+        {/* End of scrolling body */}
+
+        {/* Pinned footer: the primary action for whichever view is showing */}
+        <div className="shrink-0 border-t border-line bg-card px-5 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
+          {scannedDoc ? (
+            <div className="flex items-center gap-2">
               <button
-                type="submit"
-                disabled={isSubmitting || !parsedExpense.isValid}
-                className="w-full rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 py-3 text-sm font-bold shadow-md shadow-zinc-950/10 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                type="button"
+                onClick={handleDismissScan}
+                className="min-h-12 rounded-xl px-4 text-sm font-semibold text-ink-soft hover:bg-paper hover:text-ink cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting || selectedScanCount === 0}
+                onClick={handleLogScannedRows}
+                className={`${primaryButtonClass} flex-1`}
               >
                 {isSubmitting ? (
-                  <span>{t.common.adding}</span>
+                  <>
+                    <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />
+                    <span>Mencatat...</span>
+                  </>
                 ) : (
-                  <span>
-                    {t.expenses.addTitle}
-                    {parsedExpense.amount ? ` (${formatCurrency(parsedExpense.amount)})` : ""}
-                  </span>
+                  <>
+                    <Check aria-hidden="true" className="w-4 h-4" strokeWidth={3} />
+                    <span>Catat {selectedScanCount} Transaksi</span>
+                  </>
                 )}
               </button>
             </div>
-          </form>
-        )}
+          ) : inputMode === "standard" ? (
+            <button type="submit" form={standardFormId} disabled={isSubmitting} className={`${primaryButtonClass} w-full`}>
+              {isSubmitting ? (
+                <span>{t.common.adding}</span>
+              ) : (
+                <>
+                  <span>{t.expenses.addTitle}</span>
+                  {amount > 0 && <span className="font-semibold opacity-85">· {formatCurrency(amount)}</span>}
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              type="submit"
+              form={quickFormId}
+              disabled={isSubmitting || !parsedExpense.isValid}
+              className={`${primaryButtonClass} w-full`}
+            >
+              {isSubmitting ? (
+                <span>{t.common.adding}</span>
+              ) : (
+                <>
+                  <span>{t.expenses.addTitle}</span>
+                  {parsedExpense.amount ? (
+                    <span className="font-semibold opacity-85">· {formatCurrency(parsedExpense.amount)}</span>
+                  ) : null}
+                </>
+              )}
+            </button>
+          )}
+        </div>
 
         </div>
 
